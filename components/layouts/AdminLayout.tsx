@@ -1,0 +1,401 @@
+
+import React, { useState, useEffect, useCallback } from 'react';
+import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
+import { useData } from '../../context/DataContext';
+
+export const AdminLayout: React.FC = () => {
+  const { currentUser, logout, isAuthenticated } = useAuth();
+  const { bookings, leads } = useData(); // Connect to real data
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  // ... other state ...
+
+  // ... (Lines 11-236 skipped for brevity in tool call, matching target carefully below) ...
+
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
+  const [isFabOpen, setIsFabOpen] = useState(false);
+  const [commandSearch, setCommandSearch] = useState('');
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  // Route Protection: Redirect if not logged in
+  useEffect(() => {
+    if (!isAuthenticated) {
+      navigate('/', { replace: true });
+    }
+  }, [isAuthenticated, navigate]);
+
+  const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
+  const closeSidebar = () => setIsSidebarOpen(false);
+
+  const handleLogout = () => {
+    logout();
+    navigate('/', { replace: true });
+  };
+
+  const handleSearch = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      setIsCommandPaletteOpen(true);
+      setCommandSearch((e.target as HTMLInputElement).value);
+    }
+  };
+
+  const handleNotifications = () => {
+    alert("You have 3 unread notifications.");
+  };
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Cmd/Ctrl + K for command palette
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setIsCommandPaletteOpen(prev => !prev);
+        setCommandSearch('');
+      }
+      // Escape to close modals
+      if (e.key === 'Escape') {
+        setIsCommandPaletteOpen(false);
+        setIsFabOpen(false);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  const isActive = (path: string) => {
+    const active = path === '/admin'
+      ? location.pathname === '/admin'
+      : location.pathname.startsWith(path);
+
+    return active
+      ? "bg-slate-900 text-white shadow-lg shadow-slate-900/20 dark:bg-white dark:text-slate-900"
+      : "text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white";
+  };
+
+  const navGroups = [
+    {
+      title: 'Overview',
+      items: [
+        { name: 'Dashboard', path: '/admin', icon: 'dashboard' },
+        { name: 'Analytics', path: '/admin/analytics', icon: 'bar_chart' },
+      ]
+    },
+    {
+      title: 'Operations',
+      items: [
+        { name: 'Bookings', path: '/admin/bookings', icon: 'airplane_ticket' },
+        { name: 'Inventory', path: '/admin/inventory', icon: 'calendar_month' },
+        { name: 'Vendors', path: '/admin/vendors', icon: 'storefront' },
+        { name: 'Itinerary Builder', path: '/admin/itinerary-builder', icon: 'map' },
+        { name: 'Masters', path: '/admin/masters', icon: 'dataset' },
+      ]
+    },
+    {
+      title: 'Growth',
+      items: [
+        { name: 'Leads CRM', path: '/admin/leads', icon: 'groups' },
+        { name: 'Accounts', path: '/admin/accounts', icon: 'account_balance' },
+      ]
+    },
+    {
+      title: 'People & Content',
+      items: [
+        { name: 'Staff', path: '/admin/staff', icon: 'badge' },
+        { name: 'Packages', path: '/admin/packages', icon: 'inventory_2' },
+      ]
+    }
+  ];
+
+  // Flatten nav items for command palette search
+  const allNavItems = navGroups.flatMap(g => g.items);
+
+  // Quick actions for FAB
+  const quickActions = [
+    { name: 'New Booking', icon: 'add_circle', path: '/admin/bookings', color: 'from-blue-500 to-indigo-600' },
+    { name: 'Add Lead', icon: 'person_add', path: '/admin/leads', color: 'from-purple-500 to-pink-600' },
+    { name: 'Create Package', icon: 'travel_explore', path: '/admin/itinerary-builder', color: 'from-emerald-500 to-teal-600' },
+    { name: 'Add Master Data', icon: 'dataset', path: '/admin/masters', color: 'from-orange-500 to-rose-500' },
+  ];
+
+  // Filter nav items for command palette
+  const filteredNavItems = commandSearch
+    ? allNavItems.filter(item =>
+      item.name.toLowerCase().includes(commandSearch.toLowerCase())
+    )
+    : allNavItems;
+
+  if (!isAuthenticated || !currentUser) return null;
+
+  return (
+    <div className="bg-slate-50 dark:bg-[#0B1116] text-slate-900 dark:text-slate-100 flex h-screen overflow-hidden font-sans">
+      {/* Mobile Sidebar Backdrop */}
+      {isSidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] lg:hidden animate-in fade-in"
+          onClick={closeSidebar}
+        />
+      )}
+
+      {/* Side Navigation - Modernized */}
+      <aside className={`
+        fixed lg:static inset-y-0 left-0 w-[280px] bg-white/95 dark:bg-[#0F172A]/95 backdrop-blur-xl border-r border-slate-200/50 dark:border-slate-800/50 
+        transform transition-transform duration-300 ease-[cubic-bezier(0.25,0.1,0.25,1.0)] z-[110] flex flex-col
+        ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+      `}>
+        {/* Logo Area */}
+        <div className="h-20 flex items-center justify-between px-6 shrink-0">
+          <Link to="/" className="flex items-center gap-3 group">
+            <div className="size-11 rounded-2xl bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center text-white shadow-lg shadow-indigo-500/30 transition-all duration-300 group-hover:shadow-indigo-500/50 group-hover:scale-105">
+              <span className="material-symbols-outlined text-[24px]">travel_explore</span>
+            </div>
+            <div className="flex flex-col">
+              <span className="font-black text-xl tracking-tight leading-none text-slate-900 dark:text-white">Shravya</span>
+              <span className="text-[10px] font-bold text-transparent bg-clip-text bg-gradient-to-r from-indigo-500 to-purple-500 uppercase tracking-[0.2em] mt-0.5">Admin Panel</span>
+            </div>
+          </Link>
+          <button className="lg:hidden p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-colors" onClick={closeSidebar}>
+            <span className="material-symbols-outlined">close</span>
+          </button>
+        </div>
+
+        {/* Navigation Items */}
+        <nav className="flex-1 overflow-y-auto py-6 px-4 space-y-6 scrollbar-thin">
+          {navGroups.map((group, idx) => (
+            <div key={idx} className="space-y-1">
+              <p className="px-4 text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 dark:text-slate-500 mb-2">
+                {group.title}
+              </p>
+              <div className="space-y-1">
+                {group.items.map(item => {
+                  const active = isActive(item.path).includes('bg-slate-900');
+                  return (
+                    <Link
+                      key={item.path}
+                      to={item.path}
+                      onClick={closeSidebar}
+                      className={`relative flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 font-semibold text-sm group overflow-hidden
+                        ${active
+                          ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-lg shadow-indigo-500/25'
+                          : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white'
+                        }
+                      `}
+                    >
+                      {active && (
+                        <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                      )}
+                      <span className={`material-symbols-outlined text-[20px] transition-all duration-200 ${active ? 'text-white' : 'text-slate-400 group-hover:text-indigo-500 group-hover:scale-110'}`}>
+                        {item.icon}
+                      </span>
+                      <span className="relative z-10">{item.name}</span>
+                      {active && (
+                        <div className="ml-auto flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                        </div>
+                      )}
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </nav>
+
+        {/* User Profile & Footer */}
+        <div className="p-4 border-t border-slate-100 dark:border-slate-800/50 space-y-3">
+          {/* Quick Stats */}
+          <div className="flex gap-2 mb-3">
+            <div className="flex-1 bg-gradient-to-br from-emerald-50 to-emerald-100 dark:from-emerald-900/20 dark:to-emerald-900/10 rounded-xl p-3 text-center">
+              <p className="text-lg font-black text-emerald-600 dark:text-emerald-400">{bookings.length}</p>
+              <p className="text-[9px] font-bold text-emerald-600/70 uppercase">Bookings</p>
+            </div>
+            <div className="flex-1 bg-gradient-to-br from-amber-50 to-amber-100 dark:from-amber-900/20 dark:to-amber-900/10 rounded-xl p-3 text-center">
+              <p className="text-lg font-black text-amber-600 dark:text-amber-400">{leads.length}</p>
+              <p className="text-[9px] font-bold text-amber-600/70 uppercase">Leads</p>
+            </div>
+          </div>
+
+          <Link to="/" target="_blank" className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/50 font-semibold transition-all text-xs group">
+            <span className="material-symbols-outlined text-[18px] group-hover:text-indigo-500 transition-colors">open_in_new</span>
+            <span>View Live Website</span>
+          </Link>
+          <button type="button" onClick={handleLogout} className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 font-semibold transition-all text-xs cursor-pointer group">
+            <span className="material-symbols-outlined text-[18px] group-hover:scale-110 transition-transform">logout</span>
+            <span>Log Out</span>
+          </button>
+        </div>
+      </aside>
+
+      {/* Main Content Wrapper */}
+      <div className="flex-1 flex flex-col h-screen overflow-hidden relative bg-slate-50 dark:bg-[#0B1116]">
+
+        {/* Sticky Top Header */}
+        <header className="h-20 flex items-center justify-between px-6 lg:px-8 border-b border-slate-200/60 dark:border-slate-800 bg-white/80 dark:bg-[#151d29]/80 backdrop-blur-xl z-20 shrink-0 sticky top-0">
+          <div className="flex items-center gap-4">
+            <button
+              className="lg:hidden p-2 -ml-2 text-slate-500 hover:bg-slate-100 rounded-xl transition-colors"
+              onClick={toggleSidebar}
+            >
+              <span className="material-symbols-outlined text-2xl">menu</span>
+            </button>
+            {/* Breadcrumb or Page Title placeholder could go here */}
+          </div>
+
+          <div className="flex items-center gap-4 lg:gap-6">
+            {/* Modern Search Bar */}
+            <div className="hidden lg:flex relative group">
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 material-symbols-outlined text-[20px] group-focus-within:text-primary transition-colors">search</span>
+              <input
+                className="h-11 w-80 bg-slate-100 dark:bg-slate-800 border-none rounded-full pl-12 pr-12 text-sm font-semibold focus:ring-2 focus:ring-primary/20 placeholder:text-slate-400 transition-all focus:w-96 focus:bg-white dark:focus:bg-slate-900 shadow-sm"
+                placeholder="Search anything..."
+                type="text"
+                onKeyDown={handleSearch}
+              />
+              <div className="absolute right-4 top-1/2 -translate-y-1/2 flex gap-1 pointer-events-none">
+                <span className="text-[10px] font-bold text-slate-400 bg-white dark:bg-slate-700 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-600">/</span>
+              </div>
+            </div>
+
+            {/* Notification Bell */}
+            <button onClick={handleNotifications} className="relative p-2.5 rounded-full text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors border border-transparent hover:border-slate-200 dark:hover:border-slate-700">
+              <span className="material-symbols-outlined text-[22px]">notifications</span>
+              <span className="absolute top-2.5 right-2.5 size-2.5 bg-red-500 rounded-full border-2 border-white dark:border-[#151d29]"></span>
+            </button>
+
+            {/* User Profile */}
+            <div className="flex items-center gap-3 pl-6 border-l border-slate-200 dark:border-slate-700 h-8">
+              <div className="text-right hidden lg:block leading-tight">
+                <p className="text-sm font-bold text-slate-900 dark:text-white">{currentUser.name}</p>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">{currentUser.role} ({currentUser.userType})</p>
+              </div>
+              <div className={`size-10 rounded-full bg-${currentUser.color}-100 dark:bg-${currentUser.color}-900 flex items-center justify-center font-bold text-${currentUser.color}-600 dark:text-${currentUser.color}-400 text-sm ring-4 ring-slate-100 dark:ring-slate-800 shadow-md cursor-pointer hover:ring-primary/20 transition-all`}>
+                {currentUser.initials}
+              </div>
+            </div>
+          </div>
+        </header>
+
+        {/* Scrollable Content Area */}
+        <div className="flex-1 overflow-y-auto scroll-smooth">
+          <Outlet />
+        </div>
+
+        {/* Floating Action Button (FAB) */}
+        <div className="fixed bottom-6 right-6 z-50">
+          {/* FAB Menu */}
+          {isFabOpen && (
+            <div className="absolute bottom-16 right-0 mb-2 space-y-2 animate-slide-up">
+              {quickActions.map((action, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => { navigate(action.path); setIsFabOpen(false); }}
+                  className={`flex items-center gap-3 px-4 py-3 bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-100 dark:border-slate-700 hover:scale-105 transition-all group whitespace-nowrap`}
+                  style={{ animationDelay: `${idx * 50}ms` }}
+                >
+                  <div className={`size-10 rounded-xl bg-gradient-to-br ${action.color} flex items-center justify-center text-white shadow-lg`}>
+                    <span className="material-symbols-outlined text-[20px]">{action.icon}</span>
+                  </div>
+                  <span className="font-semibold text-slate-700 dark:text-slate-200 text-sm">{action.name}</span>
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Main FAB Button */}
+          <button
+            onClick={() => setIsFabOpen(!isFabOpen)}
+            className={`size-14 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 text-white shadow-xl shadow-indigo-500/30 flex items-center justify-center transition-all duration-300 hover:shadow-indigo-500/50 hover:scale-105 btn-press ${isFabOpen ? 'rotate-45' : ''}`}
+          >
+            <span className="material-symbols-outlined text-[28px]">{isFabOpen ? 'close' : 'add'}</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Command Palette Modal */}
+      {isCommandPaletteOpen && (
+        <div className="fixed inset-0 z-[200] flex items-start justify-center pt-[15vh]">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm animate-fade-in"
+            onClick={() => setIsCommandPaletteOpen(false)}
+          />
+
+          {/* Palette */}
+          <div className="relative w-full max-w-xl bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden animate-scale-in">
+            {/* Search Input */}
+            <div className="flex items-center gap-3 px-5 py-4 border-b border-slate-100 dark:border-slate-800">
+              <span className="material-symbols-outlined text-slate-400">search</span>
+              <input
+                type="text"
+                value={commandSearch}
+                onChange={(e) => setCommandSearch(e.target.value)}
+                placeholder="Search pages, actions, or type a command..."
+                className="flex-1 bg-transparent border-none outline-none text-lg font-medium placeholder:text-slate-400 text-slate-900 dark:text-white"
+                autoFocus
+              />
+              <div className="flex items-center gap-1">
+                <span className="text-[10px] font-bold text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded">ESC</span>
+              </div>
+            </div>
+
+            {/* Results */}
+            <div className="max-h-80 overflow-y-auto p-2">
+              {/* Pages Section */}
+              <div className="px-3 py-2">
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Pages</p>
+                <div className="space-y-1">
+                  {filteredNavItems.map((item, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => { navigate(item.path); setIsCommandPaletteOpen(false); }}
+                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors group text-left"
+                    >
+                      <span className="material-symbols-outlined text-slate-400 group-hover:text-indigo-500 transition-colors text-[20px]">{item.icon}</span>
+                      <span className="font-medium text-slate-700 dark:text-slate-200">{item.name}</span>
+                      <span className="ml-auto text-xs text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity">Go →</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Quick Actions Section */}
+              {!commandSearch && (
+                <div className="px-3 py-2 border-t border-slate-100 dark:border-slate-800 mt-2">
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Quick Actions</p>
+                  <div className="space-y-1">
+                    {quickActions.map((action, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => { navigate(action.path); setIsCommandPaletteOpen(false); }}
+                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors group text-left"
+                      >
+                        <div className={`size-8 rounded-lg bg-gradient-to-br ${action.color} flex items-center justify-center text-white`}>
+                          <span className="material-symbols-outlined text-[16px]">{action.icon}</span>
+                        </div>
+                        <span className="font-medium text-slate-700 dark:text-slate-200">{action.name}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="px-5 py-3 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs text-slate-400">
+              <div className="flex items-center gap-4">
+                <span className="flex items-center gap-1">
+                  <span className="text-[10px] font-bold bg-slate-200 dark:bg-slate-700 px-1.5 py-0.5 rounded">↑↓</span> Navigate
+                </span>
+                <span className="flex items-center gap-1">
+                  <span className="text-[10px] font-bold bg-slate-200 dark:bg-slate-700 px-1.5 py-0.5 rounded">↵</span> Select
+                </span>
+              </div>
+              <span className="font-semibold text-indigo-500">⌘K to toggle</span>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};

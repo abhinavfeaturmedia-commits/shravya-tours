@@ -1,0 +1,220 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { useItinerary, ItineraryItem, ServiceType } from '../ItineraryContext';
+import { ServiceSelector } from '../selectors/ServiceSelector';
+import { gsap } from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { Plus, Hotel, Bike, Car, Plane, StickyNote, Trash2, Clock, DollarSign, MapPin, MoreVertical } from 'lucide-react';
+
+gsap.registerPlugin(ScrollTrigger);
+
+export const StepDayPlanner: React.FC = () => {
+    const { tripDetails, getItemsForDay, setStep, removeItem, updateItem } = useItinerary();
+    const [addingToDay, setAddingToDay] = useState<number | null>(null);
+    const containerRef = useRef<HTMLDivElement>(null);
+
+    const days = Array.from({ length: tripDetails.duration }, (_, i) => i + 1);
+
+    const handleNext = () => {
+        setStep(3);
+    };
+
+    return (
+        <div ref={containerRef} className="h-full flex flex-col bg-slate-50 dark:bg-[#0B1116] relative">
+
+            <div className="bg-white dark:bg-[#1A2633] px-4 py-3 md:px-6 md:py-3 border-b border-slate-200 dark:border-slate-800 shrink-0 flex items-center justify-between z-10 shadow-sm gap-2">
+                <div className="min-w-0">
+                    <h2 className="text-sm md:text-base font-black text-slate-900 dark:text-white truncate">{tripDetails.title}</h2>
+                    <p className="text-[10px] md:text-xs font-medium text-slate-500 truncate">{tripDetails.duration} Days • {tripDetails.guests}</p>
+                </div>
+                <button
+                    onClick={handleNext}
+                    className="bg-indigo-600 hover:bg-indigo-700 text-white text-[10px] md:text-xs font-bold px-3 py-2 md:px-4 md:py-2.5 rounded-lg transition-all shadow-lg shadow-indigo-600/20 active:scale-95 flex items-center gap-1 md:gap-2 shrink-0"
+                >
+                    Review <span className="hidden md:inline">Itinerary</span> <span className="material-symbols-outlined text-xs">arrow_forward</span>
+                </button>
+            </div>
+
+            {/* Scrollable Timeline Canvas */}
+            <div className="flex-1 overflow-y-auto p-4 md:p-10 space-y-12 scroll-smooth pb-40">
+                {days.map((day, index) => (
+                    <DayContainer
+                        key={day}
+                        day={day}
+                        items={getItemsForDay(day)}
+                        onAdd={() => setAddingToDay(day)}
+                        onRemove={removeItem}
+                        onUpdate={updateItem}
+                        isLast={index === days.length - 1}
+                    />
+                ))}
+            </div>
+
+            {/* Modal */}
+            {addingToDay && (
+                <ServiceSelector day={addingToDay} onClose={() => setAddingToDay(null)} />
+            )}
+        </div>
+    );
+};
+
+// --- Sub Component: Day Container ---
+
+const DayContainer: React.FC<{
+    day: number;
+    items: ItineraryItem[];
+    onAdd: () => void;
+    onRemove: (id: string) => void;
+    onUpdate: (id: string, updates: Partial<ItineraryItem>) => void;
+    isLast: boolean;
+}> = ({ day, items, onAdd, onRemove, onUpdate, isLast }) => {
+
+    return (
+        <div className="max-w-5xl mx-auto flex gap-3 md:gap-10 group relative isolate">
+
+            {/* Timeline Line */}
+            {!isLast && (
+                <div className="absolute left-[14px] md:left-[19px] top-10 bottom-[-32px] md:bottom-[-48px] w-0.5 bg-slate-200 dark:bg-slate-800 -z-10 group-hover:bg-indigo-100 dark:group-hover:bg-slate-700 transition-colors" />
+            )}
+
+            {/* Day Marker */}
+            <div className="flex flex-col items-center pt-2 shrink-0">
+                <div className="size-7 md:size-8 rounded-lg bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-black flex items-center justify-center shadow-xl z-10 text-xs md:text-sm border-2 md:border-2 border-slate-50 dark:border-[#0B1116]">
+                    {day}
+                </div>
+            </div>
+
+            {/* Content */}
+            <div className="flex-1 space-y-3 min-w-0">
+                <div className="flex items-center justify-between sticky top-0 bg-slate-50/95 dark:bg-[#0B1116]/95 backdrop-blur-sm py-2 z-10 rounded-lg">
+                    <h3 className="text-sm md:text-base font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                        Day {day}
+                    </h3>
+                    <button
+                        onClick={onAdd}
+                        className="text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 px-3 py-1.5 rounded-lg text-[10px] md:text-xs font-bold transition-all flex items-center gap-1 md:gap-1.5 border border-transparent hover:border-indigo-100 dark:hover:border-indigo-800"
+                    >
+                        <Plus size={12} strokeWidth={3} /> Add <span className="hidden md:inline">Service</span>
+                    </button>
+                </div>
+
+                <div className={`
+                    min-h-[80px] md:min-h-[120px] rounded-2xl p-2 space-y-3 md:space-y-4 transition-all
+                    ${items.length === 0 ? 'border-2 border-dashed border-slate-300 dark:border-slate-800 bg-slate-100/50 dark:bg-slate-900/30' : ''}
+                `}>
+                    {items.length === 0 ? (
+                        <div
+                            onClick={onAdd}
+                            className="h-full flex flex-col items-center justify-center text-slate-400 py-6 md:py-10 cursor-pointer hover:text-indigo-500 transition-colors group/empty"
+                        >
+                            <div className="size-10 md:size-16 rounded-full bg-slate-200 dark:bg-slate-800 flex items-center justify-center mb-2 md:mb-4 group-hover/empty:scale-110 transition-transform">
+                                <Plus size={24} className="opacity-50 md:hidden" />
+                                <Plus size={32} className="opacity-50 hidden md:block" />
+                            </div>
+                            <span className="text-[10px] md:text-sm font-bold uppercase tracking-wide">Empty Day • Click to Plan</span>
+                        </div>
+                    ) : (
+                        items.sort((a, b) => (a.time || '').localeCompare(b.time || '')).map((item, idx) => (
+                            <ServiceCard key={item.id} item={item} onRemove={() => onRemove(item.id)} onUpdate={onUpdate} index={idx} />
+                        ))
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+};
+
+// --- Sub Component: Service Card ---
+
+const ServiceCard: React.FC<{ item: ItineraryItem; onRemove: () => void; onUpdate: (id: string, u: any) => void; index: number }> = ({ item, onRemove, onUpdate, index }) => {
+
+    const getStyles = (type: ServiceType) => {
+        switch (type) {
+            case 'hotel': return { icon: <Hotel size={20} />, bg: 'bg-white dark:bg-[#1A2633]', border: 'border-rose-200 dark:border-rose-900/30', accent: 'text-rose-500', decoration: 'bg-rose-500' };
+            case 'activity': return { icon: <Bike size={20} />, bg: 'bg-white dark:bg-[#1A2633]', border: 'border-orange-200 dark:border-orange-900/30', accent: 'text-orange-500', decoration: 'bg-orange-500' };
+            case 'transport': return { icon: <Car size={20} />, bg: 'bg-white dark:bg-[#1A2633]', border: 'border-emerald-200 dark:border-emerald-900/30', accent: 'text-emerald-500', decoration: 'bg-emerald-500' };
+            case 'flight': return { icon: <Plane size={20} />, bg: 'bg-white dark:bg-[#1A2633]', border: 'border-blue-200 dark:border-blue-900/30', accent: 'text-blue-500', decoration: 'bg-blue-500' };
+            case 'note': return { icon: <StickyNote size={20} />, bg: 'bg-yellow-50 dark:bg-yellow-900/10', border: 'border-yellow-200 dark:border-yellow-900/30', accent: 'text-yellow-600 dark:text-yellow-400', decoration: 'bg-yellow-500' };
+            default: return { icon: <Plus size={20} />, bg: 'bg-slate-50', border: 'border-slate-200', accent: 'text-slate-500', decoration: 'bg-slate-500' };
+        }
+    };
+
+    const style = getStyles(item.type);
+
+    return (
+        <div className={`
+             relative rounded-xl p-3 md:p-4 shadow-sm hover:shadow-xl transition-all duration-300 group
+             border ${style.border} ${style.bg}
+             animate-in fade-in slide-in-from-bottom-4
+        `}
+            style={{ animationDelay: `${index * 50}ms` }}
+        >
+            {/* Left Decor Line */}
+            <div className={`absolute left-0 top-4 bottom-4 w-1 rounded-r-full ${style.decoration}`} />
+
+            <div className="flex gap-3 items-start pl-2 md:pl-3">
+                {/* Icon Box */}
+                <div className={`
+                    size-8 md:size-10 rounded-lg flex items-center justify-center shrink-0 shadow-sm
+                    ${style.accent} bg-slate-50 dark:bg-slate-800
+                `}>
+                    {React.cloneElement(style.icon as React.ReactElement, { size: 16 })}
+                </div>
+
+                <div className="flex-1 min-w-0 space-y-1.5 md:space-y-2">
+                    {/* Top Row: Title & Price */}
+                    <div className="flex flex-col md:flex-row md:items-start gap-1 md:justify-between">
+                        <input
+                            value={item.title}
+                            onChange={e => onUpdate(item.id, { title: e.target.value })}
+                            className="font-black text-sm md:text-base text-slate-900 dark:text-white bg-transparent border-none p-0 focus:ring-0 w-full truncate placeholder:text-slate-300"
+                            placeholder="Service Name"
+                        />
+                        <div className="flex w-fit items-center gap-1 text-slate-900 dark:text-white font-black bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md text-[10px] md:text-xs">
+                            <DollarSign size={10} className="text-slate-400" />
+                            {item.cost?.toLocaleString() ?? 0}
+                        </div>
+                    </div>
+
+                    {/* Metadata Row */}
+                    <div className="flex flex-wrap items-center gap-2 md:gap-4 text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-wide">
+                        <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-800/50 px-2 py-1 rounded-md">
+                            <Clock size={12} className={style.accent} />
+                            <input
+                                value={item.time || ''}
+                                onChange={e => onUpdate(item.id, { time: e.target.value })}
+                                placeholder="00:00"
+                                className="bg-transparent border-none p-0 w-12 focus:ring-0 text-slate-500 dark:text-slate-400"
+                            />
+                        </div>
+                        {item.duration && (
+                            <span className="flex items-center gap-1"><Clock size={12} /> {item.duration}</span>
+                        )}
+                        {item.masterData?.locationId && (
+                            <span className="flex items-center gap-1"><MapPin size={12} /> {item.masterData.locationId}</span>
+                        )}
+                    </div>
+
+                    {/* Description */}
+                    <input
+                        value={item.description || ''}
+                        onChange={e => onUpdate(item.id, { description: e.target.value })}
+                        placeholder="Add notes or description..."
+                        className="w-full text-xs md:text-sm font-medium text-slate-400 bg-transparent border-none p-0 focus:ring-0 placeholder:text-slate-300"
+                    />
+                </div>
+
+                {/* Actions */}
+                <div className="flex flex-col gap-2 md:opacity-0 md:group-hover:opacity-100 transition-all md:transform md:translate-x-2 md:group-hover:translate-x-0">
+                    <button
+                        onClick={onRemove}
+                        className="size-8 flex items-center justify-center text-slate-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                        title="Remove"
+                    >
+                        <Trash2 size={16} />
+                    </button>
+                    {/* Future: Edit button */}
+                </div>
+            </div>
+        </div>
+    );
+};
