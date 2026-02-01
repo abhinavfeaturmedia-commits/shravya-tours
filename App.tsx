@@ -14,6 +14,7 @@ const Packages = lazy(() => import('./pages/Packages').then(module => ({ default
 const PackageDetail = lazy(() => import('./pages/PackageDetail').then(module => ({ default: module.PackageDetail })));
 const About = lazy(() => import('./pages/About').then(module => ({ default: module.About })));
 const Contact = lazy(() => import('./pages/Contact').then(module => ({ default: module.Contact })));
+const Login = lazy(() => import('./pages/Login').then(module => ({ default: module.Login })));
 
 const AdminDashboard = lazy(() => import('./pages/AdminDashboard').then(module => ({ default: module.AdminDashboard })));
 const Inventory = lazy(() => import('./pages/admin/Inventory').then(module => ({ default: module.Inventory })));
@@ -55,6 +56,8 @@ const App: React.FC = () => {
                   <Route path="about" element={<About />} />
                   <Route path="contact" element={<Contact />} />
                 </Route>
+
+                <Route path="/login" element={<Login />} />
 
                 {/* Admin Routes using AdminLayout (Sidebar/Topbar) */}
                 <Route path="/admin" element={<AdminLayout />}>

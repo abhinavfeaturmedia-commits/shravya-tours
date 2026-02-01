@@ -21,7 +21,7 @@ export const AdminLayout: React.FC = () => {
   // Route Protection: Redirect if not logged in
   useEffect(() => {
     if (!isAuthenticated) {
-      navigate('/', { replace: true });
+      navigate('/login', { replace: true, state: { from: location } });
     }
   }, [isAuthenticated, navigate]);
 
