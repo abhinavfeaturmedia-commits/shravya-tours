@@ -240,7 +240,7 @@ export const PackageDetail: React.FC = () => {
                 </div>
                 <div className="space-y-1">
                   <label className="block text-xs font-bold uppercase text-slate-500 pl-1">Mobile Number</label>
-                  <input required type="tel" pattern="[0-9]{10,15}" placeholder="+91 98765 43210" className="w-full rounded-xl border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-3.5 font-medium outline-none focus:ring-2 focus:ring-primary transition-all" value={bookingData.phone} onChange={e => setBookingData({ ...bookingData, phone: e.target.value })} />
+                  <input required type="tel" pattern="[0-9]{10,15}" placeholder="+91 80109 55675" className="w-full rounded-xl border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-3.5 font-medium outline-none focus:ring-2 focus:ring-primary transition-all" value={bookingData.phone} onChange={e => setBookingData({ ...bookingData, phone: e.target.value })} />
                 </div>
                 <div className="space-y-1">
                   <label className="block text-xs font-bold uppercase text-slate-500 pl-1">Travel Date</label>

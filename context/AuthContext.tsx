@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { StaffMember, StaffPermissions } from '../types';
+import { supabase } from '../src/lib/supabase';
 
 // Helper for localStorage
 const STORAGE_KEY = 'shravya_auth_data';
@@ -112,46 +113,88 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const [staff, setStaff] = useState<StaffMember[]>(() =>
-        loadFromStorage(`${STORAGE_KEY}_staff`, INITIAL_STAFF)
-    );
-    const [currentUser, setCurrentUser] = useState<StaffMember | null>(() =>
-        loadFromStorage(`${STORAGE_KEY}_user`, INITIAL_STAFF[0]) // Auto-login as admin for demo
-    );
+    // Keep staff list for permission mapping (Hybrid approach)
+    const [staff, setStaff] = useState<StaffMember[]>(INITIAL_STAFF);
+    const [currentUser, setCurrentUser] = useState<StaffMember | null>(null);
+    const [loading, setLoading] = useState(true);
 
-    // Persist to localStorage
+    // Initialize Supabase Auth
     useEffect(() => {
-        saveToStorage(`${STORAGE_KEY}_staff`, staff);
-    }, [staff]);
+        // Check active session
+        supabase.auth.getSession().then(({ data: { session } }) => {
+            if (session?.user) {
+                mapUserToStaff(session.user.email);
+            } else {
+                setLoading(false);
+            }
+        });
 
-    useEffect(() => {
-        saveToStorage(`${STORAGE_KEY}_user`, currentUser);
-    }, [currentUser]);
+        // Listen for changes
+        const {
+            data: { subscription },
+        } = supabase.auth.onAuthStateChange((_event, session) => {
+            if (session?.user) {
+                mapUserToStaff(session.user.email);
+            } else {
+                setCurrentUser(null);
+                setLoading(false);
+            }
+        });
 
-    const login = useCallback((email: string, _password: string): boolean => {
-        const user = staff.find((s) => s.email.toLowerCase() === email.toLowerCase());
-        if (user) {
-            setCurrentUser(user);
-            return true;
+        return () => subscription.unsubscribe();
+    }, []);
+
+    const mapUserToStaff = (email: string | undefined) => {
+        if (!email) return;
+        // Find if this email matches a known staff member
+        const matchedStaff = staff.find(s => s.email.toLowerCase() === email.toLowerCase());
+
+        if (matchedStaff) {
+            setCurrentUser(matchedStaff);
+        } else {
+            // New/Unknown user - Give default restrict access or create basic profile
+            const newStaff: StaffMember = {
+                id: Date.now(),
+                name: email.split('@')[0],
+                email: email,
+                role: 'Agent',
+                userType: 'Staff',
+                initials: email.substring(0, 2).toUpperCase(),
+                department: 'Sales',
+                status: 'Active',
+                lastActive: 'Now',
+                color: 'gray',
+                queryScope: 'Show Assigned Query Only',
+                whatsappScope: 'Assigned Queries Messages',
+                permissions: DEFAULT_PERMISSIONS
+            };
+            setCurrentUser(newStaff);
         }
-        return false;
-    }, [staff]);
+        setLoading(false);
+    };
 
-    const logout = useCallback(() => {
+    const login = useCallback(async (email: string, password: string): Promise<boolean> => {
+        const { error } = await supabase.auth.signInWithPassword({
+            email,
+            password
+        });
+
+        if (error) {
+            console.error('Login failed:', error.message);
+            return false;
+        }
+        return true;
+    }, []);
+
+    const logout = useCallback(async () => {
+        await supabase.auth.signOut();
         setCurrentUser(null);
     }, []);
 
-    const addStaff = useCallback((member: StaffMember) => {
-        setStaff((prev) => [member, ...prev]);
-    }, []);
-
-    const updateStaff = useCallback((id: number, member: Partial<StaffMember>) => {
-        setStaff((prev) => prev.map((s) => (s.id === id ? { ...s, ...member } : s)));
-    }, []);
-
-    const deleteStaff = useCallback((id: number) => {
-        setStaff((prev) => prev.filter((s) => s.id !== id));
-    }, []);
+    // ... (Keep addStaff/updateStaff etc. for Admin UI, but they won't create Supabase users automatically yet without Cloud Functions)
+    const addStaff = useCallback((member: StaffMember) => setStaff(prev => [member, ...prev]), []);
+    const updateStaff = useCallback((id: number, member: Partial<StaffMember>) => setStaff(prev => prev.map(s => s.id === id ? { ...s, ...member } : s)), []);
+    const deleteStaff = useCallback((id: number) => setStaff(prev => prev.filter(s => s.id !== id)), []);
 
     const hasPermission = useCallback(
         (module: keyof StaffPermissions, action: 'view' | 'manage'): boolean => {
@@ -167,6 +210,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             staff,
             currentUser,
             isAuthenticated: !!currentUser,
+            isLoading: loading,
             login,
             logout,
             addStaff,
@@ -174,7 +218,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             deleteStaff,
             hasPermission,
         }),
-        [staff, currentUser, login, logout, addStaff, updateStaff, deleteStaff, hasPermission]
+        [staff, currentUser, loading, login, logout, addStaff, updateStaff, deleteStaff, hasPermission]
     );
 
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

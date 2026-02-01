@@ -1,5 +1,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
+import { api } from '../src/lib/api';
+import { toast } from 'sonner';
 import { Package, Booking, BookingStatus, DailySlot, Lead, LeadLog, Vendor, VendorDocument, VendorTransaction, VendorNote, Account, AccountTransaction, Campaign } from '../types';
 
 // Storage helpers
@@ -350,16 +352,12 @@ interface DataContextType {
 const DataContext = createContext<DataContextType | undefined>(undefined);
 
 export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Initialize state from localStorage or fallback to initial data
-  const [packages, setPackages] = useState<Package[]>(() =>
-    loadFromStorage(`${STORAGE_KEY}_packages`, INITIAL_PACKAGES)
-  );
-  const [bookings, setBookings] = useState<Booking[]>(() =>
-    loadFromStorage(`${STORAGE_KEY}_bookings`, INITIAL_BOOKINGS)
-  );
-  const [leads, setLeads] = useState<Lead[]>(() =>
-    loadFromStorage(`${STORAGE_KEY}_leads`, INITIAL_LEADS)
-  );
+  // Use API for core business data
+  const [packages, setPackages] = useState<Package[]>([]);
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [leads, setLeads] = useState<Lead[]>([]);
+
+  // Keep Mock/Local for secondary features (Vendors, Accounts, Campaigns)
   const [vendors, setVendors] = useState<Vendor[]>(() =>
     loadFromStorage(`${STORAGE_KEY}_vendors`, INITIAL_VENDORS)
   );
@@ -370,7 +368,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     loadFromStorage(`${STORAGE_KEY}_campaigns`, INITIAL_CAMPAIGNS)
   );
 
-  // Initialize Inventory State - Dynamic for Current Month
+  // Initialize Inventory State - Dynamic for Current Month (Mock)
   const [inventory, setInventory] = useState<Record<number, DailySlot>>(() => {
     const saved = loadFromStorage<Record<number, DailySlot> | null>(`${STORAGE_KEY}_inventory`, null);
     if (saved) return saved;
@@ -386,57 +384,107 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return initialInv;
   });
 
-  // Persist to localStorage on changes
-  useEffect(() => { saveToStorage(`${STORAGE_KEY}_packages`, packages); }, [packages]);
-  useEffect(() => { saveToStorage(`${STORAGE_KEY}_bookings`, bookings); }, [bookings]);
-  useEffect(() => { saveToStorage(`${STORAGE_KEY}_leads`, leads); }, [leads]);
-  useEffect(() => { saveToStorage(`${STORAGE_KEY}_vendors`, vendors); }, [vendors]);
-  useEffect(() => { saveToStorage(`${STORAGE_KEY}_accounts`, accounts); }, [accounts]);
+  // Load Real Data from Supabase
+  useEffect(() => {
+    const loadRealData = async () => {
+      try {
+        const [p, b, l, v, a, i] = await Promise.all([
+          api.getPackages(),
+          api.getBookings(),
+          api.getLeads(),
+          api.getVendors(),
+          api.getAccounts(),
+          api.getInventory()
+        ]);
+        setPackages(p);
+        setBookings(b);
+        setLeads(l);
+        setVendors(v);
+        setAccounts(a);
+
+        // Merge DB inventory into state
+        if (i && Object.keys(i).length > 0) {
+          setInventory(prev => ({ ...prev, ...i }));
+        }
+      } catch (e) {
+        console.error("Failed to load Supabase data.", e);
+        toast.error("Failed to load data. Please check connection.");
+      }
+    };
+    loadRealData();
+  }, []);
+
+  // Persist only minimal secondary data or cache
   useEffect(() => { saveToStorage(`${STORAGE_KEY}_campaigns`, campaigns); }, [campaigns]);
-  useEffect(() => { saveToStorage(`${STORAGE_KEY}_inventory`, inventory); }, [inventory]);
+
 
   // Package CRUD
-  const addPackage = useCallback((pkg: Package) => setPackages(prev => [...prev, pkg]), []);
-  const updatePackage = useCallback((id: string, updated: Partial<Package>) => {
-    setPackages(prev => prev.map(p => p.id === id ? { ...p, ...updated } : p));
+  const addPackage = useCallback(async (pkg: Package) => {
+    try {
+      const newPkg = await api.createPackage(pkg);
+      setPackages(prev => [newPkg, ...prev]);
+    } catch (e) { console.error("Add Package Failed", e); }
   }, []);
+
+  const updatePackage = useCallback(async (id: string, updated: Partial<Package>) => {
+    setPackages(prev => prev.map(p => p.id === id ? { ...p, ...updated } : p));
+    try { await api.updatePackage(id, updated); } catch (e) { console.error(e); }
+  }, []);
+
   const deletePackage = useCallback((id: string) => {
     setPackages(prev => prev.filter(p => p.id !== id));
   }, []);
 
   // Booking CRUD
-  const addBooking = useCallback((booking: Booking) => {
+  const addBooking = useCallback(async (booking: Booking) => {
+    // Optimistic Update
     setBookings(prev => [booking, ...prev]);
-    const bDate = new Date(booking.date);
-    const now = new Date();
 
-    // Update Daily Slot Inventory
-    if (booking.type === 'Tour' && bDate.getMonth() === now.getMonth() && bDate.getFullYear() === now.getFullYear()) {
-      const d = bDate.getDate();
+    try {
+      await api.createBooking(booking);
+
+      // Update Daily Slot Inventory (Real Logic)
+      const bDate = new Date(booking.date);
+      const day = bDate.getDate();
+      const dateStr = bDate.toISOString().split('T')[0];
+
+      // Optimistic Update
       setInventory(prev => ({
         ...prev,
-        [d]: { ...prev[d], booked: prev[d].booked + 1 }
+        [day]: { ...prev[day], booked: (prev[day]?.booked || 0) + 1 }
       }));
-    }
 
-    // Update Specific Package Inventory (Remaining Seats) - Critical Business Logic
-    if (booking.packageId) {
-      setPackages(prev => prev.map(p => {
-        if (p.id === booking.packageId) {
-          const currentSeats = p.remainingSeats !== undefined ? p.remainingSeats : 10;
-          return { ...p, remainingSeats: Math.max(0, currentSeats - 1) };
+      // Server Update
+      await api.updateInventory(dateStr, { booked: (inventory[day]?.booked || 0) + 1 });
+
+
+      // Update Specific Package Inventory (Real DB Sync)
+      if (booking.packageId) {
+        const pkg = packages.find(p => p.id === booking.packageId);
+        if (pkg && (pkg.remainingSeats !== undefined)) {
+          const newSeats = Math.max(0, pkg.remainingSeats - 1);
+          // Update Local
+          setPackages(prev => prev.map(p => p.id === pkg.id ? { ...p, remainingSeats: newSeats } : p));
+          // Update DB
+          await api.updatePackage(pkg.id, { remainingSeats: newSeats });
         }
-        return p;
-      }));
+      }
+      toast.success("Booking created successfully!");
+    } catch (e) {
+      console.error("Add Booking Failed", e);
+      toast.error("Failed to create booking.");
+      // Rollback (Simplistic)
+      setBookings(prev => prev.filter(b => b.id !== booking.id));
     }
-  }, []);
+  }, [packages]);
 
   const updateBooking = useCallback((id: string, updated: Partial<Booking>) => {
     setBookings(prev => prev.map(b => b.id === id ? { ...b, ...updated } : b));
   }, []);
 
-  const updateBookingStatus = useCallback((id: string, status: BookingStatus) => {
+  const updateBookingStatus = useCallback(async (id: string, status: BookingStatus) => {
     setBookings(prev => prev.map(b => b.id === id ? { ...b, status } : b));
+    try { await api.updateBookingStatus(id, status); } catch (e) { console.error(e); }
   }, []);
 
   const deleteBooking = useCallback((id: string) => {
@@ -444,8 +492,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   // Lead CRUD
-  const addLead = useCallback((lead: Lead) => {
+  const addLead = useCallback(async (lead: Lead) => {
     setLeads(prev => [lead, ...prev]);
+    try { await api.createLead(lead); } catch (e) { console.error(e); }
   }, []);
 
   const updateLead = useCallback((id: string, updated: Partial<Lead>) => {
@@ -465,15 +514,25 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setInventory(prev => ({ ...prev, [date]: slot }));
   }, []);
 
+
   const getRevenue = useCallback(() => bookings.reduce((acc, curr) => {
-    if (curr.payment === 'Paid' || curr.payment === 'Deposit') {
+    if (curr.payment === 'Paid') {
       return acc + curr.amount;
     }
     return acc;
   }, 0), [bookings]);
 
   // Vendor CRUD
-  const addVendor = useCallback((vendor: Vendor) => setVendors(prev => [vendor, ...prev]), []);
+  const addVendor = useCallback(async (vendor: Vendor) => {
+    setVendors(prev => [vendor, ...prev]);
+    try {
+      await api.createVendor(vendor);
+      toast.success("Vendor added.");
+    } catch (e) {
+      console.error(e);
+      toast.error("Failed to save vendor.");
+    }
+  }, []);
   const updateVendor = useCallback((id: string, updated: Partial<Vendor>) => {
     setVendors(prev => prev.map(v => v.id === id ? { ...v, ...updated } : v));
   }, []);
@@ -513,7 +572,16 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   // Account CRUD
-  const addAccount = useCallback((acc: Account) => setAccounts(prev => [...prev, acc]), []);
+  const addAccount = useCallback(async (acc: Account) => {
+    setAccounts(prev => [...prev, acc]);
+    try {
+      await api.createAccount(acc);
+      toast.success("Account added.");
+    } catch (e) {
+      console.error(e);
+      toast.error("Failed to save account.");
+    }
+  }, []);
   const updateAccount = useCallback((id: string, updated: Partial<Account>) => {
     setAccounts(prev => prev.map(a => a.id === id ? { ...a, ...updated } : a));
   }, []);

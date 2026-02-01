@@ -78,9 +78,9 @@ export const Contact: React.FC = () => {
                         <div className="space-y-10 animate-in slide-in-from-left-10 duration-700 delay-100">
                             <div className="space-y-8">
                                 {[
-                                    { icon: 'location_on', title: 'Headquarters', text: '123 Adventure Avenue,\nMumbai, India 400001', color: 'blue' },
-                                    { icon: 'call', title: 'Phone Support', text: '+91 98765 43210 (Sales)\n+91 98765 12345 (Support)', color: 'green' },
-                                    { icon: 'mail', title: 'Email Us', text: 'hello@shravya.com\nsupport@shravya.com', color: 'purple' },
+                                    { icon: 'location_on', title: 'Headquarters', text: 'Wisteria housing society, gaon,\nPatil Nagar, Patilnagar, Chikhali,\nPimpri-Chinchwad, Pune, Maharashtra 411062', color: 'blue' },
+                                    { icon: 'call', title: 'Phone Support', text: '80109 55675', color: 'green' },
+                                    { icon: 'mail', title: 'Email Us', text: 'toursshravya@gmail.com', color: 'purple' },
                                 ].map((item, i) => (
                                     <div key={i} className="flex items-start gap-6 group">
                                         <div className={`size-16 rounded-2xl bg-${item.color}-50 dark:bg-${item.color}-900/10 flex items-center justify-center text-${item.color}-600 dark:text-${item.color}-400 shadow-sm group-hover:scale-110 transition-transform duration-300`}>

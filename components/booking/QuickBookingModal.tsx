@@ -130,7 +130,7 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
                             type="tel"
                             className={`w-full rounded-xl border px-4 py-3 outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all font-medium ${errors.phone ? 'border-red-300 bg-red-50' : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800'
                                 }`}
-                            placeholder="+91 98765 43210"
+                            placeholder="+91 80109 55675"
                         />
                         {errors.phone && <p className="text-xs text-red-500 mt-1 ml-1">{errors.phone.message}</p>}
                     </div>

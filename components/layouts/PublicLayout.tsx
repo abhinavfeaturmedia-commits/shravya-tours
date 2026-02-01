@@ -89,9 +89,9 @@ export const PublicLayout: React.FC = () => {
             <div>
               <h4 className="font-bold text-slate-900 dark:text-white mb-6 uppercase text-xs tracking-[0.2em]">Contact</h4>
               <div className="space-y-4 text-slate-500 dark:text-slate-400 text-sm font-medium">
-                <a href="mailto:hello@shravya.com" className="flex items-center gap-3 hover:text-primary transition-colors"><span className="material-symbols-outlined text-primary text-[20px]">mail</span> hello@shravya.com</a>
-                <a href="tel:+18005550199" className="flex items-center gap-3 hover:text-primary transition-colors"><span className="material-symbols-outlined text-primary text-[20px]">call</span> +1 (800) 555-0199</a>
-                <p className="flex items-center gap-3"><span className="material-symbols-outlined text-primary text-[20px]">location_on</span> Mumbai, India</p>
+                <a href="mailto:toursshravya@gmail.com" className="flex items-center gap-3 hover:text-primary transition-colors"><span className="material-symbols-outlined text-primary text-[20px]">mail</span> toursshravya@gmail.com</a>
+                <a href="tel:8010955675" className="flex items-center gap-3 hover:text-primary transition-colors"><span className="material-symbols-outlined text-primary text-[20px]">call</span> 80109 55675</a>
+                <p className="flex items-center gap-3"><span className="material-symbols-outlined text-primary text-[20px]">location_on</span> Pune, Maharashtra</p>
               </div>
             </div>
           </div>
