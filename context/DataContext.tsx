@@ -387,16 +387,24 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Load Real Data from Supabase
   useEffect(() => {
     const loadRealData = async () => {
+      // Load public data first (Packages) - this should always work
       try {
-        const [p, b, l, v, a, i] = await Promise.all([
-          api.getPackages(),
-          api.getBookings(),
-          api.getLeads(),
-          api.getVendors(),
-          api.getAccounts(),
-          api.getInventory()
+        const packages = await api.getPackages();
+        setPackages(packages);
+      } catch (e) {
+        console.error("Failed to load packages:", e);
+        toast.error("Failed to load data. Please check connection.");
+      }
+
+      // Load authenticated data separately - these may fail if not logged in (RLS)
+      try {
+        const [b, l, v, a, i] = await Promise.all([
+          api.getBookings().catch(() => []),
+          api.getLeads().catch(() => []),
+          api.getVendors().catch(() => []),
+          api.getAccounts().catch(() => []),
+          api.getInventory().catch(() => ({}))
         ]);
-        setPackages(p);
         setBookings(b);
         setLeads(l);
         setVendors(v);
@@ -407,8 +415,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setInventory(prev => ({ ...prev, ...i }));
         }
       } catch (e) {
-        console.error("Failed to load Supabase data.", e);
-        toast.error("Failed to load data. Please check connection.");
+        console.warn("Some data failed to load (user may not be logged in):", e);
       }
     };
     loadRealData();
