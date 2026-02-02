@@ -5,12 +5,24 @@ import * as z from 'zod';
 import { Lead } from '../../types';
 import { useData } from '../../context/DataContext';
 import { toast } from '../ui/Toast';
+import { TravelerSelector } from '../ui/TravelerSelector';
 
 const bookingSchema = z.object({
     name: z.string().min(2, 'Name must be at least 2 characters'),
     email: z.string().email('Please enter a valid email'),
     phone: z.string().min(10, 'Please enter a valid phone number'),
+    isWhatsappSame: z.boolean(),
+    whatsapp: z.string().optional(),
+    travelers: z.string(),
     date: z.string().min(1, 'Please select a travel date'),
+}).refine((data) => {
+    if (!data.isWhatsappSame && (!data.whatsapp || data.whatsapp.length < 10)) {
+        return false;
+    }
+    return true;
+}, {
+    message: "WhatsApp number is required when it's different from phone number",
+    path: ["whatsapp"],
 });
 
 type BookingFormData = z.infer<typeof bookingSchema>;
@@ -36,10 +48,23 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
         register,
         handleSubmit,
         reset,
+        watch,
+        setValue,
         formState: { errors },
     } = useForm<BookingFormData>({
         resolver: zodResolver(bookingSchema),
+        defaultValues: {
+            name: '',
+            email: '',
+            phone: '',
+            isWhatsappSame: true,
+            whatsapp: '',
+            travelers: '2 Adults',
+            date: ''
+        }
     });
+
+    const isWhatsappSame = watch('isWhatsappSame');
 
     const onSubmit = async (data: BookingFormData) => {
         setIsSubmitting(true);
@@ -49,13 +74,15 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
             name: data.name,
             email: data.email,
             phone: data.phone,
+            whatsapp: data.isWhatsappSame ? data.phone : data.whatsapp,
+            isWhatsappSame: data.isWhatsappSame,
             destination: bookingDetails,
             type: bookingType,
             status: 'New',
             priority: 'Medium',
             potentialValue: bookingType === 'Car' ? 3500 : bookingType === 'Bus' ? 1200 : 8000,
             addedOn: new Date().toISOString(),
-            travelers: 'N/A',
+            travelers: data.travelers,
             budget: 'TBD',
             source: 'Website',
             preferences: `Request for ${bookingType}. Date: ${data.date}. Details: ${bookingDetails}`,
@@ -123,6 +150,7 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
                         {errors.email && <p className="text-xs text-red-500 mt-1 ml-1">{errors.email.message}</p>}
                     </div>
 
+
                     <div className="space-y-1">
                         <label className="block text-xs font-bold uppercase text-slate-500 ml-1">Phone Number</label>
                         <input
@@ -133,6 +161,42 @@ export const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
                             placeholder="+91 80109 55675"
                         />
                         {errors.phone && <p className="text-xs text-red-500 mt-1 ml-1">{errors.phone.message}</p>}
+                    </div>
+
+                    <div className="space-y-1">
+                        <div className="flex items-center gap-2 ml-1">
+                            <input
+                                type="checkbox"
+                                id="isWhatsappSameBooking"
+                                {...register('isWhatsappSame')}
+                                className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary"
+                            />
+                            <label htmlFor="isWhatsappSameBooking" className="text-xs font-bold uppercase text-slate-500 cursor-pointer select-none">
+                                Same as WhatsApp Number
+                            </label>
+                        </div>
+                    </div>
+
+                    {!isWhatsappSame && (
+                        <div className="space-y-1 animate-in fade-in slide-in-from-top-1">
+                            <label className="block text-xs font-bold uppercase text-slate-500 ml-1">WhatsApp Number</label>
+                            <input
+                                {...register('whatsapp')}
+                                type="tel"
+                                className={`w-full rounded-xl border px-4 py-3 outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all font-medium ${errors.whatsapp ? 'border-red-300 bg-red-50' : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800'
+                                    }`}
+                                placeholder="WhatsApp Number"
+                            />
+                            {errors.whatsapp && <p className="text-xs text-red-500 mt-1 ml-1">{errors.whatsapp.message}</p>}
+                        </div>
+                    )}
+
+                    <div className="space-y-1">
+                        <label className="block text-xs font-bold uppercase text-slate-500 ml-1">Travelers</label>
+                        <TravelerSelector
+                            value={watch('travelers')}
+                            onChange={(val) => setValue('travelers', val)}
+                        />
                     </div>
 
                     <div className="space-y-1">

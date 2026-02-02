@@ -5,7 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useData } from '../../context/DataContext';
 
 export const AdminLayout: React.FC = () => {
-  const { currentUser, logout, isAuthenticated } = useAuth();
+  const { currentUser, logout, isAuthenticated, isMasquerading, stopMasquerading, realUser } = useAuth();
   const { bookings, leads } = useData(); // Connect to real data
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   // ... other state ...
@@ -96,6 +96,7 @@ export const AdminLayout: React.FC = () => {
       title: 'Growth',
       items: [
         { name: 'Leads CRM', path: '/admin/leads', icon: 'groups' },
+        { name: 'Customers', path: '/admin/customers', icon: 'face' },
         { name: 'Accounts', path: '/admin/accounts', icon: 'account_balance' },
       ]
     },
@@ -129,7 +130,19 @@ export const AdminLayout: React.FC = () => {
   if (!isAuthenticated || !currentUser) return null;
 
   return (
-    <div className="bg-slate-50 dark:bg-[#0B1116] text-slate-900 dark:text-slate-100 flex h-screen overflow-hidden font-sans">
+    <div className="bg-slate-50 dark:bg-[#0B1116] text-slate-900 dark:text-slate-100 flex h-screen overflow-hidden font-sans relative">
+      {/* Masquerade Banner */}
+      {isMasquerading && (
+        <div className="fixed top-0 left-0 right-0 h-8 bg-amber-400 text-amber-900 z-[200] flex items-center justify-center text-xs font-bold gap-4 shadow-sm animate-in slide-in-from-top">
+          <span className="flex items-center gap-1">
+            <span className="material-symbols-outlined text-[16px]">visibility</span>
+            Viewing system as {currentUser?.name}
+          </span>
+          <button onClick={stopMasquerading} className="bg-amber-900 text-white px-3 h-6 rounded-full hover:bg-black transition-colors flex items-center gap-1">
+            Exit View
+          </button>
+        </div>
+      )}
       {/* Mobile Sidebar Backdrop */}
       {isSidebarOpen && (
         <div

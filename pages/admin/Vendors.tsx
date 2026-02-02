@@ -384,7 +384,7 @@ export const Vendors: React.FC = () => {
             <div className="flex flex-col w-full">
 
                 {/* Compact Sticky Header */}
-                <div className="px-6 py-5 md:px-8 bg-white dark:bg-[#1A2633] border-b border-slate-200 dark:border-slate-800 shrink-0 sticky top-0 z-30 shadow-sm transition-all duration-200">
+                <div className="px-6 py-5 md:px-8 bg-white dark:bg-[#1A2633] border-b border-slate-200 dark:border-slate-800 shrink-0 shadow-sm transition-all duration-200">
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                         <div>
                             <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">Vendor Management</h1>

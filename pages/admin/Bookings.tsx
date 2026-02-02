@@ -3,9 +3,12 @@ import React, { useState, useEffect } from 'react';
 import { useData } from '../../context/DataContext';
 import { BookingStatus, Booking, BookingType } from '../../types';
 import { useLocation } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
+import { toast } from 'sonner';
 
 export const Bookings: React.FC = () => {
     const { bookings, packages, addBooking, updateBooking, deleteBooking } = useData();
+    const { currentUser } = useAuth();
     const location = useLocation();
     const [viewMode, setViewMode] = useState<'list' | 'board'>('list');
     const [activeTab, setActiveTab] = useState('All');
@@ -501,7 +504,13 @@ export const Bookings: React.FC = () => {
                                     </div>
                                     <div className="space-y-1">
                                         <label className="text-xs font-bold text-slate-500">Total Amount (₹)</label>
-                                        <input type="number" value={formData.amount} onChange={e => setFormData({ ...formData, amount: e.target.value })} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary outline-none" />
+                                        <input
+                                            type="number"
+                                            value={formData.amount}
+                                            onChange={e => setFormData({ ...formData, amount: e.target.value })}
+                                            className={`w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary outline-none ${isEditMode && currentUser?.userType !== 'Admin' ? 'opacity-60 cursor-not-allowed' : ''}`}
+                                            disabled={isEditMode && currentUser?.userType !== 'Admin'}
+                                        />
                                     </div>
                                 </div>
                             </div>
@@ -537,7 +546,7 @@ export const Bookings: React.FC = () => {
 
                             <div className="flex justify-between pt-4">
                                 {/* New Refund Button in Modal */}
-                                {formData.status === BookingStatus.CANCELLED && (formData.payment === 'Paid' || formData.payment === 'Deposit') ? (
+                                {currentUser?.userType === 'Admin' && formData.status === BookingStatus.CANCELLED && (formData.payment === 'Paid' || formData.payment === 'Deposit') ? (
                                     <button type="button" onClick={() => handleProcessRefund(formData.id)} className="px-6 py-2.5 rounded-xl border border-purple-200 bg-purple-50 text-purple-700 font-bold hover:bg-purple-100 transition-colors flex items-center gap-2">
                                         <span className="material-symbols-outlined text-[18px]">currency_exchange</span> Process Refund
                                     </button>
@@ -554,7 +563,7 @@ export const Bookings: React.FC = () => {
             )}
 
             {/* Main Header */}
-            <div className="px-4 md:px-8 py-6 border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-[#1A2633] sticky top-0 z-10">
+            <div className="px-4 md:px-8 py-6 border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-[#1A2633]">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div>
                         <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">Booking Management</h1>
@@ -578,8 +587,8 @@ export const Bookings: React.FC = () => {
                                 key={tab}
                                 onClick={() => setActiveTab(tab)}
                                 className={`px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-lg transition-all whitespace-nowrap ${activeTab === tab
-                                        ? 'bg-white dark:bg-[#1A2633] text-primary shadow-sm'
-                                        : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                                    ? 'bg-white dark:bg-[#1A2633] text-primary shadow-sm'
+                                    : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
                                     }`}
                             >
                                 {tab === 'All' ? 'All Bookings' : tab}

@@ -1,10 +1,13 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import { PillNav, PillNavItem } from '../ui/PillNav';
 import { UrgencyNotification } from '../ui/UrgencyNotification';
+import { COMPANY_EMAIL, COMPANY_PHONE, COMPANY_PHONE_DISPLAY } from '../../src/lib/constants';
+import { WhatsAppModal } from '../booking/WhatsAppModal';
 
 export const PublicLayout: React.FC = () => {
   const location = useLocation();
+  const [isWhatsAppOpen, setIsWhatsAppOpen] = useState(false);
 
   const navItems: PillNavItem[] = [
     { label: 'Home', href: '/' },
@@ -27,6 +30,8 @@ export const PublicLayout: React.FC = () => {
     <div className="flex flex-col min-h-screen font-sans bg-background-light dark:bg-slate-950 selection:bg-primary/30 text-slate-900 dark:text-slate-100">
       <UrgencyNotification />
 
+      <WhatsAppModal isOpen={isWhatsAppOpen} onClose={() => setIsWhatsAppOpen(false)} />
+
       {/* Floating Navigation */}
       <div className="fixed top-6 inset-x-0 z-50 flex justify-center px-4 pointer-events-none">
         <div className="pointer-events-auto w-full flex justify-center">
@@ -38,6 +43,19 @@ export const PublicLayout: React.FC = () => {
           />
         </div>
       </div>
+
+      {/* Floating WhatsApp Button */}
+      <button
+        onClick={() => setIsWhatsAppOpen(true)}
+        className="fixed bottom-6 right-6 z-[100] bg-[#25D366] text-white p-4 rounded-full shadow-2xl shadow-green-500/40 hover:scale-110 active:scale-95 transition-all duration-300 group flex items-center justify-center"
+        aria-label="Chat on WhatsApp"
+      >
+        {/* Using a font icon, assuming material symbols has something similar or sticking to 'chat' */}
+        <span className="material-symbols-outlined text-3xl">chat</span>
+        <span className="absolute right-full mr-4 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs font-bold px-3 py-2 rounded-xl shadow-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+          Chat with us
+        </span>
+      </button>
 
       {/* Main Content */}
       <main className="flex-grow">
@@ -89,8 +107,9 @@ export const PublicLayout: React.FC = () => {
             <div>
               <h4 className="font-bold text-slate-900 dark:text-white mb-6 uppercase text-xs tracking-[0.2em]">Contact</h4>
               <div className="space-y-4 text-slate-500 dark:text-slate-400 text-sm font-medium">
-                <a href="mailto:toursshravya@gmail.com" className="flex items-center gap-3 hover:text-primary transition-colors"><span className="material-symbols-outlined text-primary text-[20px]">mail</span> toursshravya@gmail.com</a>
-                <a href="tel:8010955675" className="flex items-center gap-3 hover:text-primary transition-colors"><span className="material-symbols-outlined text-primary text-[20px]">call</span> 80109 55675</a>
+                <a href={`mailto:${COMPANY_EMAIL}`} className="flex items-center gap-3 hover:text-primary transition-colors"><span className="material-symbols-outlined text-primary text-[20px]">mail</span> {COMPANY_EMAIL}</a>
+                {/* Clicking phone number also opens WhatsApp Modal for better lead capture? Or just calls? Keeping as call for now as standard behavior */}
+                <a href={`tel:${COMPANY_PHONE}`} className="flex items-center gap-3 hover:text-primary transition-colors"><span className="material-symbols-outlined text-primary text-[20px]">call</span> {COMPANY_PHONE_DISPLAY}</a>
                 <p className="flex items-center gap-3"><span className="material-symbols-outlined text-primary text-[20px]">location_on</span> Pune, Maharashtra</p>
               </div>
             </div>

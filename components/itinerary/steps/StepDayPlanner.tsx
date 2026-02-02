@@ -3,13 +3,16 @@ import { useItinerary, ItineraryItem, ServiceType } from '../ItineraryContext';
 import { ServiceSelector } from '../selectors/ServiceSelector';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { Plus, Hotel, Bike, Car, Plane, StickyNote, Trash2, Clock, DollarSign, MapPin, MoreVertical } from 'lucide-react';
+import { Plus, Hotel, Bike, Car, Plane, StickyNote, Trash2, Clock, DollarSign, MapPin, MoreVertical, Sparkles } from 'lucide-react';
+import { generateItinerary } from '../../../src/lib/gemini';
+import { toast } from 'sonner';
 
 gsap.registerPlugin(ScrollTrigger);
 
 export const StepDayPlanner: React.FC = () => {
-    const { tripDetails, getItemsForDay, setStep, removeItem, updateItem } = useItinerary();
+    const { tripDetails, getItemsForDay, setStep, removeItem, updateItem, replaceAllItems } = useItinerary();
     const [addingToDay, setAddingToDay] = useState<number | null>(null);
+    const [isGenerating, setIsGenerating] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
 
     const days = Array.from({ length: tripDetails.duration }, (_, i) => i + 1);
@@ -18,20 +21,88 @@ export const StepDayPlanner: React.FC = () => {
         setStep(3);
     };
 
+    const handleAutoGenerate = async () => {
+        if (!tripDetails.destination) {
+            toast.error("Please select a destination in Step 1 first.");
+            return;
+        }
+
+        setIsGenerating(true);
+        const toastId = toast.loading("Consulting our AI Travel Expert...");
+
+        try {
+            // Construct a guest string from the new counts
+            const guestStr = `${tripDetails.adults} Adults, ${tripDetails.children} Children`;
+
+            const result = await generateItinerary(
+                tripDetails.destination,
+                tripDetails.duration,
+                guestStr,
+                tripDetails.startDate
+            );
+
+            // Convert the AI response (simplified structure) to our ItineraryItem[]
+            const newItems: ItineraryItem[] = [];
+
+            result.days.forEach((day: any) => {
+                day.activities.forEach((act: any) => {
+                    newItems.push({
+                        id: `AI-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+                        type: 'activity', // Default to activity, AI can be smarter later
+                        day: day.day,
+                        title: act.description.split(':')[0] || "Activity", // Try to extract a short title
+                        description: act.description,
+                        cost: act.cost || 0,
+                        time: act.time,
+                        duration: '2 Hours' // Default
+                    });
+                });
+            });
+
+            replaceAllItems(newItems);
+            toast.dismiss(toastId);
+            toast.success("Itinerary generated successfully!");
+
+        } catch (error: any) {
+            console.error("Gemini Generation Error:", error);
+            console.error("Error Details:", JSON.stringify(error, null, 2));
+            toast.dismiss(toastId);
+
+            let errorMessage = error.message || error.toString();
+            if (errorMessage.includes("400")) errorMessage = "Bad Request (400). Invalid Prompt or Params.";
+            if (errorMessage.includes("403")) errorMessage = "Access Denied (403). API Key invalid or restricted.";
+            if (errorMessage.includes("Failed to fetch")) errorMessage = "Network Error. Check internet or ad-blockers.";
+
+            toast.error(errorMessage, { duration: 10000 }); // Show for 10 seconds
+        } finally {
+            setIsGenerating(false);
+        }
+    };
+
     return (
         <div ref={containerRef} className="h-full flex flex-col bg-slate-50 dark:bg-[#0B1116] relative">
 
             <div className="bg-white dark:bg-[#1A2633] px-4 py-3 md:px-6 md:py-3 border-b border-slate-200 dark:border-slate-800 shrink-0 flex items-center justify-between z-10 shadow-sm gap-2">
                 <div className="min-w-0">
                     <h2 className="text-sm md:text-base font-black text-slate-900 dark:text-white truncate">{tripDetails.title}</h2>
-                    <p className="text-[10px] md:text-xs font-medium text-slate-500 truncate">{tripDetails.duration} Days • {tripDetails.guests}</p>
+                    <p className="text-[10px] md:text-xs font-medium text-slate-500 truncate">{tripDetails.duration} Days • {tripDetails.adults} Adults, {tripDetails.children} Kids</p>
                 </div>
-                <button
-                    onClick={handleNext}
-                    className="bg-indigo-600 hover:bg-indigo-700 text-white text-[10px] md:text-xs font-bold px-3 py-2 md:px-4 md:py-2.5 rounded-lg transition-all shadow-lg shadow-indigo-600/20 active:scale-95 flex items-center gap-1 md:gap-2 shrink-0"
-                >
-                    Review <span className="hidden md:inline">Itinerary</span> <span className="material-symbols-outlined text-xs">arrow_forward</span>
-                </button>
+                <div className="flex items-center gap-2">
+                    <button
+                        onClick={handleAutoGenerate}
+                        disabled={isGenerating}
+                        className="bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white text-[10px] md:text-xs font-bold px-3 py-2 md:px-4 md:py-2.5 rounded-lg transition-all shadow-lg shadow-purple-600/20 active:scale-95 flex items-center gap-1 md:gap-2 shrink-0 border border-purple-500/50"
+                    >
+                        <Sparkles size={14} className={isGenerating ? "animate-spin" : ""} />
+                        <span className="hidden md:inline">{isGenerating ? 'Generating...' : 'Auto-Plan AI'}</span>
+                    </button>
+                    <button
+                        onClick={handleNext}
+                        className="bg-indigo-600 hover:bg-indigo-700 text-white text-[10px] md:text-xs font-bold px-3 py-2 md:px-4 md:py-2.5 rounded-lg transition-all shadow-lg shadow-indigo-600/20 active:scale-95 flex items-center gap-1 md:gap-2 shrink-0"
+                    >
+                        Review <span className="hidden md:inline">Itinerary</span> <span className="material-symbols-outlined text-xs">arrow_forward</span>
+                    </button>
+                </div>
             </div>
 
             {/* Scrollable Timeline Canvas */}

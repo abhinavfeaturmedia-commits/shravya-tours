@@ -90,8 +90,7 @@ export const StepTripDetails: React.FC = () => {
                             </div>
                         </div>
 
-                        {/* Duration & Guests Counters */}
-                        <div className="grid grid-cols-2 gap-4 md:gap-5 animate-item">
+                        <div className="grid grid-cols-2 gap-4 md:gap-5 animate-item z-20 relative">
                             <Counter
                                 label="Duration"
                                 icon={<Clock size={12} />}
@@ -99,18 +98,12 @@ export const StepTripDetails: React.FC = () => {
                                 onChange={(v) => updateTripDetails({ duration: v })}
                                 min={1}
                             />
-                            <div className="space-y-1.5">
-                                <label className="text-[10px] md:text-xs font-bold uppercase text-slate-400 tracking-wider flex items-center gap-1.5 truncate">
-                                    <Users size={12} /> Guests
-                                </label>
-                                <input
-                                    type="text"
-                                    placeholder="e.g. 2 Adults"
-                                    value={tripDetails.guests}
-                                    onChange={(e) => updateTripDetails({ guests: e.target.value })}
-                                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2.5 md:px-4 md:py-3 font-bold focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-xs md:text-sm"
-                                />
-                            </div>
+                            {/* Guest Selector */}
+                            <GuestSelector
+                                adults={tripDetails.adults || 2}
+                                childrenCount={tripDetails.children || 0}
+                                onChange={(a, c) => updateTripDetails({ adults: a, children: c })}
+                            />
                         </div>
 
                         {/* Image URL */}
@@ -188,6 +181,88 @@ const Counter: React.FC<{ label: string; icon: React.ReactNode; value: number; o
                     +
                 </button>
             </div>
+        </div>
+    );
+};
+
+const GuestSelector: React.FC<{
+    adults: number;
+    childrenCount: number;
+    onChange: (adults: number, children: number) => void
+}> = ({ adults, childrenCount, onChange }) => {
+    const [isOpen, setIsOpen] = React.useState(false);
+    const popoverRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (popoverRef.current && !popoverRef.current.contains(event.target as Node)) {
+                setIsOpen(false);
+            }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
+
+    const total = adults + childrenCount;
+    // Basic summary logic to show like "2 Adults, 1 Child"
+    const summary = `${adults} Adult${adults !== 1 ? 's' : ''}${childrenCount > 0 ? `, ${childrenCount} Child${childrenCount !== 1 ? 'ren' : ''}` : ''}`;
+
+    return (
+        <div className="space-y-1.5 relative" ref={popoverRef}>
+            <label className="text-[10px] md:text-xs font-bold uppercase text-slate-400 tracking-wider flex items-center gap-1.5 truncate">
+                <Users size={12} /> Guests
+            </label>
+            <button
+                type="button"
+                onClick={() => setIsOpen(!isOpen)}
+                className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2.5 md:px-4 md:py-[13px] font-bold text-left text-sm md:text-base focus:ring-2 focus:ring-indigo-500 outline-none transition-all flex justify-between items-center text-slate-900 dark:text-white"
+            >
+                <span>{summary}</span>
+                <span className="material-symbols-outlined text-[16px] text-slate-400">expand_more</span>
+            </button>
+
+            {/* Popover */}
+            {isOpen && (
+                <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-100 dark:border-slate-700 p-4 z-50 animate-in fade-in zoom-in-95">
+                    <div className="space-y-4">
+                        <div className="flex justify-between items-center">
+                            <div>
+                                <p className="text-sm font-bold text-slate-900 dark:text-white">Adults</p>
+                                <p className="text-[10px] text-slate-500">Age 13+</p>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <button
+                                    onClick={() => onChange(Math.max(1, adults - 1), childrenCount)}
+                                    className="size-8 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
+                                >-</button>
+                                <span className="w-4 text-center font-bold text-slate-900 dark:text-white">{adults}</span>
+                                <button
+                                    onClick={() => onChange(adults + 1, childrenCount)}
+                                    className="size-8 rounded-full bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors"
+                                >+</button>
+                            </div>
+                        </div>
+                        <div className="h-px bg-slate-100 dark:bg-slate-700"></div>
+                        <div className="flex justify-between items-center">
+                            <div>
+                                <p className="text-sm font-bold text-slate-900 dark:text-white">Children</p>
+                                <p className="text-[10px] text-slate-500">Age 2-12</p>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <button
+                                    onClick={() => onChange(adults, Math.max(0, childrenCount - 1))}
+                                    className="size-8 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
+                                >-</button>
+                                <span className="w-4 text-center font-bold text-slate-900 dark:text-white">{childrenCount}</span>
+                                <button
+                                    onClick={() => onChange(adults, childrenCount + 1)}
+                                    className="size-8 rounded-full bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors"
+                                >+</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

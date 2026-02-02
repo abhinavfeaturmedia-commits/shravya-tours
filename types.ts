@@ -68,6 +68,18 @@ export interface LeadLog {
   timestamp: string; // ISO String
 }
 
+
+
+export interface AuditLog {
+  id: string;
+  action: string; // e.g., "Deleted Lead", "Updated Staff"
+  module: string; // e.g., "Leads", "Staff", "Finance"
+  performedBy: string; // User Name
+  details: string;
+  timestamp: string;
+  severity: 'Info' | 'Warning' | 'Critical';
+}
+
 export interface Lead {
   id: string;
   name: string;
@@ -86,7 +98,30 @@ export interface Lead {
   preferences?: string;
   logs: LeadLog[];
   avatarColor?: string;
+  assignedTo?: number; // Staff ID
+  whatsapp?: string; // WhatsApp Number
+  isWhatsappSame?: boolean;
+  aiScore?: number; // 0-100
+  aiSummary?: string;
 }
+
+export interface Customer {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  location?: string;
+  type: 'New' | 'Returning' | 'VIP';
+  status: 'Active' | 'Inactive';
+  totalSpent: number;
+  bookingsCount: number;
+  joinedDate: string;
+  tags?: string[];
+  lastActive?: string;
+}
+
+
+
 
 export interface StaffModulePermissions {
   view: boolean;
@@ -108,18 +143,19 @@ export interface StaffPermissions {
 export interface StaffMember {
   id: number;
   name: string;
-  initials: string;
-  role: string; // Changed from literal to string to support "CEO (TravelBit Holidays)" etc.
-  userType: 'Staff' | 'Admin';
-  queryScope: 'Show Assigned Query Only' | 'Show All Queries';
-  whatsappScope: 'Assigned Queries Messages' | 'All Messages';
-  permissions: StaffPermissions;
-  department: 'Executive' | 'Sales' | 'Operations' | 'Marketing' | 'Support';
   email: string;
   phone?: string;
+  role: string;
+  userType: 'Staff' | 'Admin';
+  department: string;
   status: 'Active' | 'Inactive';
   lastActive: string;
+  initials: string;
   color: string;
+  currentSessionId?: string; // For single session enforcement
+  permissions?: StaffPermissions;
+  queryScope?: 'Show Assigned Query Only' | 'Show All Queries';
+  whatsappScope?: 'Assigned Queries Messages' | 'All Messages';
 }
 
 export interface DailySlot {

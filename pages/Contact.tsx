@@ -6,12 +6,24 @@ import { useData } from '../context/DataContext';
 import { Lead } from '../types';
 import { SEO } from '../components/ui/SEO';
 import { toast } from '../components/ui/Toast';
+import { COMPANY_EMAIL, COMPANY_PHONE_DISPLAY, COMPANY_ADDRESS } from '../src/lib/constants';
 
 // Validation schema
 const contactSchema = z.object({
     name: z.string().min(2, 'Name must be at least 2 characters'),
     email: z.string().email('Please enter a valid email address'),
+    phone: z.string().min(10, 'Phone must be at least 10 digits'),
+    isWhatsappSame: z.boolean(),
+    whatsapp: z.string().optional(),
     message: z.string().min(10, 'Message must be at least 10 characters'),
+}).refine((data) => {
+    if (!data.isWhatsappSame && (!data.whatsapp || data.whatsapp.length < 10)) {
+        return false;
+    }
+    return true;
+}, {
+    message: "WhatsApp number is required when it's different from phone number",
+    path: ["whatsapp"],
 });
 
 type ContactFormData = z.infer<typeof contactSchema>;
@@ -20,17 +32,28 @@ export const Contact: React.FC = () => {
     const { addLead } = useData();
     const [isSubmitted, setIsSubmitted] = useState(false);
 
-    const { register, handleSubmit, formState: { errors }, reset } = useForm<ContactFormData>({
+    const { register, handleSubmit, watch, formState: { errors }, reset } = useForm<ContactFormData>({
         resolver: zodResolver(contactSchema),
-        defaultValues: { name: '', email: '', message: '' }
+        defaultValues: {
+            name: '',
+            email: '',
+            phone: '',
+            isWhatsappSame: true,
+            whatsapp: '',
+            message: ''
+        }
     });
+
+    const isWhatsappSame = watch('isWhatsappSame');
 
     const onSubmit = (data: ContactFormData) => {
         const newLead: Lead = {
             id: `CNT-${Date.now()}`,
             name: data.name,
             email: data.email,
-            phone: 'N/A',
+            phone: data.phone,
+            whatsapp: data.isWhatsappSame ? data.phone : data.whatsapp,
+            isWhatsappSame: data.isWhatsappSame,
             destination: 'General Inquiry',
             type: 'Contact Form',
             status: 'New',
@@ -76,11 +99,12 @@ export const Contact: React.FC = () => {
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-24 items-start">
                         {/* Contact Info */}
                         <div className="space-y-10 animate-in slide-in-from-left-10 duration-700 delay-100">
+
                             <div className="space-y-8">
                                 {[
                                     { icon: 'location_on', title: 'Headquarters', text: 'Wisteria housing society, gaon,\nPatil Nagar, Patilnagar, Chikhali,\nPimpri-Chinchwad, Pune, Maharashtra 411062', color: 'blue' },
-                                    { icon: 'call', title: 'Phone Support', text: '80109 55675', color: 'green' },
-                                    { icon: 'mail', title: 'Email Us', text: 'toursshravya@gmail.com', color: 'purple' },
+                                    { icon: 'call', title: 'Phone Support', text: COMPANY_PHONE_DISPLAY, color: 'green' },
+                                    { icon: 'mail', title: 'Email Us', text: COMPANY_EMAIL, color: 'purple' },
                                 ].map((item, i) => (
                                     <div key={i} className="flex items-start gap-6 group">
                                         <div className={`size-16 rounded-2xl bg-${item.color}-50 dark:bg-${item.color}-900/10 flex items-center justify-center text-${item.color}-600 dark:text-${item.color}-400 shadow-sm group-hover:scale-110 transition-transform duration-300`}>
@@ -149,6 +173,44 @@ export const Contact: React.FC = () => {
                                                 <label htmlFor="email" className="absolute left-0 -top-3.5 text-xs font-bold text-slate-400 transition-all peer-placeholder-shown:text-base peer-placeholder-shown:text-slate-400 peer-placeholder-shown:top-3 peer-focus:-top-3.5 peer-focus:text-xs peer-focus:text-primary">Email Address</label>
                                                 {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email.message}</p>}
                                             </div>
+                                            <div className="relative group">
+                                                <input
+                                                    {...register('phone')}
+                                                    type="tel"
+                                                    className={`peer w-full bg-transparent border-b-2 ${errors.phone ? 'border-red-400' : 'border-slate-200 dark:border-slate-700'} py-3 text-lg font-medium text-slate-900 dark:text-white focus:border-primary focus:outline-none transition-colors placeholder-transparent`}
+                                                    placeholder="Phone"
+                                                    id="phone"
+                                                />
+                                                <label htmlFor="phone" className="absolute left-0 -top-3.5 text-xs font-bold text-slate-400 transition-all peer-placeholder-shown:text-base peer-placeholder-shown:text-slate-400 peer-placeholder-shown:top-3 peer-focus:-top-3.5 peer-focus:text-xs peer-focus:text-primary">Phone Number</label>
+                                                {errors.phone && <p className="text-red-500 text-xs mt-1">{errors.phone.message}</p>}
+                                            </div>
+
+                                            <div className="flex items-center gap-3">
+                                                <input
+                                                    type="checkbox"
+                                                    id="isWhatsappSame"
+                                                    {...register('isWhatsappSame')}
+                                                    className="w-5 h-5 rounded border-gray-300 text-primary focus:ring-primary"
+                                                />
+                                                <label htmlFor="isWhatsappSame" className="text-sm font-medium text-slate-700 dark:text-slate-300 cursor-pointer select-none">
+                                                    My WhatsApp number is the same as my phone number
+                                                </label>
+                                            </div>
+
+                                            {!isWhatsappSame && (
+                                                <div className="relative group animate-in fade-in slide-in-from-top-2">
+                                                    <input
+                                                        {...register('whatsapp')}
+                                                        type="tel"
+                                                        className={`peer w-full bg-transparent border-b-2 ${errors.whatsapp ? 'border-red-400' : 'border-slate-200 dark:border-slate-700'} py-3 text-lg font-medium text-slate-900 dark:text-white focus:border-primary focus:outline-none transition-colors placeholder-transparent`}
+                                                        placeholder="WhatsApp"
+                                                        id="whatsapp"
+                                                    />
+                                                    <label htmlFor="whatsapp" className="absolute left-0 -top-3.5 text-xs font-bold text-slate-400 transition-all peer-placeholder-shown:text-base peer-placeholder-shown:text-slate-400 peer-placeholder-shown:top-3 peer-focus:-top-3.5 peer-focus:text-xs peer-focus:text-primary">WhatsApp Number</label>
+                                                    {errors.whatsapp && <p className="text-red-500 text-xs mt-1">{errors.whatsapp.message}</p>}
+                                                </div>
+                                            )}
+
                                             <div className="relative group">
                                                 <textarea
                                                     {...register('message')}

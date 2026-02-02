@@ -28,10 +28,13 @@ interface TripDetails {
     duration: number; // Total days
     destination: string;
     coverImage: string;
-    guests: string;
+    // guests: string; // Deprecated
+    adults: number;
+    children: number;
 }
 
 interface ItineraryContextType {
+    // ... existing ...
     // State
     step: number;
     tripDetails: TripDetails;
@@ -46,6 +49,7 @@ interface ItineraryContextType {
     addItem: (item: ItineraryItem) => void;
     updateItem: (id: string, updates: Partial<ItineraryItem>) => void;
     removeItem: (id: string) => void;
+    replaceAllItems: (items: ItineraryItem[]) => void;
     reorderItems: (destDay: number, newOrder: ItineraryItem[]) => void;
 
     // Helpers
@@ -75,7 +79,8 @@ export const ItineraryProvider: React.FC<{ children: ReactNode }> = ({ children 
         duration: 3,
         destination: '',
         coverImage: 'https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?q=80&w=2070&auto=format&fit=crop', // Default beautiful travel image
-        guests: '2 Adults'
+        adults: 2,
+        children: 0
     });
 
     // Calculate Total Cost
@@ -95,6 +100,10 @@ export const ItineraryProvider: React.FC<{ children: ReactNode }> = ({ children 
 
     const removeItem = (id: string) => {
         setItems(prev => prev.filter(item => item.id !== id));
+    };
+
+    const replaceAllItems = (newItems: ItineraryItem[]) => {
+        setItems(newItems);
     };
 
     // Reorder is a bit complex across days, simplistic implementation for now:
@@ -123,6 +132,7 @@ export const ItineraryProvider: React.FC<{ children: ReactNode }> = ({ children 
         addItem,
         updateItem,
         removeItem,
+        replaceAllItems,
         reorderItems,
         getItemsForDay
     };

@@ -5,6 +5,7 @@ import { Lead } from '../types';
 import { SEO } from '../components/ui/SEO';
 import { OptimizedImage } from '../components/ui/OptimizedImage';
 import { toast } from '../components/ui/Toast';
+import { TravelerSelector } from '../components/ui/TravelerSelector';
 
 export const PackageDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -13,7 +14,14 @@ export const PackageDetail: React.FC = () => {
 
   const [guests, setGuests] = useState('2 Adults');
   const [bookingModal, setBookingModal] = useState(false);
-  const [bookingData, setBookingData] = useState({ name: '', email: '', phone: '', date: '' });
+  const [bookingData, setBookingData] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    isWhatsappSame: true,
+    whatsapp: '',
+    date: ''
+  });
 
   // Customization State
   const [selectedAddons, setSelectedAddons] = useState<string[]>([]);
@@ -113,13 +121,16 @@ export const PackageDetail: React.FC = () => {
   };
 
   const getGuestMultiplier = () => {
-    switch (guests) {
-      case '1 Adult': return 1.2; // Single supplement (+20%)
-      case '2 Adults': return 2;  // Standard for 2 people
-      case 'Family (2A + 1C)': return 2.5; // Child at 50%
-      case 'Family (2A + 2C)': return 3.0; // 2 Children at 50% each
-      default: return 2;
-    }
+    const adultsMatch = guests.match(/(\d+)\s*Adults?/i);
+    const childrenMatch = guests.match(/(\d+)\s*Child(ren)?/i);
+
+    const adults = adultsMatch ? parseInt(adultsMatch[1]) : 2;
+    const children = childrenMatch ? parseInt(childrenMatch[1]) : 0;
+
+    const totalPeople = adults + children;
+
+    if (totalPeople === 1) return 1.2; // Single supplement
+    return (adults * 1) + (children * 0.5);
   };
 
   const calculateTotal = () => {
@@ -142,6 +153,8 @@ export const PackageDetail: React.FC = () => {
       name: bookingData.name,
       email: bookingData.email,
       phone: bookingData.phone,
+      whatsapp: bookingData.isWhatsappSame ? bookingData.phone : bookingData.whatsapp,
+      isWhatsappSame: bookingData.isWhatsappSame,
       destination: tour.title,
       startDate: bookingData.date,
       type: 'Tour Package',
@@ -242,6 +255,37 @@ export const PackageDetail: React.FC = () => {
                   <label className="block text-xs font-bold uppercase text-slate-500 pl-1">Mobile Number</label>
                   <input required type="tel" pattern="[0-9]{10,15}" placeholder="+91 80109 55675" className="w-full rounded-xl border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-3.5 font-medium outline-none focus:ring-2 focus:ring-primary transition-all" value={bookingData.phone} onChange={e => setBookingData({ ...bookingData, phone: e.target.value })} />
                 </div>
+
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 pl-1">
+                    <input
+                      type="checkbox"
+                      id="isWhatsappSamePackage"
+                      checked={bookingData.isWhatsappSame}
+                      onChange={e => setBookingData({ ...bookingData, isWhatsappSame: e.target.checked })}
+                      className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary"
+                    />
+                    <label htmlFor="isWhatsappSamePackage" className="text-xs font-bold uppercase text-slate-500 cursor-pointer select-none">
+                      Same as WhatsApp Number
+                    </label>
+                  </div>
+
+                  {!bookingData.isWhatsappSame && (
+                    <div className="space-y-1 animate-in fade-in slide-in-from-top-1">
+                      <label className="block text-xs font-bold uppercase text-slate-500 pl-1">WhatsApp Number</label>
+                      <input
+                        required={!bookingData.isWhatsappSame}
+                        type="tel"
+                        pattern="[0-9]{10,15}"
+                        placeholder="WhatsApp Number"
+                        className="w-full rounded-xl border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-3.5 font-medium outline-none focus:ring-2 focus:ring-primary transition-all"
+                        value={bookingData.whatsapp}
+                        onChange={e => setBookingData({ ...bookingData, whatsapp: e.target.value })}
+                      />
+                    </div>
+                  )}
+                </div>
+
                 <div className="space-y-1">
                   <label className="block text-xs font-bold uppercase text-slate-500 pl-1">Travel Date</label>
                   <input required type="date" min={today} className="w-full rounded-xl border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-3.5 font-medium outline-none focus:ring-2 focus:ring-primary transition-all" value={bookingData.date} onChange={e => setBookingData({ ...bookingData, date: e.target.value })} />
@@ -453,17 +497,10 @@ export const PackageDetail: React.FC = () => {
                     <div>
                       <label className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-3 ml-1">Travelers</label>
                       <div className="relative">
-                        <select
+                        <TravelerSelector
                           value={guests}
-                          onChange={(e) => setGuests(e.target.value)}
-                          className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl py-4 pl-5 pr-10 font-bold text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-primary appearance-none cursor-pointer transition-all hover:bg-slate-100 dark:hover:bg-slate-900"
-                        >
-                          <option>2 Adults</option>
-                          <option>1 Adult</option>
-                          <option>Family (2A + 1C)</option>
-                          <option>Family (2A + 2C)</option>
-                        </select>
-                        <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">expand_more</span>
+                          onChange={(val) => setGuests(val)}
+                        />
                       </div>
                     </div>
 

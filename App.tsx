@@ -23,6 +23,7 @@ const ItineraryBuilder = lazy(() => import('./pages/admin/ItineraryBuilder').the
 const StaffManagement = lazy(() => import('./pages/admin/StaffManagement').then(module => ({ default: module.StaffManagement })));
 const Bookings = lazy(() => import('./pages/admin/Bookings').then(module => ({ default: module.Bookings })));
 const AdminLeads = lazy(() => import('./pages/admin/Leads').then(module => ({ default: module.Leads })));
+const AdminCustomers = lazy(() => import('./pages/admin/Customers').then(module => ({ default: module.Customers })));
 const AdminPackages = lazy(() => import('./pages/admin/Packages').then(module => ({ default: module.AdminPackages })));
 const Vendors = lazy(() => import('./pages/admin/Vendors').then(module => ({ default: module.Vendors })));
 const AdminAccounts = lazy(() => import('./pages/admin/Accounts').then(module => ({ default: module.Accounts })));
@@ -69,6 +70,7 @@ const App: React.FC = () => {
                   <Route path="itinerary-builder" element={<ItineraryBuilder />} />
                   <Route path="accounts" element={<AdminAccounts />} />
                   <Route path="leads" element={<AdminLeads />} />
+                  <Route path="customers" element={<AdminCustomers />} />
                   <Route path="staff" element={<StaffManagement />} />
                   <Route path="packages" element={<AdminPackages />} />
                   <Route path="masters" element={<Masters />} />
