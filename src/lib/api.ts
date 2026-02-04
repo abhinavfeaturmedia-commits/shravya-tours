@@ -1,6 +1,5 @@
-
 import { supabase } from './supabase';
-import { Package, Booking, Lead, BookingStatus } from '../../types';
+import { Package, Booking, Lead, BookingStatus, StaffMember, Customer } from '../../types';
 
 // Helper to map DB row to Package type
 const mapPackage = (row: any): Package => ({
@@ -17,8 +16,6 @@ const mapPackage = (row: any): Package => ({
     itinerary: [], // Need separate table or JSON column
     gallery: [],
     theme: 'Tour',
-    rating: '4.5',
-    reviews: '0',
     overview: row.description || '',
     status: 'Active'
 });
@@ -227,6 +224,86 @@ export const api = {
             email: acc.email,
             phone: acc.phone
         }).select().single();
+        if (error) throw error;
+        return data;
+    },
+
+    // --- STAFF ---
+    getStaff: async (): Promise<StaffMember[]> => {
+        const { data, error } = await supabase.from('staff_members').select('*').order('created_at', { ascending: false });
+        if (error) throw error;
+        return (data || []).map((s: any) => ({
+            id: s.id,
+            name: s.name,
+            email: s.email,
+            role: s.role,
+            userType: s.user_type,
+            department: s.department,
+            status: s.status,
+            initials: s.initials,
+            color: s.color,
+            permissions: s.permissions,
+            queryScope: s.query_scope,
+            whatsappScope: s.whatsapp_scope,
+            lastActive: s.last_active
+        }));
+    },
+
+    createStaff: async (staff: Partial<StaffMember>) => {
+        const { data, error } = await supabase.from('staff_members').insert({
+            name: staff.name,
+            email: staff.email,
+            role: staff.role,
+            user_type: staff.userType,
+            department: staff.department,
+            status: staff.status,
+            initials: staff.initials,
+            color: staff.color,
+            permissions: staff.permissions,
+            query_scope: staff.queryScope,
+            whatsapp_scope: staff.whatsappScope
+        }).select().single();
+        if (error) throw error;
+        return data;
+    },
+
+    updateStaff: async (id: number, updates: Partial<StaffMember>) => {
+        const dbUpdates: any = {};
+        if (updates.name) dbUpdates.name = updates.name;
+        if (updates.role) dbUpdates.role = updates.role;
+        if (updates.permissions) dbUpdates.permissions = updates.permissions;
+        // ... map other fields
+
+        const { error } = await supabase.from('staff_members').update(dbUpdates).eq('id', id);
+        if (error) throw error;
+    },
+
+    deleteStaff: async (id: number) => {
+        const { error } = await supabase.from('staff_members').delete().eq('id', id);
+        if (error) throw error;
+    },
+
+    // --- CUSTOMERS ---
+    getCustomers: async (): Promise<Customer[]> => {
+        const { data, error } = await supabase.from('customers').select('*').order('created_at', { ascending: false });
+        if (error) throw error;
+        return (data || []).map((c: any) => ({
+            id: c.id,
+            name: c.name,
+            email: c.email,
+            phone: c.phone,
+            location: c.location,
+            type: c.type,
+            status: c.status,
+            totalSpent: c.total_spent,
+            bookingsCount: c.bookings_count,
+            joinedDate: c.created_at
+        }));
+    },
+
+    // --- MASTERS ---
+    getLocations: async () => {
+        const { data, error } = await supabase.from('master_locations').select('*');
         if (error) throw error;
         return data;
     }

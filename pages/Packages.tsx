@@ -279,7 +279,6 @@ export const Packages: React.FC = () => {
                         <div className="absolute bottom-0 left-0 right-0 p-6 text-white translate-y-2 group-hover:translate-y-0 transition-transform duration-500">
                           <div className="flex items-center gap-2 mb-2 opacity-0 group-hover:opacity-100 transition-opacity duration-500 delay-100">
                             <span className="flex items-center gap-1 text-xs font-bold bg-white/20 backdrop-blur-md px-2 py-1 rounded-md"><span className="material-symbols-outlined text-[14px]">schedule</span> {pkg.days} Days</span>
-                            <span className="flex items-center gap-1 text-xs font-bold bg-white/20 backdrop-blur-md px-2 py-1 rounded-md"><span className="material-symbols-outlined text-[14px]">star</span> {pkg.rating}</span>
                           </div>
                           <h3 className="font-black text-2xl leading-tight shadow-black drop-shadow-md mb-1">{pkg.title}</h3>
                           <p className="text-white/80 text-sm font-medium flex items-center gap-1"><span className="material-symbols-outlined text-[16px]">location_on</span> {pkg.location}</p>

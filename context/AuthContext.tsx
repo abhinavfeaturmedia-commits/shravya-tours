@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { StaffMember, StaffPermissions } from '../types';
 import { supabase } from '../src/lib/supabase';
+import { api } from '../src/lib/api'; // Import api helper
 
 // Helper for localStorage
 const STORAGE_KEY = 'shravya_auth_data';
@@ -64,37 +65,27 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    // Keep staff list for permission mapping (Hybrid approach)
-    // Load staff from local storage or use empty array
-    const [staff, setStaff] = useState<StaffMember[]>(() => loadFromStorage(STORAGE_KEY, INITIAL_STAFF));
+    const [staff, setStaff] = useState<StaffMember[]>([]);
     const [currentUser, setCurrentUser] = useState<StaffMember | null>(null);
     const [loading, setLoading] = useState(true);
 
-    // Persist staff changes to localStorage
-    useEffect(() => {
-        saveToStorage(STORAGE_KEY, staff);
-    }, [staff]);
-
-    // Keep a Ref for event listeners to read fresh state without re-binding
-    const staffRef = React.useRef(staff);
-    useEffect(() => { staffRef.current = staff; }, [staff]);
-
-    // Cleanup Logic: Deduplicate on load (One-time fix for existing messed up data)
-    useEffect(() => {
-        const unique = new Map();
-        let hasDupes = false;
-        staff.forEach(s => {
-            if (!unique.has(s.email.toLowerCase())) {
-                unique.set(s.email.toLowerCase(), s);
-            } else {
-                hasDupes = true;
-            }
-        });
-        if (hasDupes) {
-            console.log('Cleaning up duplicate staff entries...');
-            setStaff(Array.from(unique.values()));
+    // Initial Load - Fetch from Supabase
+    const fetchStaff = useCallback(async () => {
+        try {
+            const data = await api.getStaff();
+            setStaff(data);
+        } catch (e) {
+            console.error('Failed to fetch staff:', e);
         }
     }, []);
+
+    useEffect(() => {
+        fetchStaff();
+    }, [fetchStaff]);
+
+    // Keep a Ref for event listeners
+    const staffRef = React.useRef(staff);
+    useEffect(() => { staffRef.current = staff; }, [staff]);
 
     // Initialize Supabase Auth
     useEffect(() => {
@@ -122,15 +113,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return () => subscription.unsubscribe();
     }, []);
 
-    // Re-run mapping if staff list changes (e.g. after adding a new user) while logged in
+    // Re-run mapping if staff list changes
     useEffect(() => {
         supabase.auth.getSession().then(({ data: { session } }) => {
             if (session?.user && !currentUser) {
-                // Try mapping again if we don't have a currentUser but have a session
-                // This handles the case where Staff list was updated
                 mapUserToStaff(session.user.email);
             } else if (session?.user && currentUser) {
-                // Ensure current user data is up to date with staff list
                 const updatedUser = staff.find(s => s.email.toLowerCase() === session.user.email?.toLowerCase());
                 if (updatedUser && JSON.stringify(updatedUser) !== JSON.stringify(currentUser)) {
                     setCurrentUser(updatedUser);
@@ -139,78 +127,61 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         });
     }, [staff]);
 
-
-    const mapUserToStaff = (email: string | undefined) => {
+    const mapUserToStaff = async (email: string | undefined) => {
         if (!email) return;
 
-        // USE REF TO PREVENT CLOSURE STALENESS
-        const currentList = staffRef.current;
+        // Note: In a real app, we might need to await fetchStaff() if it hasn't finished,
+        // but for now we rely on the staff state being populated shortly.
+        // A better approach is to fetch 'me' from an API endpoint, but we are simulating 'mapping'.
+
+        // Wait briefly for staff to load if empty (race condition hack for MVP)
+        let currentList = staffRef.current;
+        if (currentList.length === 0) {
+            const fresh = await api.getStaff();
+            setStaff(fresh);
+            currentList = fresh;
+        }
+
         const matchedStaff = currentList.find(s => s.email.toLowerCase() === email.toLowerCase());
 
         if (matchedStaff) {
             setCurrentUser(matchedStaff);
         } else {
-            // Check again robustly before adding
-            // It's possible the ref is slightly stale if multiple events fired rapidly, 
-            // but for normal auth flows this is sufficient.
+            // New User Logic - Create in DB
+            const isFirstUser = currentList.length === 0;
+            const isAdminEmail = email === 'toursshravya@gmail.com';
 
-            setStaff(prev => {
-                // Double check inside the updater to be 100% sure
-                if (prev.find(s => s.email.toLowerCase() === email.toLowerCase())) {
-                    return prev;
-                }
+            const newStaff: Partial<StaffMember> = {
+                name: email.split('@')[0],
+                email: email,
+                role: (isFirstUser || isAdminEmail) ? 'Administrator' : 'Agent',
+                userType: (isFirstUser || isAdminEmail) ? 'Admin' : 'Staff',
+                initials: email.substring(0, 2).toUpperCase(),
+                department: (isFirstUser || isAdminEmail) ? 'Executive' : 'Sales',
+                status: 'Active',
+                color: 'indigo',
+                queryScope: 'Show All Queries',
+                whatsappScope: 'All Messages',
+                permissions: (isFirstUser || isAdminEmail) ? ADMIN_PERMISSIONS : DEFAULT_PERMISSIONS
+            };
 
-                // New User Logic
-                const isFirstUser = prev.length === 0;
-                const isAdminEmail = email === 'toursshravya@gmail.com';
-
-                const newStaff: StaffMember = {
-                    id: Date.now(),
-                    name: email.split('@')[0],
-                    email: email,
-                    role: (isFirstUser || isAdminEmail) ? 'Administrator' : 'Agent',
-                    userType: (isFirstUser || isAdminEmail) ? 'Admin' : 'Staff',
-                    initials: email.substring(0, 2).toUpperCase(),
-                    department: (isFirstUser || isAdminEmail) ? 'Executive' : 'Sales',
-                    status: 'Active',
-                    lastActive: 'Now',
-                    color: 'indigo',
-                    queryScope: 'Show All Queries',
-                    whatsappScope: 'All Messages',
-                    permissions: (isFirstUser || isAdminEmail) ? ADMIN_PERMISSIONS : DEFAULT_PERMISSIONS
-                };
-
-                setCurrentUser(newStaff);
-                return [...prev, newStaff];
-            });
+            try {
+                const created = await api.createStaff(newStaff as any); // Type assertion for partial
+                setStaff(prev => [created, ...prev]);
+                setCurrentUser(created);
+            } catch (e) {
+                console.error("Failed to auto-create staff", e);
+            }
         }
         setLoading(false);
     };
 
     const login = useCallback(async (email: string, password: string): Promise<boolean> => {
-        const { error } = await supabase.auth.signInWithPassword({
-            email,
-            password
-        });
-
+        const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) {
             console.error('Login failed:', error.message);
             return false;
         }
-
-        // --- Single Session Logic ---
-        // Generates a new Session ID and updates the "Central" staff record.
-        // Any other active instance will detect this change and log out.
-        const newSessionId = `sess_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-        sessionStorage.setItem('shravya_session_id', newSessionId);
-
-        setStaff(prev => prev.map(s => {
-            if (s.email.toLowerCase() === email.toLowerCase()) {
-                return { ...s, currentSessionId: newSessionId, lastActive: 'Now' };
-            }
-            return s;
-        }));
-
         return true;
     }, []);
 
@@ -219,44 +190,37 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setCurrentUser(null);
     }, []);
 
-    // Session Enforcement Effect
-    useEffect(() => {
-        const checkSession = () => {
-            if (!currentUser) return;
+    const addStaff = useCallback(async (member: StaffMember) => {
+        try {
+            // We use api.createStaff usually, but context might call this for UI optimism?
+            // Let's assume the component calls API and simpler updates list.
+            // Actually, components should call Context.addStaff -> Context calls API -> Context updates state.
+            const created = await api.createStaff(member);
+            setStaff(prev => [created, ...prev]);
+        } catch (e) { console.error(e); }
+    }, []);
 
-            // Find the "True" record from the shared state
-            const trueRecord = staff.find(s => s.id === currentUser.id);
-            if (!trueRecord) return;
+    const updateStaff = useCallback(async (id: number, member: Partial<StaffMember>) => {
+        try {
+            await api.updateStaff(id, member);
+            setStaff(prev => prev.map(s => s.id === id ? { ...s, ...member } : s));
+        } catch (e) { console.error(e); }
+    }, []);
 
-            const mySessionId = sessionStorage.getItem('shravya_session_id');
+    const deleteStaff = useCallback(async (id: number) => {
+        try {
+            await api.deleteStaff(id);
+            setStaff(prev => prev.filter(s => s.id !== id));
+        } catch (e) { console.error(e); }
+    }, []);
 
-            // If the record has a session ID (someone logged in) AND it doesn't match ours
-            if (trueRecord.currentSessionId && trueRecord.currentSessionId !== mySessionId) {
-                console.warn('Session mismatch! forcing logout.');
-                alert('You have been logged out because this account was accessed from another device or location.');
-                logout();
-            }
-        };
-
-        const interval = setInterval(checkSession, 2000); // Check every 2 seconds
-        return () => clearInterval(interval);
-    }, [currentUser, staff, logout]);
-
-    const addStaff = useCallback((member: StaffMember) => setStaff(prev => [member, ...prev]), []);
-    const updateStaff = useCallback((id: number, member: Partial<StaffMember>) => setStaff(prev => prev.map(s => s.id === id ? { ...s, ...member } : s)), []);
-    const deleteStaff = useCallback((id: number) => setStaff(prev => prev.filter(s => s.id !== id)), []);
-
-    // Masquerade Logic
+    // Masquerade Logic (Client-side mainly)
     const [realUser, setRealUser] = useState<StaffMember | null>(null);
 
     const masqueradeAs = useCallback((staffId: number) => {
-        // Can only masquerade if you are an Admin AND not already masquerading (or switch?)
-        // For simplicity, verify current actual user is admin.
-        // Since currentUser changes, we should ideally check realUser or rely on UI to hide button.
-        // Here we just check if target exists.
         const target = staff.find(s => s.id === staffId);
         if (target) {
-            if (!realUser) setRealUser(currentUser); // Save original admin
+            if (!realUser) setRealUser(currentUser);
             setCurrentUser(target);
         }
     }, [currentUser, staff, realUser]);

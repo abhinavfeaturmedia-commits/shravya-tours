@@ -210,197 +210,200 @@ interface DataContextType {
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
 
-export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Core Data (fetched from API)
-  const [packages, setPackages] = useState<Package[]>([]);
-  const [bookings, setBookings] = useState<Booking[]>([]);
-  const [leads, setLeads] = useState<Lead[]>([]);
+// Core Data (fetched from API)
+const [packages, setPackages] = useState<Package[]>([]);
+const [bookings, setBookings] = useState<Booking[]>([]);
+const [leads, setLeads] = useState<Lead[]>([]);
+const [vendors, setVendors] = useState<Vendor[]>([]);
+const [accounts, setAccounts] = useState<Account[]>([]);
+const [customers, setCustomers] = useState<Customer[]>([]);
+const [masterLocations, setMasterLocations] = useState<MasterLocation[]>([]);
 
-  // Local/Mock Secondary Data
-  const [vendors, setVendors] = useState<Vendor[]>(() => loadFromStorage(`${STORAGE_KEY}_vendors`, INITIAL_VENDORS));
-  const [accounts, setAccounts] = useState<Account[]>(() => loadFromStorage(`${STORAGE_KEY}_accounts`, INITIAL_ACCOUNTS));
-  const [campaigns, setCampaigns] = useState<Campaign[]>(() => loadFromStorage(`${STORAGE_KEY}_campaigns`, INITIAL_CAMPAIGNS));
-  const [customers, setCustomers] = useState<Customer[]>(() => loadFromStorage(`${STORAGE_KEY}_customers`, INITIAL_CUSTOMERS));
+// Local/Mock Secondary Data (Keep these local for now until migrated)
+const [campaigns, setCampaigns] = useState<Campaign[]>(() => loadFromStorage(`${STORAGE_KEY}_campaigns`, INITIAL_CAMPAIGNS));
+const [auditLogs, setAuditLogs] = useState<AuditLog[]>(() => loadFromStorage<AuditLog[]>('shravya_audit_logs', []));
 
-  const [auditLogs, setAuditLogs] = useState<AuditLog[]>(() => loadFromStorage<AuditLog[]>('shravya_audit_logs', []));
+// Master Data State (Keep local except Locations)
+const [masterHotels, setMasterHotels] = useState<MasterHotel[]>(() => loadFromStorage(`${STORAGE_KEY}_m_hotels`, INITIAL_MASTER_HOTELS));
+const [masterActivities, setMasterActivities] = useState<MasterActivity[]>(() => loadFromStorage(`${STORAGE_KEY}_m_activities`, INITIAL_MASTER_ACTIVITIES));
+const [masterTransports, setMasterTransports] = useState<MasterTransport[]>(() => loadFromStorage(`${STORAGE_KEY}_m_transports`, INITIAL_MASTER_TRANSPORT));
+const [masterPlans, setMasterPlans] = useState<MasterPlan[]>(() => loadFromStorage(`${STORAGE_KEY}_m_plans`, INITIAL_MASTER_PLANS));
 
-  // Master Data State
-  const [masterLocations, setMasterLocations] = useState<MasterLocation[]>(() => loadFromStorage(`${STORAGE_KEY}_m_locations`, INITIAL_MASTER_LOCATIONS));
-  const [masterHotels, setMasterHotels] = useState<MasterHotel[]>(() => loadFromStorage(`${STORAGE_KEY}_m_hotels`, INITIAL_MASTER_HOTELS));
-  const [masterActivities, setMasterActivities] = useState<MasterActivity[]>(() => loadFromStorage(`${STORAGE_KEY}_m_activities`, INITIAL_MASTER_ACTIVITIES));
-  const [masterTransports, setMasterTransports] = useState<MasterTransport[]>(() => loadFromStorage(`${STORAGE_KEY}_m_transports`, INITIAL_MASTER_TRANSPORT));
-  const [masterPlans, setMasterPlans] = useState<MasterPlan[]>(() => loadFromStorage(`${STORAGE_KEY}_m_plans`, INITIAL_MASTER_PLANS));
+// Inventory
+const [inventory, setInventory] = useState<Record<number, DailySlot>>(() => {
+  const saved = loadFromStorage<Record<number, DailySlot> | null>(`${STORAGE_KEY}_inventory`, null);
+  if (saved) return saved;
+  const initialInv: Record<number, DailySlot> = {};
+  const now = new Date();
+  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  for (let i = 1; i <= daysInMonth; i++) {
+    initialInv[i] = { date: i, capacity: 20, booked: Math.floor(Math.random() * 3), price: 35000, isBlocked: false };
+  }
+  return initialInv;
+});
 
-  // Inventory
-  const [inventory, setInventory] = useState<Record<number, DailySlot>>(() => {
-    const saved = loadFromStorage<Record<number, DailySlot> | null>(`${STORAGE_KEY}_inventory`, null);
-    if (saved) return saved;
-    const initialInv: Record<number, DailySlot> = {};
-    const now = new Date();
-    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-    for (let i = 1; i <= daysInMonth; i++) {
-      initialInv[i] = { date: i, capacity: 20, booked: Math.floor(Math.random() * 3), price: 35000, isBlocked: false };
+// Load Real Data
+useEffect(() => {
+  const loadRealData = async () => {
+    try {
+      const pkgs = await api.getPackages();
+      setPackages(pkgs);
+    } catch (e) {
+      console.error("Failed to load packages", e);
     }
-    return initialInv;
-  });
 
-  // Load Real Data
-  useEffect(() => {
-    const loadRealData = async () => {
-      try {
-        const pkgs = await api.getPackages();
-        setPackages(pkgs);
-      } catch (e) {
-        console.error("Failed to load packages", e);
-      }
-      try {
-        const [b, l] = await Promise.all([
-          api.getBookings().catch(() => []),
-          api.getLeads().catch(() => [])
-        ]);
-        setBookings(b);
-        setLeads(l);
-      } catch (e) {
-        console.warn("Auth required for some data");
-      }
-    };
-    loadRealData();
-  }, []);
+    // Load Authorized Data
+    try {
+      const [b, l, v, a, c, locs] = await Promise.all([
+        api.getBookings().catch(() => []),
+        api.getLeads().catch(() => []),
+        api.getVendors().catch(() => []),
+        api.getAccounts().catch(() => []),
+        api.getCustomers().catch(() => []),
+        api.getLocations().catch(() => [])
+      ]);
+      setBookings(b);
+      setLeads(l);
+      setVendors(v as Vendor[]);
+      setAccounts(a as Account[]);
+      setCustomers(c);
+      setMasterLocations(locs as MasterLocation[]);
+    } catch (e) {
+      console.warn("Auth required or network error for some data");
+    }
+  };
+  loadRealData();
+}, []);
 
-  // Persistence Effects
-  useEffect(() => { saveToStorage(`${STORAGE_KEY}_vendors`, vendors); }, [vendors]);
-  useEffect(() => { saveToStorage(`${STORAGE_KEY}_accounts`, accounts); }, [accounts]);
-  useEffect(() => { saveToStorage(`${STORAGE_KEY}_campaigns`, campaigns); }, [campaigns]);
-  useEffect(() => { saveToStorage(`${STORAGE_KEY}_customers`, customers); }, [customers]);
+// Persistence Effects (Only for non-migrated data)
+useEffect(() => { saveToStorage(`${STORAGE_KEY}_campaigns`, campaigns); }, [campaigns]);
+useEffect(() => { saveToStorage(`${STORAGE_KEY}_m_hotels`, masterHotels); }, [masterHotels]);
+useEffect(() => { saveToStorage(`${STORAGE_KEY}_m_activities`, masterActivities); }, [masterActivities]);
+useEffect(() => { saveToStorage(`${STORAGE_KEY}_m_transports`, masterTransports); }, [masterTransports]);
+useEffect(() => { saveToStorage(`${STORAGE_KEY}_m_plans`, masterPlans); }, [masterPlans]);
 
-  useEffect(() => { saveToStorage(`${STORAGE_KEY}_m_locations`, masterLocations); }, [masterLocations]);
-  useEffect(() => { saveToStorage(`${STORAGE_KEY}_m_hotels`, masterHotels); }, [masterHotels]);
-  useEffect(() => { saveToStorage(`${STORAGE_KEY}_m_activities`, masterActivities); }, [masterActivities]);
-  useEffect(() => { saveToStorage(`${STORAGE_KEY}_m_transports`, masterTransports); }, [masterTransports]);
-  useEffect(() => { saveToStorage(`${STORAGE_KEY}_m_plans`, masterPlans); }, [masterPlans]);
+// --- CRUD Handlers ---
 
-  // --- CRUD Handlers ---
+// Package
+const addPackage = useCallback(async (pkg: Package) => { setPackages(p => [pkg, ...p]); try { await api.createPackage(pkg); } catch (e) { } }, []);
+const updatePackage = useCallback(async (id: string, pkg: Partial<Package>) => { setPackages(p => p.map(x => x.id === id ? { ...x, ...pkg } : x)); try { await api.updatePackage(id, pkg); } catch (e) { } }, []);
+const deletePackage = useCallback((id: string) => { setPackages(p => p.filter(x => x.id !== id)); }, []);
 
-  // Package
-  const addPackage = useCallback(async (pkg: Package) => { setPackages(p => [pkg, ...p]); try { await api.createPackage(pkg); } catch (e) { } }, []);
-  const updatePackage = useCallback(async (id: string, pkg: Partial<Package>) => { setPackages(p => p.map(x => x.id === id ? { ...x, ...pkg } : x)); try { await api.updatePackage(id, pkg); } catch (e) { } }, []);
-  const deletePackage = useCallback((id: string) => { setPackages(p => p.filter(x => x.id !== id)); }, []);
+// Booking
+const addBooking = useCallback(async (booking: Booking) => { setBookings(b => [booking, ...b]); try { await api.createBooking(booking); } catch (e) { } }, []);
+const updateBooking = useCallback((id: string, booking: Partial<Booking>) => { setBookings(b => b.map(x => x.id === id ? { ...x, ...booking } : x)); }, []);
+const updateBookingStatus = useCallback(async (id: string, status: BookingStatus) => { setBookings(b => b.map(x => x.id === id ? { ...x, status } : x)); try { await api.updateBookingStatus(id, status); } catch (e) { } }, []);
+const deleteBooking = useCallback((id: string) => { setBookings(b => b.filter(x => x.id !== id)); }, []);
 
-  // Booking
-  const addBooking = useCallback(async (booking: Booking) => { setBookings(b => [booking, ...b]); try { await api.createBooking(booking); } catch (e) { } }, []);
-  const updateBooking = useCallback((id: string, booking: Partial<Booking>) => { setBookings(b => b.map(x => x.id === id ? { ...x, ...booking } : x)); }, []);
-  const updateBookingStatus = useCallback(async (id: string, status: BookingStatus) => { setBookings(b => b.map(x => x.id === id ? { ...x, status } : x)); try { await api.updateBookingStatus(id, status); } catch (e) { } }, []);
-  const deleteBooking = useCallback((id: string) => { setBookings(b => b.filter(x => x.id !== id)); }, []);
+// Lead
+const addLead = useCallback(async (lead: Lead) => { setLeads(l => [lead, ...l]); try { await api.createLead(lead); } catch (e) { } }, []);
+const updateLead = useCallback((id: string, lead: Partial<Lead>) => { setLeads(l => l.map(x => x.id === id ? { ...x, ...lead } : x)); }, []);
+const deleteLead = useCallback((id: string) => { setLeads(l => l.filter(x => x.id !== id)); }, []);
+const addLeadLog = useCallback((id: string, log: LeadLog) => { setLeads(l => l.map(x => x.id === id ? { ...x, logs: [log, ...x.logs] } : x)); }, []);
 
-  // Lead
-  const addLead = useCallback(async (lead: Lead) => { setLeads(l => [lead, ...l]); try { await api.createLead(lead); } catch (e) { } }, []);
-  const updateLead = useCallback((id: string, lead: Partial<Lead>) => { setLeads(l => l.map(x => x.id === id ? { ...x, ...lead } : x)); }, []);
-  const deleteLead = useCallback((id: string) => { setLeads(l => l.filter(x => x.id !== id)); }, []);
-  const addLeadLog = useCallback((id: string, log: LeadLog) => { setLeads(l => l.map(x => x.id === id ? { ...x, logs: [log, ...x.logs] } : x)); }, []);
+// Customer
+const addCustomer = useCallback(async (c: Customer) => { setCustomers(p => [c, ...p]); try { /* api.createCustomer(c) todo */ } catch (e) { } }, []);
+const updateCustomer = useCallback((id: string, c: Partial<Customer>) => setCustomers(p => p.map(x => x.id === id ? { ...x, ...c } : x)), []);
+const deleteCustomer = useCallback((id: string) => setCustomers(p => p.filter(x => x.id !== id)), []);
+const importCustomers = useCallback((newCustomers: Customer[]) => setCustomers(p => [...newCustomers, ...p]), []);
 
-  // Customer
-  const addCustomer = useCallback((c: Customer) => setCustomers(p => [c, ...p]), []);
-  const updateCustomer = useCallback((id: string, c: Partial<Customer>) => setCustomers(p => p.map(x => x.id === id ? { ...x, ...c } : x)), []);
-  const deleteCustomer = useCallback((id: string) => setCustomers(p => p.filter(x => x.id !== id)), []);
-  const importCustomers = useCallback((newCustomers: Customer[]) => setCustomers(p => [...newCustomers, ...p]), []);
+// Inventory
+const updateInventory = useCallback((date: number, slot: DailySlot) => { setInventory(i => ({ ...i, [date]: slot })); }, []);
+const getRevenue = useCallback(() => bookings.reduce((acc, b) => b.payment === 'Paid' ? acc + b.amount : acc, 0), [bookings]);
 
-  // Inventory
-  const updateInventory = useCallback((date: number, slot: DailySlot) => { setInventory(i => ({ ...i, [date]: slot })); }, []);
-  const getRevenue = useCallback(() => bookings.reduce((acc, b) => b.payment === 'Paid' ? acc + b.amount : acc, 0), [bookings]);
+// Vendor
+const addVendor = useCallback(async (v: Vendor) => { setVendors(p => [v, ...p]); try { await api.createVendor(v); } catch (e) { } }, []);
+const updateVendor = useCallback((id: string, u: Partial<Vendor>) => setVendors(p => p.map(x => x.id === id ? { ...x, ...u } : x)), []);
+const deleteVendor = useCallback((id: string) => setVendors(p => p.filter(x => x.id !== id)), []);
 
-  // Vendor
-  const addVendor = useCallback((v: Vendor) => setVendors(p => [v, ...p]), []);
-  const updateVendor = useCallback((id: string, u: Partial<Vendor>) => setVendors(p => p.map(x => x.id === id ? { ...x, ...u } : x)), []);
-  const deleteVendor = useCallback((id: string) => setVendors(p => p.filter(x => x.id !== id)), []);
+// Account
+const addAccount = useCallback(async (a: Account) => { setAccounts(p => [...p, a]); try { await api.createAccount(a); } catch (e) { } }, []);
+const updateAccount = useCallback((id: string, u: Partial<Account>) => setAccounts(p => p.map(x => x.id === id ? { ...x, ...u } : x)), []);
+const deleteAccount = useCallback((id: string) => setAccounts(p => p.filter(x => x.id !== id)), []);
 
-  // Account
-  const addAccount = useCallback((a: Account) => setAccounts(p => [...p, a]), []);
-  const updateAccount = useCallback((id: string, u: Partial<Account>) => setAccounts(p => p.map(x => x.id === id ? { ...x, ...u } : x)), []);
-  const deleteAccount = useCallback((id: string) => setAccounts(p => p.filter(x => x.id !== id)), []);
+// Campaign
+const addCampaign = useCallback((c: Campaign) => setCampaigns(p => [c, ...p]), []);
 
-  // Campaign
-  const addCampaign = useCallback((c: Campaign) => setCampaigns(p => [c, ...p]), []);
+// Only partial implementations for secondary helpers to keep it short
+const processVendorPayment = useCallback(() => { }, []);
+const addVendorDocument = useCallback(() => { }, []);
+const deleteVendorDocument = useCallback(() => { }, []);
+const addVendorNote = useCallback(() => { }, []);
+const addAccountTransaction = useCallback(() => { }, []);
 
-  // Only partial implementations for secondary helpers to keep it short
-  const processVendorPayment = useCallback(() => { }, []);
-  const addVendorDocument = useCallback(() => { }, []);
-  const deleteVendorDocument = useCallback(() => { }, []);
-  const addVendorNote = useCallback(() => { }, []);
-  const addAccountTransaction = useCallback(() => { }, []);
+// Master Data Handlers
+const addMasterLocation = useCallback(async (item: MasterLocation) => { setMasterLocations(p => [item, ...p]); /* todo api */ }, []);
+const updateMasterLocation = useCallback((id: string, item: Partial<MasterLocation>) => setMasterLocations(p => p.map(x => x.id === id ? { ...x, ...item } : x)), []);
+const deleteMasterLocation = useCallback((id: string) => setMasterLocations(p => p.filter(x => x.id !== id)), []);
 
-  // Master Data Handlers
-  const addMasterLocation = useCallback((item: MasterLocation) => setMasterLocations(p => [item, ...p]), []);
-  const updateMasterLocation = useCallback((id: string, item: Partial<MasterLocation>) => setMasterLocations(p => p.map(x => x.id === id ? { ...x, ...item } : x)), []);
-  const deleteMasterLocation = useCallback((id: string) => setMasterLocations(p => p.filter(x => x.id !== id)), []);
+const addMasterHotel = useCallback((item: MasterHotel) => setMasterHotels(p => [item, ...p]), []);
+const updateMasterHotel = useCallback((id: string, item: Partial<MasterHotel>) => setMasterHotels(p => p.map(x => x.id === id ? { ...x, ...item } : x)), []);
+const deleteMasterHotel = useCallback((id: string) => setMasterHotels(p => p.filter(x => x.id !== id)), []);
 
-  const addMasterHotel = useCallback((item: MasterHotel) => setMasterHotels(p => [item, ...p]), []);
-  const updateMasterHotel = useCallback((id: string, item: Partial<MasterHotel>) => setMasterHotels(p => p.map(x => x.id === id ? { ...x, ...item } : x)), []);
-  const deleteMasterHotel = useCallback((id: string) => setMasterHotels(p => p.filter(x => x.id !== id)), []);
+const addMasterActivity = useCallback((item: MasterActivity) => setMasterActivities(p => [item, ...p]), []);
+const updateMasterActivity = useCallback((id: string, item: Partial<MasterActivity>) => setMasterActivities(p => p.map(x => x.id === id ? { ...x, ...item } : x)), []);
+const deleteMasterActivity = useCallback((id: string) => setMasterActivities(p => p.filter(x => x.id !== id)), []);
 
-  const addMasterActivity = useCallback((item: MasterActivity) => setMasterActivities(p => [item, ...p]), []);
-  const updateMasterActivity = useCallback((id: string, item: Partial<MasterActivity>) => setMasterActivities(p => p.map(x => x.id === id ? { ...x, ...item } : x)), []);
-  const deleteMasterActivity = useCallback((id: string) => setMasterActivities(p => p.filter(x => x.id !== id)), []);
+const addMasterTransport = useCallback((item: MasterTransport) => setMasterTransports(p => [item, ...p]), []);
+const updateMasterTransport = useCallback((id: string, item: Partial<MasterTransport>) => setMasterTransports(p => p.map(x => x.id === id ? { ...x, ...item } : x)), []);
+const deleteMasterTransport = useCallback((id: string) => setMasterTransports(p => p.filter(x => x.id !== id)), []);
 
-  const addMasterTransport = useCallback((item: MasterTransport) => setMasterTransports(p => [item, ...p]), []);
-  const updateMasterTransport = useCallback((id: string, item: Partial<MasterTransport>) => setMasterTransports(p => p.map(x => x.id === id ? { ...x, ...item } : x)), []);
-  const deleteMasterTransport = useCallback((id: string) => setMasterTransports(p => p.filter(x => x.id !== id)), []);
+const addMasterPlan = useCallback((item: MasterPlan) => setMasterPlans(p => [item, ...p]), []);
+const updateMasterPlan = useCallback((id: string, item: Partial<MasterPlan>) => setMasterPlans(p => p.map(x => x.id === id ? { ...x, ...item } : x)), []);
+const deleteMasterPlan = useCallback((id: string) => setMasterPlans(p => p.filter(x => x.id !== id)), []);
 
-  const addMasterPlan = useCallback((item: MasterPlan) => setMasterPlans(p => [item, ...p]), []);
-  const updateMasterPlan = useCallback((id: string, item: Partial<MasterPlan>) => setMasterPlans(p => p.map(x => x.id === id ? { ...x, ...item } : x)), []);
-  const deleteMasterPlan = useCallback((id: string) => setMasterPlans(p => p.filter(x => x.id !== id)), []);
+// --- Audit Helper ---
+const logAction = useCallback((action: string, module: string, details: string, severity: 'Info' | 'Warning' | 'Critical' = 'Info', performedBy: string = 'System') => {
+  const newLog: AuditLog = {
+    id: `LOG-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    action,
+    module,
+    performedBy,
+    details,
+    timestamp: new Date().toISOString(),
+    severity
+  };
+  setAuditLogs(prev => [newLog, ...prev].slice(0, 500)); // Limit to last 500 logs
+}, []);
 
-  // --- Audit Helper ---
-  const logAction = useCallback((action: string, module: string, details: string, severity: 'Info' | 'Warning' | 'Critical' = 'Info', performedBy: string = 'System') => {
-    const newLog: AuditLog = {
-      id: `LOG-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      action,
-      module,
-      performedBy,
-      details,
-      timestamp: new Date().toISOString(),
-      severity
-    };
-    setAuditLogs(prev => [newLog, ...prev].slice(0, 500)); // Limit to last 500 logs
-  }, []);
+const value = useMemo(() => ({
+  packages, bookings, leads, inventory, vendors, accounts, campaigns, auditLogs, logAction, customers,
+  masterLocations, masterHotels, masterActivities, masterTransports, masterPlans,
+  addPackage, updatePackage, deletePackage,
+  addBooking, updateBooking, updateBookingStatus, deleteBooking,
+  addLead, updateLead, deleteLead, addLeadLog,
+  updateInventory, getRevenue,
+  addVendor, updateVendor, deleteVendor, processVendorPayment, addVendorDocument, deleteVendorDocument, addVendorNote,
+  addAccount, updateAccount, deleteAccount, addAccountTransaction,
+  addCampaign,
+  addMasterLocation, updateMasterLocation, deleteMasterLocation,
+  addMasterHotel, updateMasterHotel, deleteMasterHotel,
+  addMasterActivity, updateMasterActivity, deleteMasterActivity,
+  addMasterTransport, updateMasterTransport, deleteMasterTransport,
+  addMasterPlan, updateMasterPlan, deleteMasterPlan,
+}), [
+  packages, bookings, leads, inventory, vendors, accounts, campaigns,
+  masterLocations, masterHotels, masterActivities, masterTransports, masterPlans, customers,
+  addPackage, updatePackage, deletePackage,
+  addBooking, updateBooking, updateBookingStatus, deleteBooking,
+  addLead, updateLead, deleteLead, addLeadLog,
+  addCustomer, updateCustomer, deleteCustomer, importCustomers,
+  updateInventory, getRevenue,
+  addVendor, updateVendor, deleteVendor, processVendorPayment, addVendorDocument, deleteVendorDocument, addVendorNote,
+  addAccount, updateAccount, deleteAccount, addAccountTransaction,
+  addCampaign,
+  addMasterLocation, updateMasterLocation, deleteMasterLocation,
+  addMasterHotel, updateMasterHotel, deleteMasterHotel,
+  addMasterActivity, updateMasterActivity, deleteMasterActivity,
+  addMasterTransport, updateMasterTransport, deleteMasterTransport,
+  addMasterPlan, updateMasterPlan, deleteMasterPlan,
+]);
 
-  const value = useMemo(() => ({
-    packages, bookings, leads, inventory, vendors, accounts, campaigns, auditLogs, logAction, customers,
-    masterLocations, masterHotels, masterActivities, masterTransports, masterPlans,
-    addPackage, updatePackage, deletePackage,
-    addBooking, updateBooking, updateBookingStatus, deleteBooking,
-    addLead, updateLead, deleteLead, addLeadLog,
-    updateInventory, getRevenue,
-    addVendor, updateVendor, deleteVendor, processVendorPayment, addVendorDocument, deleteVendorDocument, addVendorNote,
-    addAccount, updateAccount, deleteAccount, addAccountTransaction,
-    addCampaign,
-    addMasterLocation, updateMasterLocation, deleteMasterLocation,
-    addMasterHotel, updateMasterHotel, deleteMasterHotel,
-    addMasterActivity, updateMasterActivity, deleteMasterActivity,
-    addMasterTransport, updateMasterTransport, deleteMasterTransport,
-    addMasterPlan, updateMasterPlan, deleteMasterPlan,
-  }), [
-    packages, bookings, leads, inventory, vendors, accounts, campaigns,
-    masterLocations, masterHotels, masterActivities, masterTransports, masterPlans, customers,
-    addPackage, updatePackage, deletePackage,
-    addBooking, updateBooking, updateBookingStatus, deleteBooking,
-    addLead, updateLead, deleteLead, addLeadLog,
-    addCustomer, updateCustomer, deleteCustomer, importCustomers,
-    updateInventory, getRevenue,
-    addVendor, updateVendor, deleteVendor, processVendorPayment, addVendorDocument, deleteVendorDocument, addVendorNote,
-    addAccount, updateAccount, deleteAccount, addAccountTransaction,
-    addCampaign,
-    addMasterLocation, updateMasterLocation, deleteMasterLocation,
-    addMasterHotel, updateMasterHotel, deleteMasterHotel,
-    addMasterActivity, updateMasterActivity, deleteMasterActivity,
-    addMasterTransport, updateMasterTransport, deleteMasterTransport,
-    addMasterPlan, updateMasterPlan, deleteMasterPlan,
-  ]);
-
-  return (
-    <DataContext.Provider value={value}>
-      {children}
-    </DataContext.Provider>
-  );
+return (
+  <DataContext.Provider value={value}>
+    {children}
+  </DataContext.Provider>
+);
 };
 
 export const useData = () => {

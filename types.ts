@@ -34,8 +34,6 @@ export interface Package {
   tag?: string;
   tagColor?: string;
   theme: string;
-  rating: string;
-  reviews: string;
   overview: string;
   highlights: { icon: string; label: string }[];
   itinerary: { day: number; title: string; desc: string }[];

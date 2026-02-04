@@ -272,10 +272,8 @@ export const AdminPackages: React.FC = () => {
                                         <p className="font-black text-slate-900 dark:text-white">₹{(pkg.price / 1000).toFixed(0)}k</p>
                                     </div>
                                     <div className="text-center md:text-right">
-                                        <p className="text-xs font-bold text-slate-400 uppercase">Rating</p>
-                                        <p className="font-bold text-slate-900 dark:text-white flex items-center gap-1">
-                                            <span className="material-symbols-outlined text-yellow-500 text-sm fill">star</span> {pkg.rating}
-                                        </p>
+                                        <p className="text-xs font-bold text-slate-400 uppercase">Price</p>
+                                        <p className="font-black text-slate-900 dark:text-white">₹{(pkg.price / 1000).toFixed(0)}k</p>
                                     </div>
                                 </div>
 

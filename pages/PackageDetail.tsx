@@ -327,8 +327,8 @@ export const PackageDetail: React.FC = () => {
                   {tour.days} Days / {tour.days - 1} Nights
                 </div>
                 <div className="flex items-center gap-2 text-slate-700 dark:text-slate-300 font-bold bg-slate-100 dark:bg-slate-800/50 px-4 py-2 rounded-full">
-                  <span className="material-symbols-outlined text-yellow-500 fill">star</span>
-                  {tour.rating} <span className="text-slate-400 font-normal">({tour.reviews} reviews)</span>
+                  <span className="material-symbols-outlined text-primary">calendar_month</span>
+                  {tour.days} Days / {tour.days - 1} Nights
                 </div>
 
                 {/* High Demand Badge */}

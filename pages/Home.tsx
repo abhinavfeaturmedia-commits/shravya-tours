@@ -16,7 +16,7 @@ import {
 
 export const Home: React.FC = () => {
   const { packages } = useData();
-  const [activeTab, setActiveTab] = useState('hotel-booking');
+  const [activeTab, setActiveTab] = useState('tour-packages');
   const navigate = useNavigate();
 
   // Quick Booking Modal State
@@ -59,10 +59,10 @@ export const Home: React.FC = () => {
 
   // Trending destinations
   const trendingTours = [
-    { id: 'kerala-backwaters', title: 'Kerala Backwaters', price: '₹35,000', days: '5 Days', loc: 'Kerala, India', img: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBp90RDz-sdjWIaMxCiFRFPO2JsAtK8_dVyOrgkjVXU2eyOfv-QVT0aL8P898Icc29bRifPA2obAWYdG2DUFAu34TSsNNv6AEBb3PkvvVLUy7SiHFhxeAmVHy5JBvY1y3-aVD3CNyS4GknQTya93LHTeT3z7AdLkm9WnOOCJCJKFhwsg0FzrktdLVdl7GvmF40ru8MoKKDLDCnEKa5pwANUTQwYGofMrr6hkRstcsuxW0zFPZrgXEepwClL91yq119GbnN_2TXDnS-4', rating: '4.9' },
-    { id: 'manali-escape', title: 'Majestic Manali', price: '₹28,000', days: '6 Days', loc: 'Himachal, India', img: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCw3nTyyZIHE-X4IDz1WIxoLShlt4crH7NAqMA0V0L2ehFuGP9AGiAolK-y2VtcGXQNnGxdEkuHTXyJ44x9J5RiIg5apuiNJV-7xi5I2UV2r-KSd-dgzrATQDbBkFz4UKlFbdF5SgirAYanpbXenNDr-_uktTK_A2FTmUBwhVLQfYFh1gqRN8EoLj-9g8qrA6B21OH52wai00ETSdEUNm2LJQX1poTztcNfmmE2IMrm1oTdfTQ3Sg0DwMSXi2UM_QPDWQt27m2xr8-D', rating: '4.8' },
-    { id: 'golden-triangle', title: 'Golden Triangle Tour', price: '₹45,000', days: '6 Days', loc: 'North India', img: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDe8BDAUta_Sad0sbfFPp3eGFuTDne-kjCHaSbEmPIsw2A35eYa_4cmO0qQIrrAUnyuBkmJYYx5BswvQ8xoNvi-V48GV78qtY2osp3mRT5dAgVv31-tcAdYZIYq5VwnghdHN-xLMZHlH8DhevC9MvU-RUVOzTxENfRuR9CornjT44jfRzEHiuwDi6on6RQISv-Sa7xPzXf6U61FblGpi9Ou2aXfsR5_PoyNJhX-aCt1zuv1ogRgtmIOXqYjfcAQ79z48VNTNX3nLemm', rating: '5.0' },
-    { id: 'ladakh-adventure', title: 'Leh Ladakh Adventure', price: '₹65,000', days: '8 Days', loc: 'Ladakh, India', img: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDpQiwfKH0yIRycIB8I2oEBy84i-Io3CIha3W5YAJfjpY1Jghiz6KZm9ugQVQh2w1iYR3smMg-3cpUXS07wl7wtOG7tMr-mD3U-5wbABd_2KyTx6jhq4cZAZVjMPjbUU1yxD4LrltucSAO-ZFLoA_ccgWlKW0wsSVrrkrWiCVwGsI8quL38dPZQOPDjQJbUiojqsqXyVKEnZ2jpVDbJw0GE7jrTbRPihr9RoDuW21hmKXYHaB52a6heuHbI7htXFMkWjCPab-3djC20', rating: '4.7' },
+    { id: 'kerala-backwaters', title: 'Kerala Backwaters', price: '₹35,000', days: '5 Days', loc: 'Kerala, India', img: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBp90RDz-sdjWIaMxCiFRFPO2JsAtK8_dVyOrgkjVXU2eyOfv-QVT0aL8P898Icc29bRifPA2obAWYdG2DUFAu34TSsNNv6AEBb3PkvvVLUy7SiHFhxeAmVHy5JBvY1y3-aVD3CNyS4GknQTya93LHTeT3z7AdLkm9WnOOCJCJKFhwsg0FzrktdLVdl7GvmF40ru8MoKKDLDCnEKa5pwANUTQwYGofMrr6hkRstcsuxW0zFPZrgXEepwClL91yq119GbnN_2TXDnS-4' },
+    { id: 'manali-escape', title: 'Majestic Manali', price: '₹28,000', days: '6 Days', loc: 'Himachal, India', img: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCw3nTyyZIHE-X4IDz1WIxoLShlt4crH7NAqMA0V0L2ehFuGP9AGiAolK-y2VtcGXQNnGxdEkuHTXyJ44x9J5RiIg5apuiNJV-7xi5I2UV2r-KSd-dgzrATQDbBkFz4UKlFbdF5SgirAYanpbXenNDr-_uktTK_A2FTmUBwhVLQfYFh1gqRN8EoLj-9g8qrA6B21OH52wai00ETSdEUNm2LJQX1poTztcNfmmE2IMrm1oTdfTQ3Sg0DwMSXi2UM_QPDWQt27m2xr8-D' },
+    { id: 'golden-triangle', title: 'Golden Triangle Tour', price: '₹45,000', days: '6 Days', loc: 'North India', img: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDe8BDAUta_Sad0sbfFPp3eGFuTDne-kjCHaSbEmPIsw2A35eYa_4cmO0qQIrrAUnyuBkmJYYx5BswvQ8xoNvi-V48GV78qtY2osp3mRT5dAgVv31-tcAdYZIYq5VwnghdHN-xLMZHlH8DhevC9MvU-RUVOzTxENfRuR9CornjT44jfRzEHiuwDi6on6RQISv-Sa7xPzXf6U61FblGpi9Ou2aXfsR5_PoyNJhX-aCt1zuv1ogRgtmIOXqYjfcAQ79z48VNTNX3nLemm' },
+    { id: 'ladakh-adventure', title: 'Leh Ladakh Adventure', price: '₹65,000', days: '8 Days', loc: 'Ladakh, India', img: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDpQiwfKH0yIRycIB8I2oEBy84i-Io3CIha3W5YAJfjpY1Jghiz6KZm9ugQVQh2w1iYR3smMg-3cpUXS07wl7wtOG7tMr-mD3U-5wbABd_2KyTx6jhq4cZAZVjMPjbUU1yxD4LrltucSAO-ZFLoA_ccgWlKW0wsSVrrkrWiCVwGsI8quL38dPZQOPDjQJbUiojqsqXyVKEnZ2jpVDbJw0GE7jrTbRPihr9RoDuW21hmKXYHaB52a6heuHbI7htXFMkWjCPab-3djC20' },
   ];
 
   return (
@@ -94,13 +94,13 @@ export const Home: React.FC = () => {
         <div className="relative z-10 container mx-auto px-4 flex flex-col items-center gap-12 text-center pt-32 pb-24 lg:pt-40 lg:pb-32">
           <div className="flex flex-col gap-6 max-w-5xl animate-in slide-in-from-bottom-10 duration-700">
             <h1 className="text-white text-5xl md:text-7xl font-black leading-[1.1] tracking-tight drop-shadow-2xl">
-              Don't Just Dream It.{' '}
+              Experience the World,{' '}
               <span className="relative inline-block text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-amber-500">
-                Live It.
+                Worry-Free.
               </span>
             </h1>
             <h2 className="text-slate-200 text-lg md:text-2xl font-medium leading-relaxed max-w-3xl mx-auto drop-shadow-lg will-change-transform">
-              Unlock exclusive deals on handpicked hotels, seamless flights, and immersive tours. Join 50,000+ travelers.
+              Premium tours, transparent pricing, and 24/7 expert support. Your perfect journey starts here.
             </h2>
           </div>
 
@@ -139,6 +139,31 @@ export const Home: React.FC = () => {
               {activeTab === 'car-booking' && <CarBookingForm onSubmit={handleCarSubmit} />}
               {activeTab === 'bus-booking' && <BusBookingForm onSubmit={handleBusSubmit} />}
             </div>
+          </div>
+        </div>
+      </section>
+
+
+
+      {/* The Shravya Advantage (Moved Up for Trust) */}
+      <section className="py-12 bg-white dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800">
+        <div className="container mx-auto px-4 md:px-10">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {[
+              { icon: 'verified_user', title: 'Book Risk-Free', desc: 'Flexible cancellations & full refunds.' },
+              { icon: 'support_agent', title: '24/7 Expert Support', desc: 'Real humans, always ready to help.' },
+              { icon: 'diamond', title: 'Handpicked Quality', desc: 'Every experience is vetted by experts.' }
+            ].map((item, i) => (
+              <div key={i} className="flex items-center gap-4 p-4 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
+                <div className="size-12 bg-blue-50 dark:bg-blue-900/20 text-primary rounded-xl flex items-center justify-center shrink-0">
+                  <span className="material-symbols-outlined text-2xl">{item.icon}</span>
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-slate-900 dark:text-white leading-tight">{item.title}</h3>
+                  <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">{item.desc}</p>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </section>
@@ -204,7 +229,7 @@ export const Home: React.FC = () => {
                       className="w-full h-full group-hover:scale-110 transition-transform duration-700"
                     />
                     <div className="absolute top-4 right-4 bg-white/90 dark:bg-slate-900/90 backdrop-blur px-3 py-1.5 rounded-full text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1 shadow-sm">
-                      <span className="material-symbols-outlined text-yellow-500 text-sm fill">star</span> {tour.rating}
+                      <span className="material-symbols-outlined text-primary text-sm fill">schedule</span> {tour.days}
                     </div>
 
                     {remainingSeats && remainingSeats < 10 && (
@@ -239,27 +264,7 @@ export const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* Why Book with Us */}
-      <section className="py-24 bg-slate-50 dark:bg-slate-950">
-        <div className="container mx-auto px-4 md:px-10 text-center">
-          <h2 className="text-slate-900 dark:text-white text-3xl md:text-4xl font-black mb-16">The Shravya Advantage</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {[
-              { icon: 'verified_user', title: 'Book Risk-Free', desc: 'Flexible cancellations and full refunds on most packages.' },
-              { icon: 'support_agent', title: '24/7 Expert Support', desc: 'Real humans, always ready to help you, day or night.' },
-              { icon: 'diamond', title: 'Handpicked Quality', desc: 'Every experience is vetted for the highest standards.' }
-            ].map((item, i) => (
-              <div key={i} className="p-8 bg-white dark:bg-slate-900 rounded-3xl shadow-xl shadow-slate-200/50 dark:shadow-none hover:-translate-y-2 transition-transform duration-300 border border-slate-100 dark:border-slate-800">
-                <div className="size-20 bg-blue-50 dark:bg-blue-900/20 text-primary rounded-2xl flex items-center justify-center mx-auto mb-6 rotate-3 group-hover:rotate-6 transition-transform">
-                  <span className="material-symbols-outlined text-4xl">{item.icon}</span>
-                </div>
-                <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-3">{item.title}</h3>
-                <p className="text-slate-500 dark:text-slate-400 leading-relaxed">{item.desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+
     </>
   );
 };
