@@ -104,10 +104,19 @@ export const StaffManagement: React.FC = () => {
         }
 
         const initials = formData.name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
-        const colorMap: Record<string, string> = { 'Super Admin': 'purple', 'Manager': 'blue', 'Editor': 'green', 'Support': 'orange' };
+        const colorMap: Record<string, string> = {
+            'Super Admin': 'purple',
+            'Owner': 'violet',
+            'Administrator': 'purple',
+            'Branch Head': 'indigo',
+            'Manager': 'blue',
+            'Agent': 'cyan',
+            'Editor': 'green',
+            'Support': 'orange'
+        };
 
         // Logic: specific roles enforce specific userTypes
-        const derivedUserType = formData.role === 'Administrator' ? 'Admin' : formData.userType;
+        const derivedUserType = (formData.role === 'Administrator' || formData.role === 'Owner' || formData.role === 'Super Admin') ? 'Admin' : formData.userType;
 
         // Logic: If Admin, FORCE all permissions to true
         let finalPermissions = formData.permissions;
@@ -198,8 +207,11 @@ export const StaffManagement: React.FC = () => {
     });
 
     const getRoleBadge = (role: string) => {
-        if (role.includes('Admin') || role.includes('CEO') || role === 'Administrator') return 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400';
+        if (role === 'Owner' || role === 'Super Admin') return 'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400';
+        if (role.includes('Admin') || role === 'Administrator') return 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400';
+        if (role === 'Branch Head') return 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400';
         if (role.includes('Manager')) return 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400';
+        if (role === 'Agent') return 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400';
         if (role.includes('Support')) return 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400';
         return 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-400';
     };
@@ -258,8 +270,11 @@ export const StaffManagement: React.FC = () => {
                                             placeholder="e.g. Senior Tour Manager"
                                         />
                                         <datalist id="roles">
+                                            <option value="Owner" />
+                                            <option value="Branch Head" />
                                             <option value="Administrator" />
                                             <option value="Manager" />
+                                            <option value="Agent" />
                                             <option value="Editor" />
                                             <option value="Support" />
                                         </datalist>

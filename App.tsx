@@ -15,10 +15,12 @@ const PackageDetail = lazy(() => import('./pages/PackageDetail').then(module => 
 const About = lazy(() => import('./pages/About').then(module => ({ default: module.About })));
 const Contact = lazy(() => import('./pages/Contact').then(module => ({ default: module.Contact })));
 const Login = lazy(() => import('./pages/Login').then(module => ({ default: module.Login })));
+const BookingConfirmation = lazy(() => import('./pages/BookingConfirmation').then(module => ({ default: module.BookingConfirmation })));
 
 const AdminDashboard = lazy(() => import('./pages/AdminDashboard').then(module => ({ default: module.AdminDashboard })));
 const Inventory = lazy(() => import('./pages/admin/Inventory').then(module => ({ default: module.Inventory })));
 const Analytics = lazy(() => import('./pages/admin/Analytics').then(module => ({ default: module.Analytics })));
+const Operations = lazy(() => import('./pages/admin/Operations').then(module => ({ default: module.Operations })));
 const ItineraryBuilder = lazy(() => import('./pages/admin/ItineraryBuilder').then(module => ({ default: module.ItineraryBuilder })));
 const StaffManagement = lazy(() => import('./pages/admin/StaffManagement').then(module => ({ default: module.StaffManagement })));
 const Bookings = lazy(() => import('./pages/admin/Bookings').then(module => ({ default: module.Bookings })));
@@ -27,7 +29,14 @@ const AdminCustomers = lazy(() => import('./pages/admin/Customers').then(module 
 const AdminPackages = lazy(() => import('./pages/admin/Packages').then(module => ({ default: module.AdminPackages })));
 const Vendors = lazy(() => import('./pages/admin/Vendors').then(module => ({ default: module.Vendors })));
 const AdminAccounts = lazy(() => import('./pages/admin/Accounts').then(module => ({ default: module.Accounts })));
+const AdminExpenses = lazy(() => import('./pages/admin/Expenses').then(module => ({ default: module.Expenses })));
+const AdminProposals = lazy(() => import('./pages/admin/Proposals').then(module => ({ default: module.Proposals })));
+const ProposalBuilder = lazy(() => import('./pages/admin/ProposalBuilder').then(module => ({ default: module.ProposalBuilder })));
+
 const Masters = lazy(() => import('./pages/admin/Masters').then(module => ({ default: module.Masters })));
+const AuditLogs = lazy(() => import('./pages/admin/AuditLogs').then(module => ({ default: module.AuditLogs })));
+const Productivity = lazy(() => import('./pages/admin/Productivity').then(module => ({ default: module.Productivity })));
+
 
 // Loading Fallback
 const PageLoader = () => (
@@ -56,6 +65,7 @@ const App: React.FC = () => {
                   <Route path="tours" element={<Navigate to="/packages" replace />} />
                   <Route path="about" element={<About />} />
                   <Route path="contact" element={<Contact />} />
+                  <Route path="booking-confirmation" element={<BookingConfirmation />} />
                 </Route>
 
                 <Route path="/login" element={<Login />} />
@@ -64,13 +74,19 @@ const App: React.FC = () => {
                 <Route path="/admin" element={<AdminLayout />}>
                   <Route index element={<AdminDashboard />} />
                   <Route path="analytics" element={<Analytics />} />
+                  <Route path="operations" element={<Operations />} />
                   <Route path="bookings" element={<Bookings />} />
                   <Route path="inventory" element={<Inventory />} />
                   <Route path="vendors" element={<Vendors />} />
                   <Route path="itinerary-builder" element={<ItineraryBuilder />} />
                   <Route path="accounts" element={<AdminAccounts />} />
+                  <Route path="expenses" element={<AdminExpenses />} />
+                  <Route path="proposals" element={<AdminProposals />} />
+                  <Route path="proposals/:id" element={<ProposalBuilder />} />
+
                   <Route path="leads" element={<AdminLeads />} />
-                  <Route path="customers" element={<AdminCustomers />} />
+                  <Route path="audit" element={<AuditLogs />} />
+                  <Route path="productivity" element={<Productivity />} />
                   <Route path="staff" element={<StaffManagement />} />
                   <Route path="packages" element={<AdminPackages />} />
                   <Route path="masters" element={<Masters />} />

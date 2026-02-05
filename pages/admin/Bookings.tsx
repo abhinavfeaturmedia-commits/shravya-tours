@@ -2,27 +2,32 @@
 import React, { useState, useEffect } from 'react';
 import { useData } from '../../context/DataContext';
 import { BookingStatus, Booking, BookingType } from '../../types';
+import { SupplierManagementModal } from '../../components/admin/SupplierManagementModal';
+import { LedgerManagementModal } from '../../components/admin/LedgerManagementModal';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { toast } from 'sonner';
+import { Pagination, usePagination } from '../../components/ui/Pagination';
 
 export const Bookings: React.FC = () => {
-    const { bookings, packages, addBooking, updateBooking, deleteBooking } = useData();
-    const { currentUser } = useAuth();
+    const { bookings, packages, addBooking, updateBooking, deleteBooking, customers } = useData();
+    const { currentUser, hasPermission } = useAuth();
     const location = useLocation();
     const [viewMode, setViewMode] = useState<'list' | 'board'>('list');
     const [activeTab, setActiveTab] = useState('All');
     const [search, setSearch] = useState('');
 
-    // Modal State
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isEditMode, setIsEditMode] = useState(false);
+    const [selectedBookingForSuppliers, setSelectedBookingForSuppliers] = useState<Booking | null>(null);
+    const [bookingForLedger, setBookingForLedger] = useState<Booking | null>(null);
 
     const today = new Date().toISOString().split('T')[0];
 
     // Form State
     const [formData, setFormData] = useState({
         id: '',
+        customerId: '',
         customer: '',
         email: '',
         phone: '',
@@ -44,6 +49,7 @@ export const Bookings: React.FC = () => {
             setFormData(prev => ({
                 ...prev,
                 id: '', // Reset ID for new booking
+                customerId: '', // Lead might not match a customer yet
                 customer: prefill.customer || '',
                 email: prefill.email || '',
                 phone: prefill.phone || '',
@@ -78,6 +84,7 @@ export const Bookings: React.FC = () => {
         setIsEditMode(false);
         setFormData({
             id: '',
+            customerId: '',
             customer: '',
             email: '',
             phone: '',
@@ -98,6 +105,7 @@ export const Bookings: React.FC = () => {
         setIsEditMode(true);
         setFormData({
             id: booking.id,
+            customerId: booking.customerId || '',
             customer: booking.customer,
             email: booking.email,
             phone: booking.phone || '',
@@ -125,11 +133,43 @@ export const Bookings: React.FC = () => {
         }));
     };
 
+    const handleCustomerSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const custId = e.target.value;
+        const cust = customers.find(c => c.id === custId);
+        if (cust) {
+            setFormData(prev => ({
+                ...prev,
+                customerId: cust.id,
+                customer: cust.name,
+                email: cust.email,
+                phone: cust.phone
+            }));
+        } else {
+            // Reset if cleared? Or just allow manual?
+            // If manual entry handling is needed, we need a way to switch or use a combobox.
+            // For now, let's keep it simple: Select OR Type (if we add a toggle, but user asked for search dropdown).
+            // Given limitations, maybe just a select for existing customers and "New Customer" option?
+            // Let's stick to Select for now as requested.
+        }
+    };
+
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
 
+        // Validation
+        if (Number(formData.amount) < 0) {
+            toast.error("Amount cannot be negative");
+            return;
+        }
+
+        if (!formData.customer || !formData.date) {
+            toast.error("Customer Name and Date are required");
+            return;
+        }
+
         const bookingData: Partial<Booking> = {
             type: formData.type,
+            customerId: formData.customerId,
             customer: formData.customer,
             email: formData.email,
             phone: formData.phone,
@@ -148,6 +188,7 @@ export const Bookings: React.FC = () => {
         } else {
             const newBooking: Booking = {
                 id: `#BK-${Math.floor(1000 + Math.random() * 9000)}`,
+                assignedTo: currentUser?.id,
                 ...bookingData as any // safely cast for new object
             };
             addBooking(newBooking);
@@ -414,8 +455,17 @@ export const Bookings: React.FC = () => {
         const matchesSearch = b.customer.toLowerCase().includes(search.toLowerCase()) ||
             b.id.toLowerCase().includes(search.toLowerCase()) ||
             b.title.toLowerCase().includes(search.toLowerCase());
-        return matchesTab && matchesSearch;
+
+        // Permission Filter
+        const isRestricted = currentUser?.queryScope === 'Show Assigned Query Only';
+        const matchesAssignment = !isRestricted || b.assignedTo === currentUser?.id;
+
+        return matchesTab && matchesSearch && matchesAssignment;
     });
+
+    // Pagination for bookings list
+    const { currentPage, setCurrentPage, itemsPerPage, setItemsPerPage, paginateData } = usePagination(filteredBookings.length, 15);
+    const paginatedBookings = paginateData<Booking>(filteredBookings);
 
     // --- Helpers ---
 
@@ -455,6 +505,19 @@ export const Bookings: React.FC = () => {
                             <div>
                                 <h3 className="text-xs font-black uppercase tracking-widest text-slate-400 mb-3">Customer Information</h3>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="space-y-1 md:col-span-2">
+                                        <label className="text-xs font-bold text-slate-500">Select Customer (Optional)</label>
+                                        <select
+                                            value={formData.customerId}
+                                            onChange={handleCustomerSelect}
+                                            className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary outline-none"
+                                        >
+                                            <option value="">-- New / Manual Entry --</option>
+                                            {customers.map(c => (
+                                                <option key={c.id} value={c.id}>{c.name} ({c.email})</option>
+                                            ))}
+                                        </select>
+                                    </div>
                                     <div className="space-y-1">
                                         <label className="text-xs font-bold text-slate-500">Full Name</label>
                                         <input required value={formData.customer} onChange={e => setFormData({ ...formData, customer: e.target.value })} type="text" className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary outline-none" />
@@ -554,7 +617,9 @@ export const Bookings: React.FC = () => {
 
                                 <div className="flex gap-3">
                                     <button type="button" onClick={() => setIsModalOpen(false)} className="px-6 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-bold hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">Cancel</button>
-                                    <button type="submit" className="px-6 py-2.5 rounded-xl bg-primary text-white font-bold shadow-lg shadow-primary/20 hover:bg-primary-dark transition-colors">{isEditMode ? 'Save Changes' : 'Create Booking'}</button>
+                                    {hasPermission('bookings', 'manage') && (
+                                        <button type="submit" className="px-6 py-2.5 rounded-xl bg-primary text-white font-bold shadow-lg shadow-primary/20 hover:bg-primary-dark transition-colors">{isEditMode ? 'Save Changes' : 'Create Booking'}</button>
+                                    )}
                                 </div>
                             </div>
                         </form>
@@ -573,9 +638,11 @@ export const Bookings: React.FC = () => {
                         <button onClick={handleExport} className="hidden sm:flex items-center gap-2 px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-sm font-bold hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors dark:text-white">
                             <span className="material-symbols-outlined text-[18px]">download</span> Export CSV
                         </button>
-                        <button onClick={openCreateModal} className="flex items-center gap-2 px-5 py-2.5 bg-primary text-white rounded-xl text-sm font-bold shadow-lg shadow-primary/20 hover:bg-primary-dark transition-all active:scale-95">
-                            <span className="material-symbols-outlined text-[20px]">add</span> New Booking
-                        </button>
+                        {hasPermission('bookings', 'manage') && (
+                            <button onClick={openCreateModal} className="flex items-center gap-2 px-5 py-2.5 bg-primary text-white rounded-xl text-sm font-bold shadow-lg shadow-primary/20 hover:bg-primary-dark transition-all active:scale-95">
+                                <span className="material-symbols-outlined text-[20px]">add</span> New Booking
+                            </button>
+                        )}
                     </div>
                 </div>
 
@@ -646,8 +713,8 @@ export const Bookings: React.FC = () => {
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-                                        {filteredBookings.length > 0 ? (
-                                            filteredBookings.map((booking) => (
+                                        {paginatedBookings.length > 0 ? (
+                                            paginatedBookings.map((booking) => (
                                                 <tr key={booking.id} className="group hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
                                                     <td className="px-6 py-4">
                                                         <div className="flex flex-col">
@@ -695,27 +762,41 @@ export const Bookings: React.FC = () => {
                                                             <button onClick={() => handleGenerateInvoice(booking)} className="p-2 text-slate-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors" title="Invoice">
                                                                 <span className="material-symbols-outlined text-[18px]">receipt_long</span>
                                                             </button>
-                                                            <button onClick={() => openEditModal(booking)} className="p-2 text-slate-400 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors" title="Edit">
-                                                                <span className="material-symbols-outlined text-[18px]">edit</span>
+                                                            <button onClick={() => setBookingForLedger(booking)} className="p-2 text-slate-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-colors" title="Billing Ledger">
+                                                                <span className="material-symbols-outlined text-[18px]">account_balance_wallet</span>
                                                             </button>
+                                                            <button onClick={() => setSelectedBookingForSuppliers(booking)} className="p-2 text-slate-400 hover:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-lg transition-colors" title="Manage Suppliers">
+                                                                <span className="material-symbols-outlined text-[18px]">inventory</span>
+                                                            </button>
+                                                            {hasPermission('bookings', 'manage') && (
+                                                                <button onClick={() => openEditModal(booking)} className="p-2 text-slate-400 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors" title="Edit">
+                                                                    <span className="material-symbols-outlined text-[18px]">edit</span>
+                                                                </button>
+                                                            )}
 
                                                             {/* Logic for Refund Button */}
-                                                            {booking.status === BookingStatus.CANCELLED && (booking.payment === 'Paid' || booking.payment === 'Deposit') && (
+                                                            {hasPermission('bookings', 'manage') && booking.status === BookingStatus.CANCELLED && (booking.payment === 'Paid' || booking.payment === 'Deposit') && (
                                                                 <button onClick={() => handleProcessRefund(booking.id)} className="p-2 text-purple-400 hover:text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-lg transition-colors" title="Refund">
                                                                     <span className="material-symbols-outlined text-[18px]">currency_exchange</span>
                                                                 </button>
                                                             )}
 
                                                             {/* Logic for Cancel Button */}
-                                                            {(booking.status === BookingStatus.PENDING || booking.status === BookingStatus.CONFIRMED) && (
+                                                            {hasPermission('bookings', 'manage') && (booking.status === BookingStatus.PENDING || booking.status === BookingStatus.CONFIRMED) && (
                                                                 <button onClick={() => handleCancelBooking(booking.id)} className="p-2 text-slate-400 hover:text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-900/20 rounded-lg transition-colors" title="Cancel Booking">
                                                                     <span className="material-symbols-outlined text-[18px]">cancel</span>
                                                                 </button>
                                                             )}
 
-                                                            <button onClick={() => deleteBooking(booking.id)} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors" title="Delete">
-                                                                <span className="material-symbols-outlined text-[18px]">delete</span>
-                                                            </button>
+                                                            {hasPermission('bookings', 'manage') && (
+                                                                <button onClick={() => {
+                                                                    if (confirm("Are you sure you want to permanently delete this booking? This action cannot be undone.")) {
+                                                                        deleteBooking(booking.id);
+                                                                    }
+                                                                }} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors" title="Delete">
+                                                                    <span className="material-symbols-outlined text-[18px]">delete</span>
+                                                                </button>
+                                                            )}
                                                         </div>
                                                     </td>
                                                 </tr>
@@ -731,6 +812,18 @@ export const Bookings: React.FC = () => {
                                     </tbody>
                                 </table>
                             </div>
+
+                            {/* Pagination */}
+                            {filteredBookings.length > 0 && (
+                                <Pagination
+                                    currentPage={currentPage}
+                                    totalItems={filteredBookings.length}
+                                    itemsPerPage={itemsPerPage}
+                                    onPageChange={setCurrentPage}
+                                    onItemsPerPageChange={setItemsPerPage}
+                                    itemsPerPageOptions={[10, 15, 25, 50]}
+                                />
+                            )}
                         </div>
                     </div>
                 )}
@@ -782,6 +875,25 @@ export const Bookings: React.FC = () => {
                 )}
 
             </div>
-        </div>
+
+            {/* Supplier Management Modal */}
+            {
+                selectedBookingForSuppliers && (
+                    <SupplierManagementModal
+                        isOpen={!!selectedBookingForSuppliers}
+                        onClose={() => setSelectedBookingForSuppliers(null)}
+                        booking={selectedBookingForSuppliers}
+                    />
+                )}
+
+            {/* Ledger Management Modal */}
+            {bookingForLedger && (
+                <LedgerManagementModal
+                    isOpen={!!bookingForLedger}
+                    onClose={() => setBookingForLedger(null)}
+                    booking={bookingForLedger}
+                />
+            )}
+        </div >
     );
 };

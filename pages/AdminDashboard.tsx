@@ -1,17 +1,32 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
 
 export const AdminDashboard: React.FC = () => {
     const navigate = useNavigate();
-    const { bookings, getRevenue, packages, leads, vendors, masterLocations, masterHotels, masterActivities } = useData();
+    const { bookings: globalBookings, packages, leads: globalLeads, vendors, masterLocations, masterHotels, masterActivities } = useData();
+    const { currentUser } = useAuth();
     const [greeting, setGreeting] = useState('');
     const [selectedYear, setSelectedYear] = useState('This Year');
+
+    // --- RBAC Scoping ---
+    const isRestricted = currentUser?.queryScope === 'Show Assigned Query Only';
+
+    const bookings = useMemo(() => {
+        if (!isRestricted) return globalBookings;
+        return globalBookings.filter(b => b.assignedTo === currentUser?.id);
+    }, [globalBookings, isRestricted, currentUser?.id]);
+
+    const leads = useMemo(() => {
+        if (!isRestricted) return globalLeads;
+        return globalLeads.filter(l => l.assignedTo === currentUser?.id);
+    }, [globalLeads, isRestricted, currentUser?.id]);
 
     // --- Enhanced Business Intelligence Calculations ---
 
     // Revenue Metrics
-    const totalRevenue = getRevenue();
+    const totalRevenue = bookings.reduce((acc, b) => b.payment === 'Paid' ? acc + b.amount : acc, 0);
     const bookingCount = bookings.length;
     const activePackages = packages.filter(p => p.status === 'Active').length;
 

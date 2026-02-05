@@ -28,66 +28,81 @@ export const ServiceSelector: React.FC<ServiceSelectorProps> = ({ day, onClose }
         masterTransports.filter(t => t.status === 'Active' && t.name.toLowerCase().includes(searchTerm.toLowerCase())),
         [masterTransports, searchTerm]);
 
-    const handleAdd = (item: ItineraryItem) => {
+    const handleAdd = (item: Omit<ItineraryItem, 'sellPrice'>) => {
         addItem(item);
         onClose();
     };
 
-    const createHotelItem = (hotel: MasterHotel): ItineraryItem => ({
+    const createHotelItem = (hotel: MasterHotel): Omit<ItineraryItem, 'sellPrice'> => ({
         id: `hotel-${Date.now()}`,
         type: 'hotel',
         day,
         title: hotel.name,
         description: `${hotel.rating}★ Hotel`,
-        cost: hotel.pricePerNight,
+        netCost: hotel.pricePerNight,
+        baseMarkupPercent: 15,
+        extraMarkupFlat: 0,
+        quantity: 1,
         masterId: hotel.id,
         masterData: hotel,
-        time: '14:00' // Default check-in
+        time: '14:00'
     });
 
-    const createActivityItem = (activity: MasterActivity): ItineraryItem => ({
+    const createActivityItem = (activity: MasterActivity): Omit<ItineraryItem, 'sellPrice'> => ({
         id: `act-${Date.now()}`,
         type: 'activity',
         day,
         title: activity.name,
         description: activity.category,
-        cost: activity.cost,
+        netCost: activity.cost,
+        baseMarkupPercent: 15,
+        extraMarkupFlat: 0,
+        quantity: 1,
         duration: activity.duration,
         masterId: activity.id,
         masterData: activity,
         time: '10:00'
     });
 
-    const createTransportItem = (transport: MasterTransport): ItineraryItem => ({
+    const createTransportItem = (transport: MasterTransport): Omit<ItineraryItem, 'sellPrice'> => ({
         id: `trans-${Date.now()}`,
         type: 'transport',
         day,
         title: transport.name,
         description: `${transport.type} (Capacity: ${transport.capacity})`,
-        cost: transport.baseRate,
+        netCost: transport.baseRate,
+        baseMarkupPercent: 15,
+        extraMarkupFlat: 0,
+        quantity: 1,
         masterId: transport.id,
         masterData: transport,
         time: '09:00'
     });
 
-    const createFlightItem = (): ItineraryItem => ({
+    const createFlightItem = (): Omit<ItineraryItem, 'sellPrice'> => ({
         id: `flight-${Date.now()}`,
         type: 'flight',
         day,
         title: 'New Flight',
         description: 'Flight Details',
-        cost: 0,
+        netCost: 0,
+        baseMarkupPercent: 10,
+        extraMarkupFlat: 0,
+        quantity: 1,
         time: '10:00',
         duration: '2h'
     });
 
-    const createNoteItem = (): ItineraryItem => ({
+    const createNoteItem = (): Omit<ItineraryItem, 'sellPrice'> => ({
         id: `note-${Date.now()}`,
         type: 'note',
         day,
         title: 'Note',
         description: 'Add details here...',
-        cost: 0
+        netCost: 0,
+        baseMarkupPercent: 0,
+        extraMarkupFlat: 0,
+        quantity: 1
     });
 
     const tabs: { id: ServiceType; label: string; icon: React.ReactNode }[] = [

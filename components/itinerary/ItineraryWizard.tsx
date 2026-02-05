@@ -2,9 +2,10 @@ import React, { useEffect, useRef } from 'react';
 import { useItinerary } from './ItineraryContext';
 import { StepTripDetails } from './steps/StepTripDetails';
 import { StepDayPlanner } from './steps/StepDayPlanner';
+import { StepPricing } from './steps/StepPricing';
 import { StepReview } from './steps/StepReview';
 import { gsap } from 'gsap';
-import { Check, Map, Calendar, FileCheck } from 'lucide-react';
+import { Check, Map, Calendar, FileCheck, Calculator } from 'lucide-react';
 
 const WizardContent: React.FC = () => {
     const { step } = useItinerary();
@@ -32,24 +33,31 @@ const WizardContent: React.FC = () => {
                             <p className="text-[10px] text-slate-500 font-medium hidden md:block mt-0.5">Create premium travel experiences</p>
                         </div>
 
-                        {/* Progress Steps */}
-                        <div className="flex items-center gap-1 md:gap-3 bg-slate-100 dark:bg-slate-900 p-1 rounded-lg scale-90 md:scale-100 origin-center">
+                        {/* Progress Steps - 4 Steps */}
+                        <div className="flex items-center gap-1 md:gap-2 bg-slate-100 dark:bg-slate-900 p-1 rounded-lg scale-90 md:scale-100 origin-center">
                             <StepIndicator
                                 number={1}
                                 label="Details"
                                 current={step}
                                 icon={<Map size={12} />}
                             />
-                            <div className={`w-3 md:w-6 h-0.5 rounded-full transition-colors duration-500 ${step > 1 ? 'bg-indigo-600' : 'bg-slate-300 dark:bg-slate-700'}`} />
+                            <div className={`w-2 md:w-4 h-0.5 rounded-full transition-colors duration-500 ${step > 1 ? 'bg-indigo-600' : 'bg-slate-300 dark:bg-slate-700'}`} />
                             <StepIndicator
                                 number={2}
                                 label="Planner"
                                 current={step}
                                 icon={<Calendar size={12} />}
                             />
-                            <div className={`w-3 md:w-6 h-0.5 rounded-full transition-colors duration-500 ${step > 2 ? 'bg-indigo-600' : 'bg-slate-300 dark:bg-slate-700'}`} />
+                            <div className={`w-2 md:w-4 h-0.5 rounded-full transition-colors duration-500 ${step > 2 ? 'bg-indigo-600' : 'bg-slate-300 dark:bg-slate-700'}`} />
                             <StepIndicator
                                 number={3}
+                                label="Pricing"
+                                current={step}
+                                icon={<Calculator size={12} />}
+                            />
+                            <div className={`w-2 md:w-4 h-0.5 rounded-full transition-colors duration-500 ${step > 3 ? 'bg-indigo-600' : 'bg-slate-300 dark:bg-slate-700'}`} />
+                            <StepIndicator
+                                number={4}
                                 label="Review"
                                 current={step}
                                 icon={<FileCheck size={12} />}
@@ -64,7 +72,8 @@ const WizardContent: React.FC = () => {
                 <div ref={contentRef} className="h-full w-full">
                     {step === 1 && <StepTripDetails />}
                     {step === 2 && <StepDayPlanner />}
-                    {step === 3 && <StepReview />}
+                    {step === 3 && <StepPricing />}
+                    {step === 4 && <StepReview />}
                 </div>
             </div>
         </div>
@@ -109,4 +118,3 @@ export const ItineraryWizard: React.FC = () => {
         <WizardContent />
     );
 };
-

@@ -4,6 +4,7 @@ import { useData } from '../../../context/DataContext';
 import { useNavigate } from 'react-router-dom';
 import { Package } from '../../../types';
 import { Check, DollarSign, Save, ArrowLeft, MapPin, Calendar, Users, FileText, Share2, Printer } from 'lucide-react';
+import { toast } from 'sonner';
 
 export const StepReview: React.FC = () => {
     const { tripDetails, items, totalCost, setStep } = useItinerary();
@@ -55,12 +56,10 @@ export const StepReview: React.FC = () => {
             days: tripDetails.duration,
             groupSize: tripDetails.guests,
             location: tripDetails.destination || 'Custom',
-            description: `Custom itinerary created for ${tripDetails.guests}.`,
+            description: `Custom itinerary created for ${tripDetails.guests || 'Valued Guests'}.`,
             price: finalPrice,
             image: tripDetails.coverImage,
             theme: 'Custom',
-            rating: 'New',
-            reviews: '0',
             overview: `A ${tripDetails.duration}-day journey to ${tripDetails.destination || 'Paradise'}.`,
             highlights: items.slice(0, 4).map(i => ({ icon: 'star', label: i.title })),
             itinerary: generatePackageItinerary(),
@@ -73,14 +72,23 @@ export const StepReview: React.FC = () => {
         navigate('/admin/packages');
     };
 
+    const handlePrint = () => {
+        window.print();
+    };
+
+    const handleShareWhatsApp = () => {
+        const text = `Here is the itinerary for *${tripDetails.title}* (%0AStart Date: ${tripDetails.startDate}%0A%0APlease check the attached PDF for full details.`;
+        window.open(`https://wa.me/?text=${text}`, '_blank');
+    };
+
     const itineraryList = generatePackageItinerary();
 
     return (
         <div className="h-full flex flex-col md:flex-row bg-slate-50 dark:bg-[#0B1116] overflow-hidden">
 
             {/* LEFT: Document Preview */}
-            <div className="flex-1 overflow-y-auto p-4 md:p-12">
-                <div className="max-w-3xl mx-auto bg-white dark:bg-slate-900 min-h-[800px] shadow-2xl rounded-sm p-6 md:p-12 relative animate-in zoom-in-95 duration-500">
+            <div className="flex-1 overflow-y-auto p-4 md:p-12 print:p-0 print:overflow-visible">
+                <div className="max-w-3xl mx-auto bg-white dark:bg-slate-900 min-h-[800px] shadow-2xl rounded-sm p-6 md:p-12 relative animate-in zoom-in-95 duration-500 print:shadow-none print:m-0 print:w-full print:max-w-none">
 
                     {/* Document Header */}
                     <div className="border-b-2 border-slate-900 dark:border-white pb-6 md:pb-6 mb-6 md:mb-6 flex flex-col md:flex-row justify-between items-start md:items-end gap-3">
@@ -125,7 +133,7 @@ export const StepReview: React.FC = () => {
             </div>
 
             {/* RIGHT: Costing Panel */}
-            <div className="w-full md:w-96 bg-white dark:bg-[#1A2633] border-l border-slate-200 dark:border-slate-800 flex flex-col shadow-2xl z-20">
+            <div className="w-full md:w-96 bg-white dark:bg-[#1A2633] border-l border-slate-200 dark:border-slate-800 flex flex-col shadow-2xl z-20 print:hidden">
                 <div className="p-6 border-b border-slate-200 dark:border-slate-800">
                     <h3 className="font-black text-lg text-slate-900 dark:text-white flex items-center gap-2">
                         <DollarSign size={20} className="text-green-500" /> Costing & Margins
@@ -201,8 +209,20 @@ export const StepReview: React.FC = () => {
                         >
                             <ArrowLeft size={16} /> Edit
                         </button>
-                        <button className="w-full py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-500 font-bold rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 transition-all flex items-center justify-center gap-2">
-                            <Printer size={16} /> Print
+                        <button onClick={handlePrint} className="w-full py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-500 font-bold rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 transition-all flex items-center justify-center gap-2">
+                            <Printer size={16} /> Print PDF
+                        </button>
+                    </div>
+                    <div className="flex gap-2">
+                        <button onClick={() => {
+                            const text = `🏝️ *Trip to ${tripDetails.destination || 'Paradise'}*\n📅 ${tripDetails.duration} Days | ${tripDetails.guests} Guests\n💰 ₹${finalPrice.toLocaleString()}\n\n*Itinerary:*\n${items.map((item, i) => `Day ${i + 1}: ${item.title}`).join('\n')}\n\nBook now with Shravya Tours! 🚀`;
+                            navigator.clipboard.writeText(text);
+                            toast.success("Itinerary copied to clipboard!");
+                        }} className="w-full py-3 bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-bold rounded-xl shadow-lg hover:opacity-90 transition-all flex items-center justify-center gap-2">
+                            <span className="material-symbols-outlined text-sm">content_copy</span> Copy Text
+                        </button>
+                        <button onClick={handleShareWhatsApp} className="w-full py-3 bg-[#25D366] text-white font-bold rounded-xl shadow-lg shadow-green-500/20 hover:bg-[#128C7E] transition-all flex items-center justify-center gap-2">
+                            <Share2 size={18} /> WhatsApp
                         </button>
                     </div>
                 </div>

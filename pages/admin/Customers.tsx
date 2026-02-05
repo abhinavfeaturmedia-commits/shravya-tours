@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useData } from '../../context/DataContext';
 import { Customer, Booking, Lead } from '../../types';
 import { toast } from 'sonner';
+import { Pagination, usePagination } from '../../components/ui/Pagination';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -52,6 +53,10 @@ export const Customers: React.FC = () => {
             return 0;
         });
     }, [customers, search, filterType, sortField, sortOrder]);
+
+    // Pagination for customers list
+    const { currentPage, setCurrentPage, itemsPerPage, setItemsPerPage, paginateData } = usePagination(processedCustomers.length, 15);
+    const paginatedCustomers = paginateData<Customer>(processedCustomers);
 
     const handleSort = (field: SortField) => {
         if (sortField === field) {
@@ -191,7 +196,7 @@ export const Customers: React.FC = () => {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                            {processedCustomers.length === 0 ? (
+                            {paginatedCustomers.length === 0 ? (
                                 <tr>
                                     <td colSpan={5} className="p-20 text-center">
                                         <div className="flex flex-col items-center justify-center opacity-50">
@@ -202,13 +207,13 @@ export const Customers: React.FC = () => {
                                     </td>
                                 </tr>
                             ) : (
-                                processedCustomers.map(customer => (
+                                paginatedCustomers.map(customer => (
                                     <tr key={customer.id} onClick={() => setSelectedCustomer(customer)} className="group hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-all cursor-pointer">
                                         <td className="p-6">
                                             <div className="flex items-center gap-4">
                                                 <div className={`size-12 rounded-[1rem] flex items-center justify-center font-black text-lg text-white shadow-md shadow-slate-200 dark:shadow-none transition-transform group-hover:scale-110 ${customer.type === 'VIP' ? 'bg-gradient-to-br from-amber-400 to-orange-600' :
-                                                        customer.type === 'Returning' ? 'bg-gradient-to-br from-blue-400 to-indigo-600' :
-                                                            'bg-gradient-to-br from-slate-400 to-slate-600'
+                                                    customer.type === 'Returning' ? 'bg-gradient-to-br from-blue-400 to-indigo-600' :
+                                                        'bg-gradient-to-br from-slate-400 to-slate-600'
                                                     }`}>
                                                     {customer.name.charAt(0)}
                                                 </div>
@@ -275,6 +280,20 @@ export const Customers: React.FC = () => {
                         </tbody>
                     </table>
                 </div>
+
+                {/* Pagination */}
+                {processedCustomers.length > 0 && (
+                    <div className="px-6 pb-6">
+                        <Pagination
+                            currentPage={currentPage}
+                            totalItems={processedCustomers.length}
+                            itemsPerPage={itemsPerPage}
+                            onPageChange={setCurrentPage}
+                            onItemsPerPageChange={setItemsPerPage}
+                            itemsPerPageOptions={[10, 15, 25, 50]}
+                        />
+                    </div>
+                )}
             </div>
 
             {/* Slide-over Details Drawer */}

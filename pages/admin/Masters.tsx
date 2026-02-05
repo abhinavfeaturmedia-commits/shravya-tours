@@ -7,10 +7,22 @@ import {
     MasterTransport,
     MasterPlan,
     MasterLocationType,
-    MasterTransportType
+    MasterTransportType,
+    MasterRoomType,
+    MasterMealPlan,
+    MasterLeadSource,
+    MasterTermsTemplate,
+    MEAL_PLAN_DESCRIPTIONS
 } from '../../types';
+import {
+    MapPin, Building2, Bike, Car, Calendar, Search, Plus, Filter,
+    Download, Upload, Trash2, Edit2, Copy, MoreVertical, X,
+    Check, ChevronDown, LayoutGrid, List, BedDouble, Utensils,
+    Users, FileText, Globe
+} from 'lucide-react';
+import { toast } from 'sonner';
 
-type MasterTab = 'analytics' | 'locations' | 'hotels' | 'activities' | 'transport' | 'plans';
+type MasterTab = 'analytics' | 'locations' | 'hotels' | 'activities' | 'transports' | 'plans' | 'room-types' | 'meal-plans' | 'lead-sources' | 'terms';
 type ViewMode = 'grid' | 'list';
 type SortDirection = 'asc' | 'desc';
 
@@ -29,6 +41,10 @@ const MasterModal: React.FC<{
         addMasterActivity, updateMasterActivity,
         addMasterTransport, updateMasterTransport,
         addMasterPlan, updateMasterPlan,
+        addMasterRoomType, updateMasterRoomType,
+        addMasterMealPlan, updateMasterMealPlan,
+        addMasterLeadSource, updateMasterLeadSource,
+        addMasterTermsTemplate, updateMasterTermsTemplate,
         masterLocations
     } = useData();
 
@@ -37,13 +53,35 @@ const MasterModal: React.FC<{
 
     // Handle saving
     const save = () => {
-        if (!form.name && !form.title) return alert('Name/Title is required');
+        // Validation for common fields
+        if (activeTab !== 'plans' && activeTab !== 'room-types' && activeTab !== 'meal-plans' && activeTab !== 'lead-sources' && activeTab !== 'terms' && !form.name) {
+            return toast.error('Name is required');
+        }
+        if (activeTab === 'plans' && !form.title) {
+            return toast.error('Title is required');
+        }
+        if (activeTab === 'room-types' && !form.name) {
+            return toast.error('Name is required');
+        }
+        if (activeTab === 'meal-plans' && (!form.name || !form.code)) {
+            return toast.error('Name and Code are required');
+        }
+        if (activeTab === 'lead-sources' && !form.name) {
+            return toast.error('Name is required');
+        }
+        if (activeTab === 'terms' && !form.title) {
+            return toast.error('Title is required');
+        }
 
         const id = editingItem ? editingItem.id : generateId(
             activeTab === 'locations' ? 'LOC' :
                 activeTab === 'hotels' ? 'HTL' :
                     activeTab === 'activities' ? 'ACT' :
-                        activeTab === 'transport' ? 'TRN' : 'PLN'
+                        activeTab === 'transports' ? 'TRN' :
+                            activeTab === 'plans' ? 'PLN' :
+                                activeTab === 'room-types' ? 'RT' :
+                                    activeTab === 'meal-plans' ? 'MP' :
+                                        activeTab === 'lead-sources' ? 'LS' : 'TT'
         );
 
         const data = { ...form, id };
@@ -55,6 +93,7 @@ const MasterModal: React.FC<{
         if (data.capacity) data.capacity = Number(data.capacity);
         if (data.baseRate) data.baseRate = Number(data.baseRate);
         if (data.duration && !isNaN(Number(data.duration))) data.duration = Number(data.duration); // Keep as number if plan, string if activity e.g "2 hours"
+        if (data.estimatedCost) data.estimatedCost = Number(data.estimatedCost);
 
         // Handle Array inputs (Amenities)
         if (typeof data.amenities === 'string') {
@@ -65,22 +104,31 @@ const MasterModal: React.FC<{
             if (activeTab === 'locations') updateMasterLocation(id, data);
             if (activeTab === 'hotels') updateMasterHotel(id, data);
             if (activeTab === 'activities') updateMasterActivity(id, data);
-            if (activeTab === 'transport') updateMasterTransport(id, data);
+            if (activeTab === 'transports') updateMasterTransport(id, data);
             if (activeTab === 'plans') updateMasterPlan(id, data);
+            if (activeTab === 'room-types') updateMasterRoomType(id, data);
+            if (activeTab === 'meal-plans') updateMasterMealPlan(id, data);
+            if (activeTab === 'lead-sources') updateMasterLeadSource(id, data);
+            if (activeTab === 'terms') updateMasterTermsTemplate(id, data);
         } else {
             if (activeTab === 'locations') addMasterLocation(data);
             if (activeTab === 'hotels') addMasterHotel(data);
             if (activeTab === 'activities') addMasterActivity(data);
-            if (activeTab === 'transport') addMasterTransport(data);
-            if (activeTab === 'plans') addMasterPlan(data);
+            if (activeTab === 'transports') addMasterTransport(data);
+            if (activeTab === 'plans') addMasterPlan({ ...data, days: [] }); // Plans start with empty days
+            if (activeTab === 'room-types') addMasterRoomType(data);
+            if (activeTab === 'meal-plans') addMasterMealPlan(data);
+            if (activeTab === 'lead-sources') addMasterLeadSource(data);
+            if (activeTab === 'terms') addMasterTermsTemplate(data);
         }
         onClose();
+        toast.success(`${editingItem ? 'Updated' : 'Added'} successfully`);
     };
 
     return (
         <div className="space-y-4">
             {/* Common Name/Title Field */}
-            {activeTab !== 'plans' ? (
+            {activeTab !== 'plans' && activeTab !== 'room-types' && activeTab !== 'meal-plans' && activeTab !== 'lead-sources' && activeTab !== 'terms' ? (
                 <div>
                     <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1">Name *</label>
                     <input
@@ -91,18 +139,7 @@ const MasterModal: React.FC<{
                         autoFocus
                     />
                 </div>
-            ) : (
-                <div>
-                    <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1">Plan Title *</label>
-                    <input
-                        value={form.title || ''}
-                        onChange={e => setForm({ ...form, title: e.target.value })}
-                        className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-indigo-500 outline-none"
-                        placeholder="e.g., Summer Escape"
-                        autoFocus
-                    />
-                </div>
-            )}
+            ) : null}
 
             {/* Location Specifics */}
             {activeTab === 'locations' && (
@@ -183,7 +220,7 @@ const MasterModal: React.FC<{
             )}
 
             {/* Transport Specifics */}
-            {activeTab === 'transport' && (
+            {activeTab === 'transports' && (
                 <>
                     <div className="grid grid-cols-2 gap-4">
                         <div>
@@ -213,6 +250,16 @@ const MasterModal: React.FC<{
             {activeTab === 'plans' && (
                 <>
                     <div>
+                        <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1">Plan Title *</label>
+                        <input
+                            value={form.title || ''}
+                            onChange={e => setForm({ ...form, title: e.target.value })}
+                            className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-indigo-500 outline-none"
+                            placeholder="e.g., Summer Escape"
+                            autoFocus
+                        />
+                    </div>
+                    <div>
                         <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1">Primary Location</label>
                         <select value={form.locationId || ''} onChange={e => setForm({ ...form, locationId: e.target.value })} className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 outline-none">
                             <option value="">Select Location</option>
@@ -230,6 +277,147 @@ const MasterModal: React.FC<{
                         </div>
                     </div>
                     <p className="text-xs text-slate-500 italic mt-2">Note: To manage the itinerary days and activities, please use the specific Itinerary Builder module or delete this plan and create a new one.</p>
+                </>
+            )}
+
+            {/* ROOM TYPES FIELDS */}
+            {activeTab === 'room-types' && (
+                <>
+                    <div>
+                        <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1">Name *</label>
+                        <input
+                            value={form.name || ''}
+                            onChange={e => setForm({ ...form, name: e.target.value })}
+                            className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-indigo-500 outline-none"
+                            placeholder="e.g. Deluxe Ocean View"
+                            autoFocus
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1">Description</label>
+                        <textarea
+                            value={form.description || ''}
+                            onChange={e => setForm({ ...form, description: e.target.value })}
+                            className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 outline-none h-24"
+                            placeholder="Room details..."
+                        />
+                    </div>
+                </>
+            )}
+
+            {/* MEAL PLANS FIELDS */}
+            {activeTab === 'meal-plans' && (
+                <>
+                    <div className="grid grid-cols-3 gap-4">
+                        <div className="col-span-1">
+                            <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1">Code *</label>
+                            <select
+                                value={form.code || 'CP'}
+                                onChange={e => setForm({ ...form, code: e.target.value })}
+                                className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 outline-none"
+                            >
+                                {Object.keys(MEAL_PLAN_DESCRIPTIONS).map(code => (
+                                    <option key={code} value={code}>{code}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <div className="col-span-2">
+                            <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1">Name *</label>
+                            <input
+                                value={form.name || ''}
+                                onChange={e => setForm({ ...form, name: e.target.value })}
+                                className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-indigo-500 outline-none"
+                                placeholder="e.g. Continental Plan"
+                            />
+                        </div>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1">Description</label>
+                        <input
+                            value={form.description || MEAL_PLAN_DESCRIPTIONS[form.code] || ''}
+                            onChange={e => setForm({ ...form, description: e.target.value })}
+                            className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 outline-none"
+                            placeholder="e.g. Breakfast included"
+                        />
+                    </div>
+                </>
+            )}
+
+            {/* LEAD SOURCES FIELDS */}
+            {activeTab === 'lead-sources' && (
+                <>
+                    <div>
+                        <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1">Name *</label>
+                        <input
+                            value={form.name || ''}
+                            onChange={e => setForm({ ...form, name: e.target.value })}
+                            className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-indigo-500 outline-none"
+                            placeholder="e.g. Instagram Ads"
+                            autoFocus
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1">Category</label>
+                        <select
+                            value={form.category || 'Organic'}
+                            onChange={e => setForm({ ...form, category: e.target.value })}
+                            className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 outline-none"
+                        >
+                            <option value="Organic">Organic</option>
+                            <option value="Paid">Paid</option>
+                            <option value="Referral">Referral</option>
+                            <option value="Direct">Direct</option>
+                        </select>
+                    </div>
+                </>
+            )}
+
+            {/* TERMS FIELDS */}
+            {activeTab === 'terms' && (
+                <>
+                    <div>
+                        <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1">Title *</label>
+                        <input
+                            value={form.title || ''}
+                            onChange={e => setForm({ ...form, title: e.target.value })}
+                            className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-indigo-500 outline-none"
+                            placeholder="e.g. Standard Cancellation Policy"
+                            autoFocus
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1">Category</label>
+                        <select
+                            value={form.category || 'Other'}
+                            onChange={e => setForm({ ...form, category: e.target.value })}
+                            className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 outline-none"
+                        >
+                            <option value="Booking & Payment">Booking & Payment</option>
+                            <option value="Cancellation Policy">Cancellation Policy</option>
+                            <option value="Travel Insurance">Travel Insurance</option>
+                            <option value="Pricing & Inclusions">Pricing & Inclusions</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1">Content (HTML)</label>
+                        <textarea
+                            value={form.content || ''}
+                            onChange={e => setForm({ ...form, content: e.target.value })}
+                            className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 outline-none h-40 font-mono"
+                            placeholder="<p>Enter terms content...</p>"
+                        />
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <input
+                            type="checkbox"
+                            checked={form.isDefault || false}
+                            onChange={e => setForm({ ...form, isDefault: e.target.checked })}
+                            id="isDefault"
+                            className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                        />
+                        <label htmlFor="isDefault" className="text-sm font-bold text-slate-700 dark:text-slate-300">Set as Default Template</label>
+                    </div>
                 </>
             )}
 
@@ -253,11 +441,16 @@ const MasterModal: React.FC<{
 export const Masters: React.FC = () => {
     const {
         masterLocations, masterHotels, masterActivities, masterTransports, masterPlans,
+        masterRoomTypes, masterMealPlans, masterLeadSources, masterTermsTemplates,
         addMasterLocation, updateMasterLocation, deleteMasterLocation,
         addMasterHotel, updateMasterHotel, deleteMasterHotel,
         addMasterActivity, updateMasterActivity, deleteMasterActivity,
         addMasterTransport, updateMasterTransport, deleteMasterTransport,
         addMasterPlan, updateMasterPlan, deleteMasterPlan,
+        addMasterRoomType, updateMasterRoomType, deleteMasterRoomType,
+        addMasterMealPlan, updateMasterMealPlan, deleteMasterMealPlan,
+        addMasterLeadSource, updateMasterLeadSource, deleteMasterLeadSource,
+        addMasterTermsTemplate, updateMasterTermsTemplate, deleteMasterTermsTemplate,
     } = useData();
 
     // --- State ---
@@ -279,17 +472,23 @@ export const Masters: React.FC = () => {
         setSelectedItems(new Set());
         setFilterStatus('All');
         setSearchQuery('');
-        setSortBy('name');
+        setSortBy('name'); // Default sort field for most tabs
+        if (activeTab === 'plans' || activeTab === 'terms') setSortBy('title');
+        if (activeTab === 'meal-plans') setSortBy('code');
         setSortDir('asc');
     }, [activeTab]);
 
-    const tabs: { id: MasterTab; label: string; icon: string; count?: number }[] = [
-        { id: 'analytics', label: 'Analytics', icon: 'monitoring' },
-        { id: 'locations', label: 'Locations', icon: 'location_on', count: masterLocations.length },
-        { id: 'hotels', label: 'Hotels', icon: 'hotel', count: masterHotels.length },
-        { id: 'activities', label: 'Activities', icon: 'attractions', count: masterActivities.length },
-        { id: 'transport', label: 'Transport', icon: 'directions_car', count: masterTransports.length },
-        { id: 'plans', label: 'Plan Templates', icon: 'map', count: masterPlans.length },
+    const tabs: { id: MasterTab; label: string; icon: React.ReactNode; count?: number }[] = [
+        { id: 'analytics', label: 'Analytics', icon: <span className="material-symbols-outlined">monitoring</span> },
+        { id: 'locations', label: 'Locations', icon: <MapPin size={16} />, count: masterLocations.length },
+        { id: 'hotels', label: 'Hotels', icon: <Building2 size={16} />, count: masterHotels.length },
+        { id: 'room-types', label: 'Room Types', icon: <BedDouble size={16} />, count: masterRoomTypes.length },
+        { id: 'meal-plans', label: 'Meal Plans', icon: <Utensils size={16} />, count: masterMealPlans.length },
+        { id: 'activities', label: 'Activities', icon: <Bike size={16} />, count: masterActivities.length },
+        { id: 'transports', label: 'Transports', icon: <Car size={16} />, count: masterTransports.length },
+        { id: 'lead-sources', label: 'Lead Sources', icon: <Globe size={16} />, count: masterLeadSources.length },
+        { id: 'terms', label: 'Terms & Conditions', icon: <FileText size={16} />, count: masterTermsTemplates.length },
+        { id: 'plans', label: 'Plan Templates', icon: <Calendar size={16} />, count: masterPlans.length },
     ];
 
     // --- Helper Functions ---
@@ -309,13 +508,22 @@ export const Masters: React.FC = () => {
             return { total: count, details: `Used in ${count} Plans` };
         }
         if (type === 'activities') {
-            const count = masterPlans.reduce((acc, plan) => acc + (plan.days?.filter(d => d.activities?.includes(id)).length || 0), 0);
+            const count = masterPlans.reduce((acc, plan) => acc + (plan.days?.flatMap(d => d.activities || []).includes(id) ? 1 : 0), 0);
             return { total: count, details: `Used in ${count} Plans` };
         }
-        if (type === 'transport') {
+        if (type === 'transports') {
             const count = masterPlans.reduce((acc, plan) => acc + (plan.days?.filter(d => d.transportId === id).length || 0), 0);
             return { total: count, details: `Used in ${count} Plans` };
         }
+        if (type === 'room-types') {
+            const count = masterHotels.filter(h => h.roomTypes?.includes(id)).length; // Assuming hotels can list room types
+            return { total: count, details: `Used in ${count} Hotels` };
+        }
+        if (type === 'meal-plans') {
+            const count = masterHotels.filter(h => h.mealPlans?.includes(id)).length; // Assuming hotels can list meal plans
+            return { total: count, details: `Used in ${count} Hotels` };
+        }
+        // Lead sources and terms templates are generally not directly linked to other master data items in this way
         return { total: 0, details: '' };
     };
 
@@ -336,16 +544,20 @@ export const Masters: React.FC = () => {
 
     const handleDuplicate = (item: any) => {
         const newItem = { ...item };
-        newItem.id = generateId(activeTab === 'locations' ? 'LOC' : activeTab === 'hotels' ? 'HTL' : activeTab === 'activities' ? 'ACT' : activeTab === 'transport' ? 'TRN' : 'PLN');
+        newItem.id = generateId(activeTab === 'locations' ? 'LOC' : activeTab === 'hotels' ? 'HTL' : activeTab === 'activities' ? 'ACT' : activeTab === 'transports' ? 'TRN' : activeTab === 'plans' ? 'PLN' : activeTab === 'room-types' ? 'RT' : activeTab === 'meal-plans' ? 'MP' : activeTab === 'lead-sources' ? 'LS' : 'TT');
         newItem.name ? (newItem.name += ' (Copy)') : (newItem.title += ' (Copy)');
 
         if (activeTab === 'locations') addMasterLocation(newItem);
         else if (activeTab === 'hotels') addMasterHotel(newItem);
         else if (activeTab === 'activities') addMasterActivity(newItem);
-        else if (activeTab === 'transport') addMasterTransport(newItem);
-        else if (activeTab === 'plans') addMasterPlan(newItem);
+        else if (activeTab === 'transports') addMasterTransport(newItem);
+        else if (activeTab === 'plans') addMasterPlan({ ...newItem, days: [] });
+        else if (activeTab === 'room-types') addMasterRoomType(newItem);
+        else if (activeTab === 'meal-plans') addMasterMealPlan(newItem);
+        else if (activeTab === 'lead-sources') addMasterLeadSource(newItem);
+        else if (activeTab === 'terms') addMasterTermsTemplate(newItem);
 
-        alert('Item duplicated successfully!');
+        toast.success('Item duplicated successfully!');
     };
 
     const confirmBulkDelete = () => {
@@ -355,13 +567,18 @@ export const Masters: React.FC = () => {
             locations: deleteMasterLocation,
             hotels: deleteMasterHotel,
             activities: deleteMasterActivity,
-            transport: deleteMasterTransport,
-            plans: deleteMasterPlan
+            transports: deleteMasterTransport,
+            plans: deleteMasterPlan,
+            'room-types': deleteMasterRoomType,
+            'meal-plans': deleteMasterMealPlan,
+            'lead-sources': deleteMasterLeadSource,
+            'terms': deleteMasterTermsTemplate,
         };
 
         if (deleteFuncs[activeTab]) {
             selectedItems.forEach(id => deleteFuncs[activeTab](id));
             setSelectedItems(new Set());
+            toast.success(`${selectedItems.size} items deleted`);
         }
     };
 
@@ -370,19 +587,24 @@ export const Masters: React.FC = () => {
             locations: updateMasterLocation,
             hotels: updateMasterHotel,
             activities: updateMasterActivity,
-            transport: updateMasterTransport,
-            plans: updateMasterPlan
+            transports: updateMasterTransport,
+            plans: updateMasterPlan,
+            'room-types': updateMasterRoomType,
+            'meal-plans': updateMasterMealPlan,
+            'lead-sources': updateMasterLeadSource,
+            'terms': updateMasterTermsTemplate,
         };
 
         if (updateFuncs[activeTab]) {
             selectedItems.forEach(id => updateFuncs[activeTab](id, { status }));
             setSelectedItems(new Set());
+            toast.success(`${selectedItems.size} items updated to ${status}`);
         }
     };
 
     // --- Import / Export ---
     const handleExport = () => {
-        if (activeTab === 'analytics') return alert('Please select a data tab to export.');
+        if (activeTab === 'analytics') return toast.error('Please select a data tab to export.');
 
         const dataToExport = getProcessedData();
         const jsonString = JSON.stringify(dataToExport, null, 2);
@@ -394,10 +616,11 @@ export const Masters: React.FC = () => {
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+        toast.success('Data exported successfully!');
     };
 
     const handleImportClick = () => {
-        if (activeTab === 'analytics') return alert('Please select a data tab to import into.');
+        if (activeTab === 'analytics') return toast.error('Please select a data tab to import into.');
         fileInputRef.current?.click();
     };
 
@@ -420,16 +643,20 @@ export const Masters: React.FC = () => {
                     if (activeTab === 'locations') addMasterLocation(newItem);
                     else if (activeTab === 'hotels') addMasterHotel(newItem);
                     else if (activeTab === 'activities') addMasterActivity(newItem);
-                    else if (activeTab === 'transport') addMasterTransport(newItem);
-                    else if (activeTab === 'plans') addMasterPlan(newItem);
+                    else if (activeTab === 'transports') addMasterTransport(newItem);
+                    else if (activeTab === 'plans') addMasterPlan({ ...newItem, days: newItem.days || [] });
+                    else if (activeTab === 'room-types') addMasterRoomType(newItem);
+                    else if (activeTab === 'meal-plans') addMasterMealPlan(newItem);
+                    else if (activeTab === 'lead-sources') addMasterLeadSource(newItem);
+                    else if (activeTab === 'terms') addMasterTermsTemplate(newItem);
                     count++;
                 });
 
-                alert(`Successfully imported ${count} items into ${activeTab}.`);
+                toast.success(`Successfully imported ${count} items into ${activeTab}.`);
                 if (fileInputRef.current) fileInputRef.current.value = '';
 
             } catch (err) {
-                alert('Failed to import: ' + (err as Error).message);
+                toast.error('Failed to import: ' + (err as Error).message);
             }
         };
         reader.readAsText(file);
@@ -452,16 +679,22 @@ export const Masters: React.FC = () => {
             case 'locations': data = masterLocations; break;
             case 'hotels': data = masterHotels; break;
             case 'activities': data = masterActivities; break;
-            case 'transport': data = masterTransports; break;
+            case 'transports': data = masterTransports; break;
             case 'plans': data = masterPlans; break;
+            case 'room-types': data = masterRoomTypes; break;
+            case 'meal-plans': data = masterMealPlans; break;
+            case 'lead-sources': data = masterLeadSources; break;
+            case 'terms': data = masterTermsTemplates; break;
             default: return [];
         }
 
         // Filter
         data = data.filter(item => {
-            const matchesSearch =
-                (item.name || item.title || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-                (item.region || '').toLowerCase().includes(searchQuery.toLowerCase());
+            const searchableFields = [
+                item.name, item.title, item.region, item.type, item.category, item.code, item.description
+            ].filter(Boolean).map(String).join(' ').toLowerCase();
+
+            const matchesSearch = searchableFields.includes(searchQuery.toLowerCase());
 
             const matchesStatus = filterStatus === 'All' || item.status === filterStatus;
 
@@ -470,11 +703,16 @@ export const Masters: React.FC = () => {
 
         // Sort
         data.sort((a, b) => {
-            const valA = a[sortBy] || a.title || '';
-            const valB = b[sortBy] || b.title || '';
+            const valA = a[sortBy] || a.title || a.name || a.code || '';
+            const valB = b[sortBy] || b.title || b.name || b.code || '';
 
-            if (valA < valB) return sortDir === 'asc' ? -1 : 1;
-            if (valA > valB) return sortDir === 'asc' ? 1 : -1;
+            if (typeof valA === 'string' && typeof valB === 'string') {
+                return sortDir === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+            }
+            if (typeof valA === 'number' && typeof valB === 'number') {
+                return sortDir === 'asc' ? valA - valB : valB - valA;
+            }
+            // Fallback for mixed types or undefined
             return 0;
         });
 
@@ -485,7 +723,7 @@ export const Masters: React.FC = () => {
 
     // --- Analytics Tab Component ---
     const AnalyticsView = () => {
-        const totalItems = masterLocations.length + masterHotels.length + masterActivities.length + masterTransports.length + masterPlans.length;
+        const totalItems = masterLocations.length + masterHotels.length + masterActivities.length + masterTransports.length + masterPlans.length + masterRoomTypes.length + masterMealPlans.length + masterLeadSources.length + masterTermsTemplates.length;
 
         const expensiveHotels = masterHotels.filter(h => h.pricePerNight > 10000).length;
         const midRangeHotels = masterHotels.filter(h => h.pricePerNight >= 5000 && h.pricePerNight <= 10000).length;
@@ -650,9 +888,16 @@ export const Masters: React.FC = () => {
                             onChange={e => setSortBy(e.target.value)}
                             className="bg-transparent font-bold text-slate-700 dark:text-slate-300 outline-none cursor-pointer hover:underline"
                         >
-                            <option value={activeTab === 'plans' ? 'title' : 'name'}>Name</option>
-                            {(activeTab === 'hotels' || activeTab === 'activities' || activeTab === 'transport') && <option value={activeTab === 'hotels' ? 'pricePerNight' : activeTab === 'transport' ? 'baseRate' : 'cost'}>Price</option>}
+                            <option value={activeTab === 'plans' || activeTab === 'terms' ? 'title' : activeTab === 'meal-plans' ? 'code' : 'name'}>Name</option>
+                            {(activeTab === 'hotels' || activeTab === 'activities' || activeTab === 'transports') && <option value={activeTab === 'hotels' ? 'pricePerNight' : activeTab === 'transports' ? 'baseRate' : 'cost'}>Price</option>}
                             <option value="status">Status</option>
+                            {activeTab === 'locations' && <option value="type">Type</option>}
+                            {activeTab === 'hotels' && <option value="rating">Rating</option>}
+                            {activeTab === 'activities' && <option value="category">Category</option>}
+                            {activeTab === 'transports' && <option value="capacity">Capacity</option>}
+                            {activeTab === 'plans' && <option value="duration">Duration</option>}
+                            {activeTab === 'lead-sources' && <option value="category">Category</option>}
+                            {activeTab === 'terms' && <option value="category">Category</option>}
                         </select>
                         <button onClick={() => setSortDir(prev => prev === 'asc' ? 'desc' : 'asc')} className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded">
                             <span className="material-symbols-outlined text-[16px]">{sortDir === 'asc' ? 'arrow_upward' : 'arrow_downward'}</span>
@@ -696,45 +941,63 @@ export const Masters: React.FC = () => {
         const isSelected = selectedItems.has(item.id);
         const usage = getUsageCount(item.id, type);
 
-        // ... (Render logic)
-        let icon = 'inventory_2';
+        let icon: React.ReactNode = <span className="material-symbols-outlined">inventory_2</span>;
         let detail = '';
         let subtitle = '';
         let price = '';
+        let title = item.name || item.title;
 
         switch (type) {
             case 'locations':
-                icon = 'location_on';
+                icon = <span className="material-symbols-outlined">location_on</span>;
                 subtitle = item.region;
                 detail = item.type;
                 break;
             case 'hotels':
-                icon = 'hotel';
+                icon = <span className="material-symbols-outlined">hotel</span>;
                 subtitle = getLocationNameById(item.locationId);
                 detail = `${item.rating} Stars`;
                 price = `₹${item.pricePerNight?.toLocaleString()}`;
                 break;
             case 'activities':
-                icon = 'attractions';
+                icon = <span className="material-symbols-outlined">attractions</span>;
                 subtitle = getLocationNameById(item.locationId);
                 detail = item.duration;
                 price = `₹${item.cost?.toLocaleString()}`;
                 break;
-            case 'transport':
-                icon = 'directions_car';
+            case 'transports':
+                icon = <span className="material-symbols-outlined">directions_car</span>;
                 subtitle = `${item.capacity} Seats`;
                 detail = item.type;
                 price = `₹${item.baseRate?.toLocaleString()}`;
                 break;
             case 'plans':
-                icon = 'map';
+                icon = <span className="material-symbols-outlined">map</span>;
                 subtitle = `${item.duration} Days`;
                 detail = getLocationNameById(item.locationId);
                 price = `₹${item.estimatedCost?.toLocaleString()}`;
                 break;
+            case 'room-types':
+                icon = <BedDouble size={20} />;
+                subtitle = item.description;
+                detail = '';
+                break;
+            case 'meal-plans':
+                icon = <Utensils size={20} />;
+                subtitle = item.name;
+                detail = item.code;
+                break;
+            case 'lead-sources':
+                icon = <Globe size={20} />;
+                subtitle = item.category;
+                detail = '';
+                break;
+            case 'terms':
+                icon = <FileText size={20} />;
+                subtitle = item.category;
+                detail = item.isDefault ? 'Default' : '';
+                break;
         }
-
-        const title = item.name || item.title;
 
         return (
             <div
@@ -771,14 +1034,16 @@ export const Masters: React.FC = () => {
                             <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">{subtitle}</p>
                         </div>
                         <div className="size-10 rounded-xl bg-slate-50 dark:bg-slate-800 flex items-center justify-center text-slate-400 group-hover:text-indigo-500 group-hover:scale-110 transition-all">
-                            <span className="material-symbols-outlined">{icon}</span>
+                            {icon}
                         </div>
                     </div>
 
                     <div className="flex items-center justify-between text-sm mb-3">
-                        <span className="px-2 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-medium">
-                            {detail}
-                        </span>
+                        {detail && (
+                            <span className="px-2 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-medium">
+                                {detail}
+                            </span>
+                        )}
                         {price && <span className="font-bold text-slate-900 dark:text-white">{price}</span>}
                     </div>
 
@@ -807,7 +1072,21 @@ export const Masters: React.FC = () => {
                         <span className="material-symbols-outlined text-[18px]">content_copy</span>
                     </button>
                     <button
-                        onClick={(e) => { e.stopPropagation(); if (confirm('Delete?')) type === 'locations' ? deleteMasterLocation(item.id) : type === 'hotels' ? deleteMasterHotel(item.id) : type === 'activities' ? deleteMasterActivity(item.id) : type === 'transport' ? deleteMasterTransport(item.id) : deleteMasterPlan(item.id) }}
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            if (confirm('Are you sure you want to delete this item?')) {
+                                if (type === 'locations') deleteMasterLocation(item.id);
+                                else if (type === 'hotels') deleteMasterHotel(item.id);
+                                else if (type === 'activities') deleteMasterActivity(item.id);
+                                else if (type === 'transports') deleteMasterTransport(item.id);
+                                else if (type === 'plans') deleteMasterPlan(item.id);
+                                else if (type === 'room-types') deleteMasterRoomType(item.id);
+                                else if (type === 'meal-plans') deleteMasterMealPlan(item.id);
+                                else if (type === 'lead-sources') deleteMasterLeadSource(item.id);
+                                else if (type === 'terms') deleteMasterTermsTemplate(item.id);
+                                toast.success('Item deleted successfully!');
+                            }
+                        }}
                         className="p-2 rounded-xl text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                     >
                         <span className="material-symbols-outlined text-[18px]">delete</span>
@@ -842,6 +1121,74 @@ export const Masters: React.FC = () => {
                         const isSelected = selectedItems.has(item.id);
                         const usage = getUsageCount(item.id, activeTab as MasterTab);
 
+                        let detailsContent;
+                        switch (activeTab) {
+                            case 'locations':
+                                detailsContent = (
+                                    <div className="flex flex-col">
+                                        <span>{item.type}</span>
+                                        <span className="text-xs text-slate-400">{item.region}</span>
+                                    </div>
+                                );
+                                break;
+                            case 'hotels':
+                                detailsContent = (
+                                    <div className="flex flex-col">
+                                        <span>{item.rating} Stars</span>
+                                        <span className="text-xs text-slate-400">{getLocationNameById(item.locationId)}</span>
+                                    </div>
+                                );
+                                break;
+                            case 'activities':
+                                detailsContent = (
+                                    <div className="flex flex-col">
+                                        <span>{item.category}</span>
+                                        <span className="text-xs text-slate-400">{getLocationNameById(item.locationId)}</span>
+                                    </div>
+                                );
+                                break;
+                            case 'transports':
+                                detailsContent = (
+                                    <div className="flex flex-col">
+                                        <span>{item.type}</span>
+                                        <span className="text-xs text-slate-400">{item.capacity} Seats</span>
+                                    </div>
+                                );
+                                break;
+                            case 'plans':
+                                detailsContent = (
+                                    <div className="flex flex-col">
+                                        <span>{item.duration} Days</span>
+                                        <span className="text-xs text-slate-400">{getLocationNameById(item.locationId)}</span>
+                                    </div>
+                                );
+                                break;
+                            case 'room-types':
+                                detailsContent = <span className="line-clamp-2">{item.description}</span>;
+                                break;
+                            case 'meal-plans':
+                                detailsContent = (
+                                    <div className="flex flex-col">
+                                        <span className="font-bold">{item.code} - {item.name}</span>
+                                        <span className="text-xs text-slate-400 line-clamp-1">{item.description}</span>
+                                    </div>
+                                );
+                                break;
+                            case 'lead-sources':
+                                detailsContent = <span className="px-2 py-1 rounded bg-slate-100 dark:bg-slate-800 text-xs font-medium">{item.category}</span>;
+                                break;
+                            case 'terms':
+                                detailsContent = (
+                                    <div className="flex flex-col">
+                                        <span>{item.category}</span>
+                                        {item.isDefault && <span className="text-xs text-indigo-500 font-bold">Default Template</span>}
+                                    </div>
+                                );
+                                break;
+                            default:
+                                detailsContent = <span className="text-slate-500">-</span>;
+                        }
+
                         return (
                             <tr key={item.id} className={`hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors ${isSelected ? 'bg-indigo-50/50 dark:bg-indigo-900/10' : ''}`}>
                                 <td className="px-6 py-4">
@@ -857,10 +1204,7 @@ export const Masters: React.FC = () => {
                                     <p className="text-xs text-slate-500 font-mono">{item.id}</p>
                                 </td>
                                 <td className="px-6 py-4 text-slate-600 dark:text-slate-300">
-                                    <div className="flex flex-col">
-                                        <span>{activeTab === 'locations' ? item.type : item.category || item.type}</span>
-                                        <span className="text-xs text-slate-400">{activeTab === 'locations' ? item.region : getLocationNameById(item.locationId)}</span>
-                                    </div>
+                                    {detailsContent}
                                 </td>
                                 <td className="px-6 py-4 text-slate-500">
                                     {usage.total > 0 ? (
@@ -883,6 +1227,27 @@ export const Masters: React.FC = () => {
                                         </button>
                                         <button onClick={() => handleOpenModal(item)} className="p-2 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg transition-colors">
                                             <span className="material-symbols-outlined text-[18px]">edit</span>
+                                        </button>
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                if (confirm('Are you sure you want to delete this item?')) {
+                                                    if (activeTab === 'locations') deleteMasterLocation(item.id);
+                                                    else if (activeTab === 'hotels') deleteMasterHotel(item.id);
+                                                    else if (activeTab === 'activities') deleteMasterActivity(item.id);
+                                                    else if (activeTab === 'transports') deleteMasterTransport(item.id);
+                                                    else if (activeTab === 'plans') deleteMasterPlan(item.id);
+                                                    else if (activeTab === 'room-types') deleteMasterRoomType(item.id);
+                                                    else if (activeTab === 'meal-plans') deleteMasterMealPlan(item.id);
+                                                    else if (activeTab === 'lead-sources') deleteMasterLeadSource(item.id);
+                                                    else if (activeTab === 'terms') deleteMasterTermsTemplate(item.id);
+                                                    toast.success('Item deleted successfully!');
+                                                }
+                                            }}
+                                            className="p-2 hover:bg-red-50 hover:text-red-600 rounded-lg transition-colors"
+                                            title="Delete"
+                                        >
+                                            <span className="material-symbols-outlined text-[18px]">delete</span>
                                         </button>
                                     </div>
                                 </td>
@@ -931,7 +1296,7 @@ export const Masters: React.FC = () => {
                             : 'text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800'
                             }`}
                     >
-                        <span className="material-symbols-outlined text-[20px]">{tab.icon}</span>
+                        {typeof tab.icon === 'string' ? <span className="material-symbols-outlined text-[20px]">{tab.icon}</span> : tab.icon}
                         {tab.label}
                         {tab.count !== undefined && (
                             <span className={`ml-2 px-2 py-0.5 rounded-full text-[10px] ${activeTab === tab.id ? 'bg-white/20 text-white dark:bg-slate-900/10 dark:text-slate-900' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'}`}>
@@ -978,7 +1343,7 @@ export const Masters: React.FC = () => {
                 <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[200] p-4 p-8 animate-in fade-in" onClick={handleCloseModal}>
                     <div className="bg-white dark:bg-[#1a2332] rounded-3xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto relative" onClick={e => e.stopPropagation()}>
                         <div className="flex items-center justify-between p-6 border-b border-slate-200 dark:border-slate-700 bg-white/50 dark:bg-slate-800/50 sticky top-0 backdrop-blur-md z-10">
-                            <h2 className="text-xl font-bold text-slate-900 dark:text-white">{editingItem ? 'Edit' : 'Add New'} {tabs.find(t => t.id === activeTab)?.label.slice(0, -1) || 'Item'}</h2>
+                            <h2 className="text-xl font-bold text-slate-900 dark:text-white">{editingItem ? 'Edit' : 'Add New'} {tabs.find(t => t.id === activeTab)?.label.replace(' Templates', '').replace('s', '') || 'Item'}</h2>
                             <button onClick={handleCloseModal} className="size-8 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center justify-center transition-colors">
                                 <span className="material-symbols-outlined text-[20px]">close</span>
                             </button>

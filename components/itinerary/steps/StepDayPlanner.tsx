@@ -42,19 +42,22 @@ export const StepDayPlanner: React.FC = () => {
             );
 
             // Convert the AI response (simplified structure) to our ItineraryItem[]
-            const newItems: ItineraryItem[] = [];
+            const newItems: Omit<ItineraryItem, 'sellPrice'>[] = [];
 
             result.days.forEach((day: any) => {
                 day.activities.forEach((act: any) => {
                     newItems.push({
                         id: `AI-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
-                        type: 'activity', // Default to activity, AI can be smarter later
+                        type: 'activity',
                         day: day.day,
-                        title: act.description.split(':')[0] || "Activity", // Try to extract a short title
+                        title: act.description.split(':')[0] || "Activity",
                         description: act.description,
-                        cost: act.cost || 0,
+                        netCost: act.cost || 0,
+                        baseMarkupPercent: 15,
+                        extraMarkupFlat: 0,
+                        quantity: 1,
                         time: act.time,
-                        duration: '2 Hours' // Default
+                        duration: '2 Hours'
                     });
                 });
             });
@@ -242,7 +245,7 @@ const ServiceCard: React.FC<{ item: ItineraryItem; onRemove: () => void; onUpdat
                         />
                         <div className="flex w-fit items-center gap-1 text-slate-900 dark:text-white font-black bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md text-[10px] md:text-xs">
                             <DollarSign size={10} className="text-slate-400" />
-                            {item.cost?.toLocaleString() ?? 0}
+                            {item.netCost?.toLocaleString() ?? 0}
                         </div>
                     </div>
 

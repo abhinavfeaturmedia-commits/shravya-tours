@@ -25,27 +25,35 @@ const saveToStorage = <T,>(key: string, data: T) => {
 
 // Default permissions
 const DEFAULT_PERMISSIONS: StaffPermissions = {
-    transfer: { view: false, manage: false },
-    dayItinerary: { view: false, manage: false },
-    destinations: { view: false, manage: false },
-    roomType: { view: false, manage: false },
-    mealPlan: { view: false, manage: false },
-    leadSource: { view: false, manage: false },
-    expenseType: { view: false, manage: false },
-    packageTheme: { view: false, manage: false },
-    currency: { view: false, manage: false },
+    dashboard: { view: true, manage: false },
+    leads: { view: false, manage: false },
+    customers: { view: false, manage: false },
+    bookings: { view: false, manage: false },
+    itinerary: { view: false, manage: false },
+    inventory: { view: false, manage: false },
+    masters: { view: false, manage: false },
+    vendors: { view: false, manage: false },
+    finance: { view: false, manage: false },
+    marketing: { view: false, manage: false },
+    staff: { view: false, manage: false },
+    reports: { view: false, manage: false },
+    audit: { view: false, manage: false },
 };
 
 const ADMIN_PERMISSIONS: StaffPermissions = {
-    transfer: { view: true, manage: true },
-    dayItinerary: { view: true, manage: true },
-    destinations: { view: true, manage: true },
-    roomType: { view: true, manage: true },
-    mealPlan: { view: true, manage: true },
-    leadSource: { view: true, manage: true },
-    expenseType: { view: true, manage: true },
-    packageTheme: { view: true, manage: true },
-    currency: { view: true, manage: true },
+    dashboard: { view: true, manage: true },
+    leads: { view: true, manage: true },
+    customers: { view: true, manage: true },
+    bookings: { view: true, manage: true },
+    itinerary: { view: true, manage: true },
+    inventory: { view: true, manage: true },
+    masters: { view: true, manage: true },
+    vendors: { view: true, manage: true },
+    finance: { view: true, manage: true },
+    marketing: { view: true, manage: true },
+    staff: { view: true, manage: true },
+    reports: { view: true, manage: true },
+    audit: { view: true, manage: true },
 };
 
 const INITIAL_STAFF: StaffMember[] = [];
@@ -177,6 +185,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     const login = useCallback(async (email: string, password: string): Promise<boolean> => {
+        // Dev/Demo Bypass
+        if (email === 'admin@shravyatours.com' && password === 'admin') {
+            const adminUser: StaffMember = {
+                id: 999,
+                name: 'Admin User',
+                email: 'admin@shravyatours.com',
+                role: 'Administrator',
+                userType: 'Admin',
+                initials: 'AD',
+                department: 'Executive',
+                status: 'Active',
+                color: 'indigo',
+                queryScope: 'Show All Queries',
+                whatsappScope: 'All Messages',
+                permissions: ADMIN_PERMISSIONS,
+            };
+            setCurrentUser(adminUser);
+            // Also ensure it's in the staff list
+            setStaff(prev => {
+                if (!prev.find(s => s.id === 999)) return [...prev, adminUser];
+                return prev;
+            });
+            return true;
+        }
+
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) {
             console.error('Login failed:', error.message);

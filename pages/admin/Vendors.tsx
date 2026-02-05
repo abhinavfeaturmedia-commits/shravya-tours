@@ -4,6 +4,7 @@ import { useData } from '../../context/DataContext';
 import { Vendor, VendorService, VendorDocument } from '../../types';
 import { ImageUpload } from '../../components/ui/ImageUpload';
 import { useNavigate } from 'react-router-dom';
+import { VendorBulkEmailModal } from '../../components/admin/VendorBulkEmailModal';
 
 // Internal Toast Component
 const Toast = ({ message, type, onClose }: { message: string, type: 'success' | 'error', onClose: () => void }) => (
@@ -39,6 +40,7 @@ export const Vendors: React.FC = () => {
     const [modalMode, setModalMode] = useState<'Create' | 'Edit'>('Create');
     const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
     const [isDocModalOpen, setIsDocModalOpen] = useState(false);
+    const [isBulkEmailModalOpen, setIsBulkEmailModalOpen] = useState(false);
 
     // Bulk Selection & Sorting State
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -150,8 +152,13 @@ export const Vendors: React.FC = () => {
         }
     };
 
-    const handleBulkAction = (action: 'export' | 'delete' | 'deactivate') => {
+    const handleBulkAction = (action: 'export' | 'delete' | 'deactivate' | 'email') => {
         if (selectedIds.size === 0) return;
+
+        if (action === 'email') {
+            setIsBulkEmailModalOpen(true);
+            return;
+        }
 
         if (action === 'delete') {
             if (confirm(`Are you sure you want to permanently delete ${selectedIds.size} vendors?`)) {
@@ -179,6 +186,16 @@ export const Vendors: React.FC = () => {
             document.body.removeChild(link);
             showToast("Export download started.");
         }
+    };
+
+    const handleSendBulkEmail = (subject: string, message: string) => {
+        // Here you would integrate with a backend service to send emails
+        console.log('Sending bulk email:', {
+            recipients: Array.from(selectedIds),
+            subject,
+            message
+        });
+        setSelectedIds(new Set());
     };
 
     const calculatePrice = (base: number, type: 'Percentage' | 'Fixed', val: number) => {
@@ -373,6 +390,7 @@ export const Vendors: React.FC = () => {
                     <div className="h-4 w-px bg-slate-700"></div>
                     <div className="flex gap-2">
                         <button onClick={() => handleBulkAction('export')} className="p-2 hover:bg-slate-800 rounded-full transition-colors tooltip" title="Export Selected"><span className="material-symbols-outlined text-[20px]">download</span></button>
+                        <button onClick={() => handleBulkAction('email')} className="p-2 hover:bg-slate-800 rounded-full transition-colors text-sky-400" title="Email Selected"><span className="material-symbols-outlined text-[20px]">mail</span></button>
                         <button onClick={() => handleBulkAction('deactivate')} className="p-2 hover:bg-slate-800 rounded-full transition-colors text-orange-400" title="Deactivate"><span className="material-symbols-outlined text-[20px]">block</span></button>
                         <button onClick={() => handleBulkAction('delete')} className="p-2 hover:bg-slate-800 rounded-full transition-colors text-red-400" title="Delete"><span className="material-symbols-outlined text-[20px]">delete</span></button>
                     </div>
@@ -938,7 +956,11 @@ export const Vendors: React.FC = () => {
                                                         </div>
                                                         <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                                             <button className="flex-1 py-2 bg-slate-50 dark:bg-slate-800 text-[10px] font-black uppercase rounded-lg hover:bg-primary hover:text-white transition-colors">View</button>
-                                                            <button onClick={() => deleteVendorDocument(selectedVendor.id, doc.id)} className="p-2 text-slate-300 hover:text-red-500 rounded-lg"><span className="material-symbols-outlined text-[18px]">delete</span></button>
+                                                            <button onClick={() => {
+                                                                if (confirm('Are you sure you want to delete this document? This action cannot be undone.')) {
+                                                                    deleteVendorDocument(selectedVendor.id, doc.id);
+                                                                }
+                                                            }} className="p-2 text-slate-300 hover:text-red-500 rounded-lg"><span className="material-symbols-outlined text-[18px]">delete</span></button>
                                                         </div>
                                                     </div>
                                                 ))}
@@ -1133,6 +1155,13 @@ export const Vendors: React.FC = () => {
                 </div>
             )}
 
+            {/* Bulk Email Modal */}
+            <VendorBulkEmailModal
+                isOpen={isBulkEmailModalOpen}
+                onClose={() => setIsBulkEmailModalOpen(false)}
+                selectedVendorCount={selectedIds.size}
+                onSend={handleSendBulkEmail}
+            />
         </div>
     );
 };

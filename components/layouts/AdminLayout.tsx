@@ -3,14 +3,58 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useData } from '../../context/DataContext';
+import { toast } from 'sonner';
+
+const NAV_GROUPS = [
+  {
+    title: 'Overview',
+    items: [
+      { name: 'Dashboard', path: '/admin', icon: 'dashboard', module: 'dashboard' },
+      { name: 'Analytics', path: '/admin/analytics', icon: 'bar_chart', module: 'reports' },
+    ]
+  },
+  {
+    title: 'Operations',
+    items: [
+      { name: 'Bookings', path: '/admin/bookings', icon: 'airplane_ticket', module: 'bookings' },
+      { name: 'Inventory', path: '/admin/inventory', icon: 'calendar_month', module: 'inventory' },
+      { name: 'Vendors', path: '/admin/vendors', icon: 'storefront', module: 'vendors' },
+      { name: 'Itinerary Builder', path: '/admin/itinerary-builder', icon: 'map', module: 'itinerary' },
+      { name: 'Live Operations', path: '/admin/operations', icon: 'traffic', module: 'bookings' },
+      { name: 'Masters', path: '/admin/masters', icon: 'dataset', module: 'masters' },
+    ]
+  },
+  {
+    title: 'Growth',
+    items: [
+      { name: 'Leads CRM', path: '/admin/leads', icon: 'groups', module: 'leads' },
+      { name: 'Customers', path: '/admin/customers', icon: 'face', module: 'customers' },
+      { name: 'Accounts', path: '/admin/accounts', icon: 'account_balance', module: 'finance' },
+      { name: 'Expenses', path: '/admin/expenses', icon: 'receipt_long', module: 'finance' },
+      { name: 'Proposals', path: '/admin/proposals', icon: 'description', module: 'leads' },
+    ]
+  },
+  {
+    title: 'People & Content',
+    items: [
+      { name: 'Staff', path: '/admin/staff', icon: 'badge', module: 'staff' },
+
+      { name: 'Packages', path: '/admin/packages', icon: 'inventory_2', module: 'inventory' },
+    ]
+  },
+  {
+    title: 'System',
+    items: [
+      { name: 'Audit Logs', path: '/admin/audit', icon: 'history', module: 'audit' },
+      { name: 'Productivity', path: '/admin/productivity', icon: 'insights', module: 'staff' },
+    ]
+  }
+];
 
 export const AdminLayout: React.FC = () => {
-  const { currentUser, logout, isAuthenticated, isMasquerading, stopMasquerading, realUser } = useAuth();
+  const { currentUser, logout, isAuthenticated, isMasquerading, stopMasquerading, realUser, hasPermission } = useAuth();
   const { bookings, leads } = useData(); // Connect to real data
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  // ... other state ...
-
-  // ... (Lines 11-236 skipped for brevity in tool call, matching target carefully below) ...
 
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [isFabOpen, setIsFabOpen] = useState(false);
@@ -74,51 +118,45 @@ export const AdminLayout: React.FC = () => {
       : "text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white";
   };
 
-  const navGroups = [
-    {
-      title: 'Overview',
-      items: [
-        { name: 'Dashboard', path: '/admin', icon: 'dashboard' },
-        { name: 'Analytics', path: '/admin/analytics', icon: 'bar_chart' },
-      ]
-    },
-    {
-      title: 'Operations',
-      items: [
-        { name: 'Bookings', path: '/admin/bookings', icon: 'airplane_ticket' },
-        { name: 'Inventory', path: '/admin/inventory', icon: 'calendar_month' },
-        { name: 'Vendors', path: '/admin/vendors', icon: 'storefront' },
-        { name: 'Itinerary Builder', path: '/admin/itinerary-builder', icon: 'map' },
-        { name: 'Masters', path: '/admin/masters', icon: 'dataset' },
-      ]
-    },
-    {
-      title: 'Growth',
-      items: [
-        { name: 'Leads CRM', path: '/admin/leads', icon: 'groups' },
-        { name: 'Customers', path: '/admin/customers', icon: 'face' },
-        { name: 'Accounts', path: '/admin/accounts', icon: 'account_balance' },
-      ]
-    },
-    {
-      title: 'People & Content',
-      items: [
-        { name: 'Staff', path: '/admin/staff', icon: 'badge' },
-        { name: 'Packages', path: '/admin/packages', icon: 'inventory_2' },
-      ]
+  // Route Protection: Permission Check
+  useEffect(() => {
+    if (!currentUser) return;
+
+    // Find the closest matching route definition
+    const allRoutes = NAV_GROUPS.flatMap(g => g.items)
+      .sort((a, b) => b.path.length - a.path.length); // Match specific paths first
+
+    const activeRoute = allRoutes.find(route =>
+      location.pathname === route.path ||
+      location.pathname.startsWith(route.path + '/')
+    );
+
+    if (activeRoute) {
+      if (!hasPermission(activeRoute.module as any, 'view')) {
+        toast.error(`Access Denied: You do not have permission to view ${activeRoute.name}.`);
+        navigate('/admin', { replace: true });
+      }
     }
-  ];
+  }, [location.pathname, currentUser, hasPermission, navigate]);
+
+  const navGroups = NAV_GROUPS;
+
+  // Filter Nav Groups based on permissions
+  const visibleNavGroups = navGroups.map(group => ({
+    ...group,
+    items: group.items.filter(item => hasPermission(item.module as any, 'view'))
+  })).filter(group => group.items.length > 0);
 
   // Flatten nav items for command palette search
-  const allNavItems = navGroups.flatMap(g => g.items);
+  const allNavItems = visibleNavGroups.flatMap(g => g.items);
 
   // Quick actions for FAB
   const quickActions = [
-    { name: 'New Booking', icon: 'add_circle', path: '/admin/bookings', color: 'from-blue-500 to-indigo-600' },
-    { name: 'Add Lead', icon: 'person_add', path: '/admin/leads', color: 'from-purple-500 to-pink-600' },
-    { name: 'Create Package', icon: 'travel_explore', path: '/admin/itinerary-builder', color: 'from-emerald-500 to-teal-600' },
-    { name: 'Add Master Data', icon: 'dataset', path: '/admin/masters', color: 'from-orange-500 to-rose-500' },
-  ];
+    { name: 'New Booking', icon: 'add_circle', path: '/admin/bookings', color: 'from-blue-500 to-indigo-600', module: 'bookings' },
+    { name: 'Add Lead', icon: 'person_add', path: '/admin/leads', color: 'from-purple-500 to-pink-600', module: 'leads' },
+    { name: 'Create Package', icon: 'travel_explore', path: '/admin/itinerary-builder', color: 'from-emerald-500 to-teal-600', module: 'inventory' },
+    { name: 'Add Master Data', icon: 'dataset', path: '/admin/masters', color: 'from-orange-500 to-rose-500', module: 'masters' },
+  ].filter(action => hasPermission(action.module as any, 'manage'));
 
   // Filter nav items for command palette
   const filteredNavItems = commandSearch

@@ -6,6 +6,7 @@ import { SEO } from '../components/ui/SEO';
 import { OptimizedImage } from '../components/ui/OptimizedImage';
 import { toast } from '../components/ui/Toast';
 import { TravelerSelector } from '../components/ui/TravelerSelector';
+import { PhoneInput } from '../components/ui/PhoneInput';
 
 export const PackageDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -148,8 +149,9 @@ export const PackageDetail: React.FC = () => {
     const addonNames = selectedAddons.map(id => addonsList.find(a => a.id === id)?.label).join(', ');
     const preferenceString = `Interested in ${tour.title}. Date: ${bookingData.date}. Add-ons: ${addonNames || 'None'}. Guests: ${guests}. Estimated Quote: ₹${calculateTotal().toLocaleString()}`;
 
+    const referenceId = `LD-${Date.now()}`;
     const newLead: Lead = {
-      id: `LD-${Date.now()}`,
+      id: referenceId,
       name: bookingData.name,
       email: bookingData.email,
       phone: bookingData.phone,
@@ -175,8 +177,19 @@ export const PackageDetail: React.FC = () => {
     addLead(newLead);
     setBookingModal(false);
 
-    toast.success('Inquiry Sent Successfully! Our travel expert will contact you shortly.');
-    navigate('/');
+    // Navigate to confirmation page with booking details
+    navigate('/booking-confirmation', {
+      state: {
+        referenceId,
+        customerName: bookingData.name,
+        packageTitle: tour.title,
+        date: bookingData.date,
+        guests,
+        email: bookingData.email,
+        phone: bookingData.phone,
+        estimatedTotal: calculateTotal()
+      }
+    });
   };
 
   const openLightbox = (index: number) => {
@@ -253,7 +266,12 @@ export const PackageDetail: React.FC = () => {
                 </div>
                 <div className="space-y-1">
                   <label className="block text-xs font-bold uppercase text-slate-500 pl-1">Mobile Number</label>
-                  <input required type="tel" pattern="[0-9]{10,15}" placeholder="+91 80109 55675" className="w-full rounded-xl border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-3.5 font-medium outline-none focus:ring-2 focus:ring-primary transition-all" value={bookingData.phone} onChange={e => setBookingData({ ...bookingData, phone: e.target.value })} />
+                  <PhoneInput
+                    value={bookingData.phone}
+                    onChange={(value) => setBookingData({ ...bookingData, phone: value })}
+                    placeholder="98765 43210"
+                    required
+                  />
                 </div>
 
                 <div className="space-y-3">
@@ -273,14 +291,11 @@ export const PackageDetail: React.FC = () => {
                   {!bookingData.isWhatsappSame && (
                     <div className="space-y-1 animate-in fade-in slide-in-from-top-1">
                       <label className="block text-xs font-bold uppercase text-slate-500 pl-1">WhatsApp Number</label>
-                      <input
-                        required={!bookingData.isWhatsappSame}
-                        type="tel"
-                        pattern="[0-9]{10,15}"
-                        placeholder="WhatsApp Number"
-                        className="w-full rounded-xl border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-3.5 font-medium outline-none focus:ring-2 focus:ring-primary transition-all"
+                      <PhoneInput
                         value={bookingData.whatsapp}
-                        onChange={e => setBookingData({ ...bookingData, whatsapp: e.target.value })}
+                        onChange={(value) => setBookingData({ ...bookingData, whatsapp: value })}
+                        placeholder="98765 43210"
+                        required={!bookingData.isWhatsappSame}
                       />
                     </div>
                   )}
@@ -296,7 +311,20 @@ export const PackageDetail: React.FC = () => {
                     <span className="text-lg">₹{calculateTotal().toLocaleString()}</span>
                   </div>
                   <p className="text-xs text-slate-500 mt-1 font-medium opacity-80">Based on {guests} and {selectedAddons.length} add-ons.</p>
+                  <p className="text-[10px] text-green-600 dark:text-green-400 mt-2 font-bold flex items-center gap-1">
+                    <span className="material-symbols-outlined text-[12px]">check_circle</span>
+                    All taxes & GST included • No hidden charges
+                  </p>
                 </div>
+
+                {/* Cancellation Policy */}
+                <div className="p-3 bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800/30 rounded-xl mt-3">
+                  <p className="text-xs text-amber-700 dark:text-amber-400 font-medium flex items-start gap-2">
+                    <span className="material-symbols-outlined text-[14px] mt-0.5 flex-shrink-0">info</span>
+                    <span><strong>Free cancellation</strong> up to 7 days before travel. 50% refund for 3-7 days. Non-refundable within 3 days.</span>
+                  </p>
+                </div>
+
                 <button type="submit" className="w-full bg-primary text-white py-4 rounded-xl font-bold shadow-xl shadow-primary/20 hover:bg-primary-dark transition-all active:scale-95 mt-4">Send Request</button>
               </form>
             </div>

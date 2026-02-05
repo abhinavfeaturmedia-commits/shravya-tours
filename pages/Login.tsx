@@ -84,6 +84,13 @@ export const Login: React.FC = () => {
                     <p className="text-center text-xs text-slate-400">
                         Protected area. Authorized personnel only.
                     </p>
+
+                    <div className="mt-4 pt-4 border-t border-slate-100 flex justify-center">
+                        <a href="/" className="text-slate-500 hover:text-indigo-600 text-sm font-medium flex items-center gap-2 transition-colors no-underline">
+                            <span className="material-symbols-outlined text-lg">arrow_back</span>
+                            Back to Homepage
+                        </a>
+                    </div>
                 </form>
             </div>
         </div>

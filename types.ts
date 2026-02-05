@@ -46,7 +46,9 @@ export interface Package {
 export interface Booking {
   id: string;
   type: BookingType;
-  customer: string;
+  customerId?: string; // Link to Customer Profile
+  customer: string; // Keep for display/historic
+
   email: string;
   phone?: string;
   title: string;
@@ -57,6 +59,37 @@ export interface Booking {
   payment: 'Paid' | 'Unpaid' | 'Deposit' | 'Refunded';
   details?: string;
   packageId?: string;
+  assignedTo?: number;
+  supplierBookings?: SupplierBooking[];
+  transactions?: BookingTransaction[];
+}
+
+export interface BookingTransaction {
+  id: string;
+  bookingId: string;
+  date: string;
+  amount: number;
+  type: 'Payment' | 'Refund';
+  method: 'Cash' | 'Bank Transfer' | 'UPI' | 'Credit Card' | 'Cheque';
+  reference?: string;
+  notes?: string;
+  recordedBy?: string;
+}
+
+export type SupplierBookingStatus = 'Pending' | 'Confirmed' | 'Cancelled' | 'Partially Paid' | 'Paid';
+
+export interface SupplierBooking {
+  id: string;
+  bookingId: string;
+  vendorId: string;
+  serviceType: 'Hotel' | 'Transport' | 'Flight' | 'Activity' | 'Other';
+  confirmationNumber?: string;
+  cost: number;
+  paidAmount: number;
+  paymentStatus: 'Unpaid' | 'Partially Paid' | 'Paid' | 'Refunded';
+  bookingStatus: SupplierBookingStatus;
+  paymentDueDate?: string; // ISO String
+  notes?: string;
 }
 
 export interface LeadLog {
@@ -83,8 +116,10 @@ export interface Lead {
   name: string;
   email: string;
   phone: string;
+  location?: string; // Added for PDF generation
   destination: string;
   startDate?: string;
+  endDate?: string; // New: Travel end date
   travelers: string;
   budget: string;
   type: string;
@@ -101,6 +136,10 @@ export interface Lead {
   isWhatsappSame?: boolean;
   aiScore?: number; // 0-100
   aiSummary?: string;
+  serviceType?: ServiceType; // New: Type of service requested
+  paxAdult?: number; // New: Number of adults
+  paxChild?: number; // New: Number of children
+  paxInfant?: number; // New: Number of infants
 }
 
 export interface Customer {
@@ -127,15 +166,19 @@ export interface StaffModulePermissions {
 }
 
 export interface StaffPermissions {
-  transfer: StaffModulePermissions;
-  dayItinerary: StaffModulePermissions;
-  destinations: StaffModulePermissions;
-  roomType: StaffModulePermissions;
-  mealPlan: StaffModulePermissions;
-  leadSource: StaffModulePermissions;
-  expenseType: StaffModulePermissions;
-  packageTheme: StaffModulePermissions;
-  currency: StaffModulePermissions;
+  dashboard: StaffModulePermissions;
+  leads: StaffModulePermissions;
+  customers: StaffModulePermissions;
+  bookings: StaffModulePermissions;
+  itinerary: StaffModulePermissions;
+  inventory: StaffModulePermissions; // Packages
+  masters: StaffModulePermissions;
+  vendors: StaffModulePermissions;
+  finance: StaffModulePermissions;
+  marketing: StaffModulePermissions;
+  staff: StaffModulePermissions;
+  reports: StaffModulePermissions;
+  audit: StaffModulePermissions;
 }
 
 export interface StaffMember {
@@ -341,4 +384,301 @@ export interface MasterPlan {
   days: MasterPlanDay[];
   estimatedCost: number;
   status: 'Active' | 'Draft';
+}
+
+// --- Lead Management 2.0 Types ---
+
+export type ServiceType =
+  | 'Activities only'
+  | 'Flight only'
+  | 'Full package'
+  | 'Hotel + Flight'
+  | 'Hotel + Transport'
+  | 'Hotel only'
+  | 'Transport only'
+  | 'Visa only';
+
+export const SERVICE_TYPES: ServiceType[] = [
+  'Activities only',
+  'Flight only',
+  'Full package',
+  'Hotel + Flight',
+  'Hotel + Transport',
+  'Hotel only',
+  'Transport only',
+  'Visa only'
+];
+
+export type FollowUpType = 'Call' | 'Email' | 'Meeting' | 'WhatsApp';
+export type FollowUpStatus = 'Scheduled' | 'Done' | 'Pending' | 'Overdue';
+
+export interface FollowUp {
+  id: string;
+  leadId: string;
+  type: FollowUpType;
+  description: string;
+  scheduledAt: string; // ISO String
+  reminderEnabled: boolean;
+  status: FollowUpStatus;
+  createdAt: string;
+  completedAt?: string;
+  assignedTo?: number; // Staff ID
+}
+
+// --- Proposal Management Types ---
+
+export interface Proposal {
+  id: string;
+  leadId: string;
+  title: string;
+  status: 'Draft' | 'Sent' | 'Accepted' | 'Rejected';
+  options: ProposalOption[];
+  createdAt: string;
+  validUntil?: string;
+}
+
+export interface ProposalOption {
+  id: string;
+  name: string; // e.g: "Luxury", "Standard"
+  description?: string;
+  price: number;
+  hotels: string[]; // List of hotel IDs or Names
+  inclusions: string[];
+  exclusions: string[];
+  image?: string;
+}
+
+// --- Pricing Engine Types ---
+
+export type PricingCategory = 'Hotel' | 'Activity' | 'Transport' | 'Visa' | 'Flight' | 'Guide' | 'Other';
+export type CurrencyCode = 'INR' | 'USD' | 'AED' | 'EUR' | 'GBP';
+
+export interface PricingItem {
+  id: string;
+  name: string;
+  category: PricingCategory;
+  quantity: number;
+  netCost: number;
+  baseMarkupPercent: number;
+  extraMarkupFlat: number;
+  sellPrice: number; // Auto-calculated: netCost * (1 + baseMarkupPercent/100) + extraMarkupFlat
+}
+
+export interface TaxConfig {
+  cgstPercent: number;
+  sgstPercent: number;
+  igstPercent: number;
+  tcsPercent: number;
+  gstOnTotal: boolean; // If true, GST on (net + markup). If false, GST on markup only.
+}
+
+export const DEFAULT_TAX_CONFIG: TaxConfig = {
+  cgstPercent: 2.5,
+  sgstPercent: 2.5,
+  igstPercent: 0,
+  tcsPercent: 0,
+  gstOnTotal: true
+};
+
+export interface ItineraryPricing {
+  items: PricingItem[];
+  currency: CurrencyCode;
+  taxes: TaxConfig;
+  subtotal: number;
+  taxAmount: number;
+  grandTotal: number;
+}
+
+// --- Additional Master Data Types ---
+
+export interface MasterRoomType {
+  id: string;
+  name: string; // 'Standard', 'Deluxe', 'Super Deluxe', 'Suite', 'Villa'
+  description?: string;
+  status: 'Active' | 'Inactive';
+}
+
+export type MealPlanCode = 'EP' | 'CP' | 'MAP' | 'AP' | 'AI';
+
+export interface MasterMealPlan {
+  id: string;
+  code: MealPlanCode;
+  name: string; // 'European Plan', 'Continental Plan', 'Modified American Plan', 'American Plan', 'All Inclusive'
+  description: string;
+  status: 'Active' | 'Inactive';
+}
+
+export const MEAL_PLAN_DESCRIPTIONS: Record<MealPlanCode, string> = {
+  'EP': 'Room only, no meals included',
+  'CP': 'Breakfast included',
+  'MAP': 'Breakfast and Dinner included',
+  'AP': 'All three meals included',
+  'AI': 'All meals, snacks, and beverages included'
+};
+
+export interface MasterLeadSource {
+  id: string;
+  name: string; // 'Walk-in', 'Website', 'Referral', 'Facebook', 'Google Ads', etc.
+  category?: 'Organic' | 'Paid' | 'Referral' | 'Direct';
+  status: 'Active' | 'Inactive';
+}
+
+export type TermsCategory = 'Booking & Payment' | 'Pricing & Inclusions' | 'Cancellation Policy' | 'Travel Insurance' | 'Other';
+
+export interface MasterTermsTemplate {
+  id: string;
+  title: string;
+  category: TermsCategory;
+  content: string; // Rich text HTML content
+  isDefault: boolean;
+  status: 'Active' | 'Inactive';
+}
+
+// --- Workflow Status Types ---
+
+export interface WorkflowStatus {
+  id: string;
+  name: string;
+  color: string; // Hex color code
+  order: number;
+  showOnDashboard: boolean;
+  requiresNote: boolean;
+  isActive: boolean;
+}
+
+// --- CMS Types ---
+
+export interface CMSBanner {
+  id: string;
+  title: string;
+  subtitle: string;
+  imageUrl: string;
+  ctaText: string;
+  ctaLink: string;
+  isActive: boolean;
+}
+
+export interface CMSTestimonial {
+  id: string;
+  customerName: string;
+  location: string;
+  rating: number; // 1-5
+  text: string;
+  avatarUrl?: string; // Optional
+  isActive: boolean;
+}
+
+export interface CMSGalleryImage {
+  id: string;
+  title: string;
+  imageUrl: string;
+  category: 'Landscape' | 'Hotel' | 'Activity' | 'Other';
+}
+
+export interface CMSPost {
+  id: string;
+  title: string;
+  slug: string; // url-friendly-title
+  excerpt: string;
+  content: string; // HTML or Markdown
+  coverImage: string;
+  author: string;
+  publishedDate: string;
+  status: 'Draft' | 'Published';
+  tags: string[];
+}
+
+// --- Productivity Features Types ---
+
+// User Activity Tracking
+export interface UserActivity {
+  id: string;
+  staffId: number;
+  staffName: string;
+  action: string;
+  module: string;
+  details?: string;
+  timestamp: string;
+}
+
+// Task Management
+export type TaskStatus = 'Pending' | 'In Progress' | 'Completed' | 'Overdue';
+export type TaskPriority = 'Low' | 'Medium' | 'High' | 'Urgent';
+
+export interface Task {
+  id: string;
+  title: string;
+  description?: string;
+  assignedTo: number;
+  assignedBy: number;
+  status: TaskStatus;
+  priority: TaskPriority;
+  dueDate: string;
+  createdAt: string;
+  completedAt?: string;
+  relatedLeadId?: string;
+  relatedBookingId?: string;
+}
+
+// Daily Targets
+export interface DailyTarget {
+  id: string;
+  staffId: number;
+  date: string;
+  targetLeads: number;
+  targetCalls: number;
+  targetConversions: number;
+  targetBookings: number;
+  actualLeads: number;
+  actualCalls: number;
+  actualConversions: number;
+  actualBookings: number;
+}
+
+// Performance Metrics (calculated, not stored)
+export interface PerformanceMetrics {
+  staffId: number;
+  staffName: string;
+  period: 'daily' | 'weekly' | 'monthly';
+  leadsHandled: number;
+  callsMade: number;
+  conversions: number;
+  bookingsCreated: number;
+  revenue: number;
+  targetAchievement: number; // percentage
+  avgResponseTime: number; // minutes
+}
+
+// Time Tracking
+export interface TimeSession {
+  id: string;
+  staffId: number;
+  taskId?: string;
+  startTime: string;
+  endTime?: string;
+  duration: number; // milliseconds
+  idleTime: number; // milliseconds of detected idle
+  status: 'Active' | 'Paused' | 'Completed';
+  notes?: string;
+}
+
+// Auto-Assignment Rules
+export type AssignmentStrategy = 'round-robin' | 'workload' | 'specialty' | 'manual';
+
+export interface AssignmentRule {
+  id: string;
+  name: string;
+  isActive: boolean;
+  strategy: AssignmentStrategy;
+  triggerOn: 'new-lead' | 'new-booking' | 'new-task';
+  eligibleStaffIds: number[]; // Empty means all active staff
+  priority: number; // Lower = higher priority
+  conditions?: {
+    leadSource?: string[];
+    packageId?: string[];
+    minValue?: number;
+    maxValue?: number;
+  };
+  createdAt: string;
+  updatedAt: string;
 }

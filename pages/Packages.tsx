@@ -293,6 +293,7 @@ export const Packages: React.FC = () => {
                           <div className="flex flex-col">
                             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Starting from</span>
                             <span className="text-xl font-black text-slate-900 dark:text-white">₹{pkg.price.toLocaleString()}</span>
+                            <span className="text-[9px] text-green-600 dark:text-green-400 font-bold">all taxes included</span>
                           </div>
                           <div className="size-10 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-colors shadow-sm">
                             <span className="material-symbols-outlined text-[20px]">arrow_forward</span>
