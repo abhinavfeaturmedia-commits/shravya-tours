@@ -109,9 +109,9 @@ export const Vendors: React.FC = () => {
     // Dashboard Stats
     const stats = useMemo(() => {
         const totalVendors = vendors.length;
-        const totalSales = vendors.reduce((acc, v) => acc + v.totalSales, 0);
-        const totalCommission = vendors.reduce((acc, v) => acc + v.totalCommission, 0);
-        const totalPayables = vendors.reduce((acc, v) => acc + v.balanceDue, 0);
+        const totalSales = vendors.reduce((acc, v) => acc + (v.totalSales || 0), 0);
+        const totalCommission = vendors.reduce((acc, v) => acc + (v.totalCommission || 0), 0);
+        const totalPayables = vendors.reduce((acc, v) => acc + (v.balanceDue || 0), 0);
         const avgMargin = totalSales > 0 ? (totalCommission / totalSales) * 100 : 0;
 
         return { totalVendors, totalSales, totalCommission, totalPayables, avgMargin };
@@ -271,8 +271,8 @@ export const Vendors: React.FC = () => {
 
     const toggleServiceStatus = (serviceId: string) => {
         if (!selectedVendor) return;
-        const updatedServices = selectedVendor.services.map(s => s.id === serviceId ? { ...s, status: s.status === 'Active' ? 'Inactive' : 'Active' as const } : s);
-        updateVendor(selectedVendor.id, { services: updatedServices });
+        const updatedServices = selectedVendor.services.map(s => s.id === serviceId ? { ...s, status: (s.status === 'Active' ? 'Inactive' : 'Active') as 'Active' | 'Inactive' } : s);
+        updateVendor(selectedVendor.id, { services: updatedServices as VendorService[] });
     };
 
     const handleDeleteService = (serviceId: string) => {
@@ -358,6 +358,27 @@ export const Vendors: React.FC = () => {
     const currentProfit = serviceForm.baseCost ? calculatePrice(serviceForm.baseCost, serviceForm.markupType as any, serviceForm.markupValue || 0) - serviceForm.baseCost : 0;
     const currentSellingPrice = serviceForm.baseCost ? calculatePrice(serviceForm.baseCost, serviceForm.markupType as any, serviceForm.markupValue || 0) : 0;
 
+    // Unit suffix helper
+    const getUnitSuffix = (unit: string) => {
+        switch (unit) {
+            case 'Per KM': return '/km';
+            case 'Per Night': return '/night';
+            case 'Per Trip': return '/trip';
+            case 'Per Guest': return '/guest';
+            default: return '';
+        }
+    };
+
+    const getCostPlaceholder = (unit: string) => {
+        switch (unit) {
+            case 'Per KM': return 'Rate per KM';
+            case 'Per Night': return 'Cost per Night';
+            case 'Per Trip': return 'Cost per Trip';
+            case 'Per Guest': return 'Cost per Guest';
+            default: return 'Cost';
+        }
+    };
+
     const getDocIcon = (type: string) => {
         switch (type) {
             case 'Contract': return 'description';
@@ -365,6 +386,16 @@ export const Vendors: React.FC = () => {
             case 'ID': return 'badge';
             case 'Insurance': return 'health_and_safety';
             default: return 'folder';
+        }
+    };
+
+    const getCategoryMeta = (category: string) => {
+        switch (category) {
+            case 'Hotel': return { icon: 'hotel', color: 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/40 dark:text-indigo-400', badge: 'bg-indigo-50 text-indigo-600 border-indigo-200 dark:bg-indigo-900/20 dark:text-indigo-400 dark:border-indigo-800' };
+            case 'Transport': return { icon: 'directions_car', color: 'bg-amber-100 text-amber-600 dark:bg-amber-900/40 dark:text-amber-400', badge: 'bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800' };
+            case 'Guide': return { icon: 'person_pin', color: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-400', badge: 'bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800' };
+            case 'Activity': return { icon: 'kayaking', color: 'bg-rose-100 text-rose-600 dark:bg-rose-900/40 dark:text-rose-400', badge: 'bg-rose-50 text-rose-600 border-rose-200 dark:bg-rose-900/20 dark:text-rose-400 dark:border-rose-800' };
+            default: return { icon: 'storefront', color: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400', badge: 'bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700' };
         }
     };
 
@@ -502,11 +533,13 @@ export const Vendors: React.FC = () => {
                                         <div key={vendor.id} onClick={() => setSelectedVendorId(vendor.id)} className="bg-white dark:bg-[#1A2633] p-4 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 active:scale-[0.98] transition-transform">
                                             <div className="flex items-start justify-between mb-4">
                                                 <div className="flex items-center gap-3">
-                                                    <img src={vendor.logo} className="size-12 rounded-lg object-cover border border-slate-100 dark:border-slate-700" alt="" />
+                                                    <div className={`size-12 rounded-lg flex items-center justify-center ${getCategoryMeta(vendor.category).color}`}>
+                                                        <span className="material-symbols-outlined text-2xl">{getCategoryMeta(vendor.category).icon}</span>
+                                                    </div>
                                                     <div>
                                                         <h3 className="font-bold text-slate-900 dark:text-white">{vendor.name}</h3>
                                                         <div className="flex items-center gap-2 mt-1">
-                                                            <span className="text-[10px] text-slate-500">{vendor.category}</span>
+                                                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${getCategoryMeta(vendor.category).badge}`}>{vendor.category}</span>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -562,12 +595,16 @@ export const Vendors: React.FC = () => {
                                                     </td>
                                                     <td className="px-6 py-4" onClick={() => setSelectedVendorId(vendor.id)}>
                                                         <div className="flex items-center gap-3">
-                                                            <div className="size-10 rounded-lg bg-slate-100 dark:bg-slate-700 p-0.5 overflow-hidden border border-slate-200 dark:border-slate-600">
-                                                                <img src={vendor.logo} className="w-full h-full object-cover rounded-md" alt="" />
+                                                            <div className={`size-10 rounded-lg flex items-center justify-center ${getCategoryMeta(vendor.category).color}`}>
+                                                                <span className="material-symbols-outlined text-xl">{getCategoryMeta(vendor.category).icon}</span>
                                                             </div>
                                                             <div>
                                                                 <p className="font-bold text-slate-900 dark:text-white text-sm">{vendor.name}</p>
-                                                                <p className="text-[11px] text-slate-500 flex items-center gap-1"><span className="material-symbols-outlined text-[12px]">location_on</span> {vendor.location}</p>
+                                                                <div className="flex items-center gap-1.5">
+                                                                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${getCategoryMeta(vendor.category).badge}`}>{vendor.category}</span>
+                                                                    <span className="text-[10px] text-slate-400">•</span>
+                                                                    <p className="text-[11px] text-slate-500 flex items-center gap-0.5"><span className="material-symbols-outlined text-[12px]">location_on</span>{vendor.location}</p>
+                                                                </div>
                                                             </div>
                                                         </div>
                                                     </td>
@@ -790,7 +827,7 @@ export const Vendors: React.FC = () => {
                                                                     <p className="font-bold text-slate-900 dark:text-white text-sm">{service.name}</p>
                                                                     {isInactive && <span className="text-[10px] font-bold px-2 py-0.5 bg-slate-200 dark:bg-slate-700 text-slate-500 rounded">Inactive</span>}
                                                                 </div>
-                                                                <p className="text-[11px] text-slate-500 font-medium">{service.unit} • Cost: ₹{service.baseCost}</p>
+                                                                <p className="text-[11px] text-slate-500 font-medium">{service.unit} • ₹{service.baseCost.toLocaleString()}{getUnitSuffix(service.unit)}</p>
                                                             </div>
                                                         </div>
                                                         <div className="flex items-center gap-6">
@@ -800,7 +837,7 @@ export const Vendors: React.FC = () => {
                                                             </div>
                                                             <div className="text-right pl-6 border-l border-slate-100 dark:border-slate-800">
                                                                 <p className="text-[10px] font-bold text-slate-400 uppercase mb-0.5">Selling Price</p>
-                                                                <p className="font-black text-slate-900 dark:text-white">₹{service.sellingPrice.toLocaleString()}</p>
+                                                                <p className="font-black text-slate-900 dark:text-white">₹{service.sellingPrice.toLocaleString()}<span className="text-[10px] font-medium text-slate-400">{getUnitSuffix(service.unit)}</span></p>
                                                             </div>
                                                             <div className="flex items-center gap-1">
                                                                 <button
@@ -832,16 +869,51 @@ export const Vendors: React.FC = () => {
                                                 <div className="grid grid-cols-2 gap-4 mb-4">
                                                     <input placeholder="Service Name" className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-sm text-white placeholder:text-slate-600 focus:ring-1 focus:ring-primary outline-none" value={serviceForm.name} onChange={e => setServiceForm({ ...serviceForm, name: e.target.value })} />
                                                     <select className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-sm text-white focus:ring-1 focus:ring-primary outline-none appearance-none" value={serviceForm.unit} onChange={e => setServiceForm({ ...serviceForm, unit: e.target.value })}>
-                                                        <option className="bg-slate-900">Per Night</option><option className="bg-slate-900">Per Trip</option><option className="bg-slate-900">Per Guest</option>
+                                                        <option className="bg-slate-900">Per Night</option><option className="bg-slate-900">Per Trip</option><option className="bg-slate-900">Per Guest</option><option className="bg-slate-900">Per KM</option>
                                                     </select>
                                                 </div>
                                                 <div className="grid grid-cols-3 gap-4 mb-6">
-                                                    <input type="number" className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-sm font-black text-white" value={serviceForm.baseCost || ''} onChange={e => setServiceForm({ ...serviceForm, baseCost: parseFloat(e.target.value) || 0 })} placeholder="Cost" />
+                                                    <input type="number" className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-sm font-black text-white" value={serviceForm.baseCost || ''} onChange={e => setServiceForm({ ...serviceForm, baseCost: parseFloat(e.target.value) || 0 })} placeholder={getCostPlaceholder(serviceForm.unit || 'Per Night')} />
                                                     <select className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-sm text-white" value={serviceForm.markupType} onChange={e => setServiceForm({ ...serviceForm, markupType: e.target.value as any })}>
                                                         <option value="Percentage" className="bg-slate-900">% Markup</option><option value="Fixed" className="bg-slate-900">₹ Markup</option>
                                                     </select>
                                                     <input type="number" className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-sm font-black text-white" value={serviceForm.markupValue} onChange={e => setServiceForm({ ...serviceForm, markupValue: parseFloat(e.target.value) || 0 })} />
                                                 </div>
+
+                                                {/* Per KM Estimated Distance Calculator */}
+                                                {serviceForm.unit === 'Per KM' && currentSellingPrice > 0 && (
+                                                    <div className="mb-4 p-4 bg-white/5 border border-white/10 rounded-xl">
+                                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                                                            <span className="material-symbols-outlined text-sm">straighten</span> Distance Estimator
+                                                        </p>
+                                                        <div className="flex items-center gap-3">
+                                                            <input
+                                                                type="number"
+                                                                className="w-28 bg-white/5 border border-white/10 rounded-lg p-2 text-sm font-bold text-white text-center"
+                                                                placeholder="KMs"
+                                                                id="estimatedKm"
+                                                                onChange={(e) => {
+                                                                    const km = parseFloat(e.target.value) || 0;
+                                                                    const el = document.getElementById('estimatedTotal');
+                                                                    if (el) el.textContent = `₹${(km * currentSellingPrice).toLocaleString()}`;
+                                                                }}
+                                                            />
+                                                            <span className="text-slate-500 text-xs">×</span>
+                                                            <span className="text-white text-sm font-bold">₹{currentSellingPrice.toLocaleString()}/km</span>
+                                                            <span className="text-slate-500 text-xs">=</span>
+                                                            <span id="estimatedTotal" className="text-lg font-black text-green-400">₹0</span>
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {/* Pricing Preview */}
+                                                {serviceForm.baseCost ? (
+                                                    <div className="mb-4 flex items-center justify-between px-1 text-xs">
+                                                        <span className="text-slate-500">Selling: <span className="text-white font-black">₹{currentSellingPrice.toLocaleString()}{getUnitSuffix(serviceForm.unit || '')}</span></span>
+                                                        <span className="text-green-400 font-bold">Profit: +₹{currentProfit.toLocaleString()}{getUnitSuffix(serviceForm.unit || '')}</span>
+                                                    </div>
+                                                ) : null}
+
                                                 <button onClick={handleAddService} className="w-full py-3 bg-primary text-white font-bold rounded-xl hover:bg-primary-dark transition-all">Add to Catalog</button>
                                             </div>
                                         </div>
@@ -1020,11 +1092,9 @@ export const Vendors: React.FC = () => {
                             <div className="space-y-4">
                                 <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">Basic Information</h3>
                                 <div className="flex justify-center mb-4">
-                                    <ImageUpload
-                                        label="Vendor Logo"
-                                        value={vendorForm.logo}
-                                        onChange={(val) => setVendorForm({ ...vendorForm, logo: val })}
-                                    />
+                                    <div className={`size-16 rounded-2xl flex items-center justify-center shadow-md ${getCategoryMeta(vendorForm.category || 'Hotel').color}`}>
+                                        <span className="material-symbols-outlined text-4xl">{getCategoryMeta(vendorForm.category || 'Hotel').icon}</span>
+                                    </div>
                                 </div>
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="space-y-1">
