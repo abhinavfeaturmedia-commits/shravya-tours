@@ -53,14 +53,51 @@ const NAV_GROUPS = [
 
 export const AdminLayout: React.FC = () => {
   const { currentUser, logout, isAuthenticated, isMasquerading, stopMasquerading, realUser, hasPermission } = useAuth();
-  const { bookings, leads } = useData(); // Connect to real data
+  const { bookings, leads, followUps } = useData(); // Connect to real data
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [isFabOpen, setIsFabOpen] = useState(false);
   const [commandSearch, setCommandSearch] = useState('');
+  const [notifiedIds, setNotifiedIds] = useState<Set<string>>(new Set());
   const location = useLocation();
   const navigate = useNavigate();
+
+  // Global Notification Check for Follow-ups
+  useEffect(() => {
+    const checkFollowUps = () => {
+      const now = new Date();
+      const pendingFollowUps = followUps.filter(f =>
+        f.status === 'Pending' &&
+        f.reminderEnabled &&
+        f.scheduledAt &&
+        new Date(f.scheduledAt) <= now &&
+        !notifiedIds.has(f.id)
+      );
+
+      pendingFollowUps.forEach(f => {
+        toast.info(`Follow-up Due: ${f.leadName || 'Unknown Lead'}`, {
+          description: f.description || f.notes || 'No notes provided',
+          action: {
+            label: 'View',
+            onClick: () => navigate('/admin/leads')
+          },
+          duration: 10000, // Show for 10 seconds
+        });
+
+        // Play a subtle sound if possible (optional, but good for "notification")
+        // const audio = new Audio('/notification.mp3'); audio.play().catch(() => {});
+
+        setNotifiedIds(prev => new Set(prev).add(f.id));
+      });
+    };
+
+    // Check immediately and then every 30 seconds
+    const timer = setInterval(checkFollowUps, 30000);
+    checkFollowUps(); // Initial check
+
+    return () => clearInterval(timer);
+  }, [followUps, notifiedIds, navigate]);
 
   // Route Protection: Redirect if not logged in
   useEffect(() => {

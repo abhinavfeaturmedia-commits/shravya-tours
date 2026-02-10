@@ -62,12 +62,16 @@ interface AuthContextType {
     staff: StaffMember[];
     currentUser: StaffMember | null;
     isAuthenticated: boolean;
-    login: (email: string, password: string) => boolean;
+    login: (email: string, password: string) => Promise<boolean>;
     logout: () => void;
     addStaff: (member: StaffMember) => void;
     updateStaff: (id: number, member: Partial<StaffMember>) => void;
     deleteStaff: (id: number) => void;
     hasPermission: (module: keyof StaffPermissions, action: 'view' | 'manage') => boolean;
+    masqueradeAs: (staffId: number) => void;
+    stopMasquerading: () => void;
+    isMasquerading: boolean;
+    realUser: StaffMember | null;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);

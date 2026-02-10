@@ -427,14 +427,17 @@ export type FollowUpStatus = 'Scheduled' | 'Done' | 'Pending' | 'Overdue';
 export interface FollowUp {
   id: string;
   leadId: string;
+  leadName?: string; // Added for display
   type: FollowUpType;
-  description: string;
+  description: string; // Used as notes
   scheduledAt: string; // ISO String
   reminderEnabled: boolean;
   status: FollowUpStatus;
+  priority?: 'High' | 'Medium' | 'Low';
   createdAt: string;
   completedAt?: string;
   assignedTo?: number; // Staff ID
+  notes?: string; // Optional alias if needed, or stick to description
 }
 
 // --- Proposal Management Types ---

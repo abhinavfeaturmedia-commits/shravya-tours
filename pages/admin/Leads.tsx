@@ -2,16 +2,16 @@
 import React, { useState, useEffect } from 'react';
 import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
-import { Lead, FollowUp, ServiceType } from '../../types';
-import { toast } from '../../components/ui/Toast';
+import { Lead, BookingStatus, FollowUpType, Customer } from '../../types'; // Removed unused imports
+import { toast } from 'sonner'; // Use sonner for consistency if available, or keep existing toast
 import { useNavigate } from 'react-router-dom';
 import {
     Phone, Mail, MapPin, Calendar, Users, Clock, X, Plus, Search,
     ChevronRight, Sparkles, Edit2, Trash2, ArrowRight, MessageCircle,
-    FileText, Bell, CheckCircle2, MoreHorizontal, Filter
+    FileText, Bell, CheckCircle2, MoreHorizontal, Filter, Save, CalendarDays
 } from 'lucide-react';
-import { analyzeLead } from '../../src/lib/gemini';
-import { BulkImportLeadsModal } from '../../components/admin/BulkImportLeadsModal';
+// import { analyzeLead } from '../../src/lib/gemini'; // Commented out unused
+// import { BulkImportLeadsModal } from '../../components/admin/BulkImportLeadsModal'; // Commented out unused
 
 // Status Badge Component
 const StatusBadge = ({ status }: { status: string }) => {
@@ -31,7 +31,7 @@ const StatusBadge = ({ status }: { status: string }) => {
 };
 
 export const Leads: React.FC = () => {
-    const { leads, addLead, addLeadLog, updateLead, deleteLead, addFollowUp, getFollowUpsByLeadId } = useData();
+    const { leads, addLead, addLeadLog, updateLead, deleteLead, addFollowUp, addBooking, followUps, customers, addCustomer } = useData();
     const { currentUser } = useAuth();
     const navigate = useNavigate();
 
@@ -40,22 +40,33 @@ export const Leads: React.FC = () => {
     const [search, setSearch] = useState('');
     const [modalMode, setModalMode] = useState<'add' | 'edit'>('add');
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+    // const [isImportModalOpen, setIsImportModalOpen] = useState(false);
 
     // Forms
     const [noteContent, setNoteContent] = useState('');
     const [isReminderSet, setIsReminderSet] = useState(false);
+    const [reminderDate, setReminderDate] = useState('');
     const [leadForm, setLeadForm] = useState<Partial<Lead>>({
         status: 'New', travelers: '2 Adults', source: 'Manual Entry'
     });
+    const [followUpType, setFollowUpType] = useState<FollowUpType>('Call');
 
     const selectedLead = leads.find(l => l.id === selectedLeadId);
 
     // Stats calculation
+    const tasksDueToday = followUps.filter(f => {
+        if (f.status !== 'Pending' || !f.scheduledAt) return false;
+        const taskDate = new Date(f.scheduledAt);
+        const today = new Date();
+        taskDate.setHours(0, 0, 0, 0);
+        today.setHours(0, 0, 0, 0);
+        return taskDate.getTime() <= today.getTime();
+    }).length;
+
     const stats = {
         pending: leads.filter(l => l.status === 'New').length,
         value: leads.reduce((acc, l) => acc + (l.potentialValue || 0), 0),
-        tasks: 5 // Mock for now
+        tasks: tasksDueToday
     };
 
     const filteredLeads = leads.filter(l =>
@@ -65,38 +76,156 @@ export const Leads: React.FC = () => {
 
     const handleSaveLog = () => {
         if (!selectedLeadId || !noteContent.trim()) return;
+
+        const logId = `lg-${Date.now()}`;
         addLeadLog(selectedLeadId, {
-            id: `lg-${Date.now()}`,
+            id: logId,
             type: 'Note',
             content: noteContent,
             timestamp: new Date().toISOString()
         });
+
+        if (isReminderSet && reminderDate) {
+            addFollowUp({
+                id: `FU-${crypto.randomUUID().substring(0, 8)}`,
+                leadId: selectedLeadId,
+                leadName: selectedLead?.name || 'Unknown',
+                scheduledAt: reminderDate,
+                type: followUpType, // Use the selected type
+                status: 'Pending',
+                description: `Reminder: ${noteContent}`,
+                reminderEnabled: true,
+                createdAt: new Date().toISOString(),
+                priority: 'Medium'
+            });
+            toast.success('Log saved & Follow-up scheduled');
+        } else {
+            toast.success('Log saved');
+        }
+
         setNoteContent('');
-        toast.success('Log saved');
+        setIsReminderSet(false);
+        setReminderDate('');
     };
 
     const handleFormSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+
+        // 1. Date Validation
+        if (leadForm.startDate && leadForm.endDate) {
+            if (new Date(leadForm.endDate) < new Date(leadForm.startDate)) {
+                toast.error('End date cannot be before start date');
+                return;
+            }
+        }
+
+        // 2. Duplicate Detection (Only for new leads)
+        if (modalMode === 'add') {
+            const isDuplicate = leads.some(l =>
+                (leadForm.email && l.email?.toLowerCase() === leadForm.email.toLowerCase()) ||
+                (leadForm.phone && l.phone === leadForm.phone)
+            );
+            if (isDuplicate) {
+                if (!confirm('A lead with this email or phone already exists. Do you want to create a duplicate?')) {
+                    return;
+                }
+            }
+        }
+
         const now = new Date().toISOString();
         if (modalMode === 'add') {
-            const newLead: any = {
-                id: `LD-${Date.now()}`,
+            const newLead: Lead = {
+                id: `LD-${crypto.randomUUID().substring(0, 8)}`, // More robust ID
                 addedOn: now,
                 logs: [],
                 avatarColor: 'bg-slate-100 text-slate-600',
-                ...leadForm,
-                potentialValue: Number(leadForm.budget) || 0
+                name: leadForm.name || '',
+                email: leadForm.email || '',
+                phone: leadForm.phone || '',
+                destination: leadForm.destination || '',
+                travelers: leadForm.travelers || '',
+                budget: leadForm.budget || '',
+                status: leadForm.status || 'New',
+                type: leadForm.type || 'Custom Package',
+                priority: 'Medium',
+                source: leadForm.source || 'Manual Entry',
+                potentialValue: Number(leadForm.budget) || 0,
+                ...leadForm
             };
             addLead(newLead);
-            toast.success('Lead added');
+            toast.success('Lead added successfully');
         } else {
             updateLead(leadForm.id!, {
                 ...leadForm,
                 potentialValue: Number(leadForm.budget) || 0
             });
-            toast.success('Lead updated');
+            toast.success('Lead updated successfully');
         }
         setIsModalOpen(false);
+    };
+
+    const handleDeleteLead = () => {
+        if (selectedLeadId && confirm('Are you sure you want to delete this lead? This action cannot be undone.')) {
+            deleteLead(selectedLeadId);
+            setSelectedLeadId(null);
+            toast.success('Lead deleted');
+        }
+    };
+
+    const handleConvertToBooking = () => {
+        if (!selectedLead) return;
+        if (confirm(`Convert ${selectedLead.name} to a confirmed booking?`)) {
+            // 1. Deep Logic: Check for existing Customer
+            let targetCustomerId: string | undefined;
+            const existingCustomer = customers?.find((c: Customer) =>
+                (c.email?.toLowerCase() === selectedLead.email?.toLowerCase()) ||
+                (c.phone === selectedLead.phone)
+            );
+
+            if (existingCustomer) {
+                targetCustomerId = existingCustomer.id;
+            } else {
+                // Create new customer
+                const newCustomerId = `CU-${crypto.randomUUID().substring(0, 8)}`;
+                const newCustomer: Customer = {
+                    id: newCustomerId,
+                    name: selectedLead.name,
+                    email: selectedLead.email,
+                    phone: selectedLead.phone || '',
+                    type: 'New',
+                    status: 'Active',
+                    joinedDate: new Date().toISOString(),
+                    bookingsCount: 0,
+                    totalSpent: 0
+                };
+                addCustomer?.(newCustomer);
+                targetCustomerId = newCustomerId;
+            }
+
+            addBooking({
+                id: `BK-${crypto.randomUUID().substring(0, 8)}`,
+                type: 'Tour',
+                customer: selectedLead.name,
+                customerId: targetCustomerId, // Linked Customer
+                email: selectedLead.email,
+                phone: selectedLead.phone,
+                title: `Trip to ${selectedLead.destination}`,
+                date: new Date().toISOString().split('T')[0],
+                amount: selectedLead.potentialValue || 0,
+                status: BookingStatus.CONFIRMED,
+                payment: 'Unpaid',
+                guests: selectedLead.travelers
+            });
+
+            updateLead(selectedLead.id, { status: 'Converted' });
+            addLeadLog(selectedLead.id, {
+                id: `lg-conv-${crypto.randomUUID().substring(0, 8)}`,
+                type: 'System',
+                content: `Lead converted to Booking. Customer profile ${existingCustomer ? 'linked' : 'created'}.`,
+                timestamp: new Date().toISOString()
+            });
+            toast.success('Lead converted to Booking!');
+        }
     };
 
     const openAddModal = () => {
@@ -221,7 +350,7 @@ export const Leads: React.FC = () => {
 
             {/* RIGHT DETAIL PANEL (Fixed Sidebar) */}
             {selectedLead && (
-                <div className="w-full lg:w-[400px] bg-white dark:bg-[#1A2633] border-l border-slate-200 dark:border-slate-800 flex flex-col h-full fixed lg:static inset-0 z-50 overflow-y-auto animate-in slide-in-from-right-10 duration-200 shadow-2xl lg:shadow-none">
+                <div className="w-full lg:w-[450px] bg-white dark:bg-[#1A2633] border-l border-slate-200 dark:border-slate-800 flex flex-col h-full fixed lg:static inset-0 z-50 overflow-y-auto animate-in slide-in-from-right-10 duration-200 shadow-2xl lg:shadow-none">
 
                     {/* Panel Header */}
                     <div className="p-6 border-b border-slate-100 dark:border-slate-800">
@@ -237,12 +366,20 @@ export const Leads: React.FC = () => {
                                     </p>
                                 </div>
                             </div>
-                            <button onClick={() => setSelectedLeadId(null)} className="text-slate-400 hover:text-slate-600 p-1">
-                                <X size={20} />
-                            </button>
+                            <div className="flex items-center gap-1">
+                                <button onClick={openEditModal} className="p-2 text-slate-400 hover:text-primary hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors">
+                                    <Edit2 size={18} />
+                                </button>
+                                <button onClick={handleDeleteLead} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 rounded-lg transition-colors">
+                                    <Trash2 size={18} />
+                                </button>
+                                <button onClick={() => setSelectedLeadId(null)} className="p-2 text-slate-400 hover:text-slate-600 rounded-lg">
+                                    <X size={20} />
+                                </button>
+                            </div>
                         </div>
                         <div className="flex gap-2">
-                            <span className="px-2 py-1 bg-green-50 text-green-700 text-[10px] font-bold uppercase rounded-md tracking-wide">High Value</span>
+                            <StatusBadge status={selectedLead.status} />
                             {selectedLead.status === 'Offer Sent' && (
                                 <span className="px-2 py-1 bg-purple-50 text-purple-700 text-[10px] font-bold uppercase rounded-md tracking-wide">Quote Sent</span>
                             )}
@@ -253,36 +390,39 @@ export const Leads: React.FC = () => {
                     <div className="p-6 flex-1 overflow-y-auto">
 
                         {/* Trip Details Grid */}
-                        <div className="mb-8">
-                            <h3 className="text-xs font-bold text-slate-400 uppercase mb-4 tracking-wider">Trip Details</h3>
-                            <div className="grid grid-cols-2 gap-y-6 gap-x-4">
+                        <div className="mb-8 p-4 bg-slate-50 dark:bg-slate-900/50 rounded-2xl border border-slate-100 dark:border-slate-800">
+                            <h3 className="text-xs font-bold text-slate-400 uppercase mb-4 tracking-wider flex items-center gap-2">
+                                <FileText size={14} /> Trip Details
+                            </h3>
+                            <div className="grid grid-cols-2 gap-y-4 gap-x-4">
                                 <div>
-                                    <p className="text-xs text-slate-500 mb-1">Dates</p>
-                                    <p className="text-sm font-bold text-slate-900 dark:text-white">Oct 12 - Oct 20</p>
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Dates</p>
+                                    <p className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                                        <Calendar size={14} className="text-primary" />
+                                        {selectedLead.startDate ? `${new Date(selectedLead.startDate).toLocaleDateString()} - ${selectedLead.endDate ? new Date(selectedLead.endDate).toLocaleDateString() : ''}` : 'Not set'}
+                                    </p>
                                 </div>
                                 <div>
-                                    <p className="text-xs text-slate-500 mb-1">Travelers</p>
-                                    <p className="text-sm font-bold text-slate-900 dark:text-white">{selectedLead.travelers}</p>
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Travelers</p>
+                                    <p className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                                        <Users size={14} className="text-primary" />
+                                        {selectedLead.travelers}
+                                    </p>
                                 </div>
                                 <div>
-                                    <p className="text-xs text-slate-500 mb-1">Budget</p>
-                                    <p className="text-sm font-bold text-slate-900 dark:text-white">₹{(selectedLead.potentialValue || 0).toLocaleString()}</p>
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Budget</p>
+                                    <p className="text-sm font-bold text-slate-900 dark:text-white text-green-600">₹{(selectedLead.potentialValue || 0).toLocaleString()}</p>
                                 </div>
                                 <div>
-                                    <p className="text-xs text-slate-500 mb-1">Type</p>
-                                    <p className="text-sm font-bold text-slate-900 dark:text-white">{selectedLead.type}</p>
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Source</p>
+                                    <p className="text-sm font-bold text-slate-900 dark:text-white">{selectedLead.source}</p>
                                 </div>
                             </div>
                         </div>
 
-                        {/* Customer Preferences */}
-                        <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-100 dark:border-slate-700 mb-8 italic text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-                            "{selectedLead.preferences || "No specific preferences recorded yet."}"
-                        </div>
-
                         {/* Quick Actions */}
                         <div className="mb-8">
-                            <h3 className="text-xs font-bold text-slate-400 uppercase mb-4 tracking-wider">Quick Actions</h3>
+                            <h3 className="text-xs font-bold text-slate-400 uppercase mb-4 tracking-wider">Communication</h3>
                             <div className="grid grid-cols-3 gap-3 mb-3">
                                 <a href={`tel:${selectedLead.phone}`} className="flex flex-col items-center justify-center p-3 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-primary/50 hover:bg-primary/5 transition-all text-slate-600 dark:text-slate-300 hover:text-primary gap-2">
                                     <div className="h-8 w-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center"><Phone size={16} /></div>
@@ -298,80 +438,146 @@ export const Leads: React.FC = () => {
                                 </a>
                             </div>
                             <button
-                                onClick={() => navigate('/admin/bookings', { state: { prefill: { customer: selectedLead.name, amount: selectedLead.potentialValue } } })}
-                                className="w-full py-3 rounded-xl border border-dashed border-primary text-primary font-bold text-sm hover:bg-primary/5 flex items-center justify-center gap-2 transition-colors"
+                                onClick={handleConvertToBooking}
+                                className="w-full py-3 rounded-xl bg-slate-900 text-white dark:bg-white dark:text-slate-900 font-bold text-sm hover:opacity-90 flex items-center justify-center gap-2 transition-all shadow-lg"
                             >
-                                <FileText size={16} /> Generate Updated Quote
+                                <CheckCircle2 size={16} /> Convert to Booking
                             </button>
                         </div>
 
                         {/* Follow Up Log */}
                         <div>
-                            <h3 className="text-xs font-bold text-slate-400 uppercase mb-4 tracking-wider">Follow-up Log</h3>
-                            <div className="mb-4">
+                            <h3 className="text-xs font-bold text-slate-400 uppercase mb-4 tracking-wider">Activity Log</h3>
+                            <div className="mb-6 bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm">
                                 <textarea
                                     value={noteContent}
                                     onChange={(e) => setNoteContent(e.target.value)}
-                                    placeholder="Log call notes or internal comments..."
-                                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-4 text-sm focus:ring-2 focus:ring-primary outline-none resize-none h-24"
+                                    placeholder="Log call notes, internal comments, or meeting outcomes..."
+                                    className="w-full bg-transparent text-sm outline-none resize-none h-20 placeholder:text-slate-400 text-slate-900 dark:text-white"
                                 />
-                                <div className="flex justify-between items-center mt-3">
-                                    <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400 cursor-pointer">
+                                <div className="flex flex-col gap-3 mt-3 border-t border-slate-100 dark:border-slate-700 pt-3">
+                                    <div className="flex items-center justify-between gap-2">
+                                        <div className="flex items-center gap-2">
+                                            <input
+                                                type="checkbox"
+                                                id="set-reminder"
+                                                checked={isReminderSet}
+                                                onChange={(e) => setIsReminderSet(e.target.checked)}
+                                                className="rounded border-slate-300 text-primary focus:ring-primary h-4 w-4"
+                                            />
+                                            <label htmlFor="set-reminder" className="text-xs font-bold text-slate-600 dark:text-slate-400 cursor-pointer select-none">
+                                                Schedule Next Follow-up
+                                            </label>
+                                        </div>
+                                        {isReminderSet && (
+                                            <select
+                                                value={followUpType}
+                                                onChange={(e) => setFollowUpType(e.target.value as FollowUpType)}
+                                                className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1 text-[10px] font-bold text-slate-700 dark:text-slate-300 outline-none"
+                                            >
+                                                {['Call', 'Email', 'WhatsApp', 'Meeting'].map(t => <option key={t} value={t}>{t}</option>)}
+                                            </select>
+                                        )}
+                                    </div>
+                                    {isReminderSet && (
                                         <input
-                                            type="checkbox"
-                                            checked={isReminderSet}
-                                            onChange={(e) => setIsReminderSet(e.target.checked)}
-                                            className="custom-checkbox h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary"
+                                            type="datetime-local"
+                                            value={reminderDate}
+                                            onChange={(e) => setReminderDate(e.target.value)}
+                                            className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-xs font-bold text-slate-700 dark:text-slate-300 outline-none w-full"
                                         />
-                                        Set Reminder
-                                    </label>
-                                    <button
-                                        onClick={handleSaveLog}
-                                        className="bg-primary text-white px-4 py-2 rounded-lg text-xs font-bold shadow-md hover:bg-primary-dark transition-colors"
-                                    >
-                                        Save Log
-                                    </button>
+                                    )}
+                                    <div className="flex justify-end">
+                                        <button
+                                            onClick={handleSaveLog}
+                                            className="bg-primary text-white px-4 py-2 rounded-lg text-xs font-bold shadow-md hover:bg-primary-dark transition-colors flex items-center gap-2"
+                                        >
+                                            <Save size={14} /> Save Log
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
 
                             {/* Timeline Activity */}
-                            <div className="space-y-6 pl-2 border-l-2 border-slate-100 dark:border-slate-800 ml-2">
-                                {/* Sample Timeline Item */}
-                                <div className="relative pl-6">
-                                    <div className="absolute -left-[5px] top-1 h-3 w-3 rounded-full border-2 border-white bg-blue-500 ring-4 ring-white dark:ring-[#1A2633]"></div>
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase mb-0.5">Today, 10:30 AM</p>
-                                    <p className="text-sm font-bold text-slate-900 dark:text-white">Quote Sent (PDF)</p>
-                                    <p className="text-xs text-slate-500 mt-0.5">Sent the "Japan Cultural Immersion" itinerary V2.</p>
-                                </div>
-                                <div className="relative pl-6">
-                                    <div className="absolute -left-[5px] top-1 h-3 w-3 rounded-full border-2 border-white bg-slate-300 ring-4 ring-white dark:ring-[#1A2633]"></div>
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase mb-0.5">Yesterday, 4:15 PM</p>
-                                    <p className="text-sm font-bold text-slate-900 dark:text-white">Call Logged: Interest High</p>
-                                    <p className="text-xs text-slate-500 mt-0.5">Client asked for hotel upgrades in Kyoto. Adjusted budget to $6k.</p>
-                                </div>
+                            <div className="space-y-6 pl-2 border-l-2 border-slate-100 dark:border-slate-800 ml-2 pb-10">
+                                {selectedLead.logs && selectedLead.logs.length > 0 ? (
+                                    [...selectedLead.logs].reverse().map((log) => (
+                                        <div key={log.id} className="relative pl-6 group">
+                                            <div className="absolute -left-[5px] top-1 h-3 w-3 rounded-full border-2 border-white bg-slate-300 ring-4 ring-white dark:ring-[#1A2633] group-hover:bg-primary transition-colors"></div>
+                                            <p className="text-[10px] font-bold text-slate-400 uppercase mb-0.5">
+                                                {new Date(log.timestamp).toLocaleDateString()} {new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                            </p>
+                                            <p className="text-sm font-bold text-slate-900 dark:text-white capitalize">{log.type}</p>
+                                            <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">{log.content}</p>
+                                        </div>
+                                    ))
+                                ) : (
+                                    <div className="pl-6 text-xs text-slate-400 italic">No activity logs recorded yet.</div>
+                                )}
                             </div>
                         </div>
                     </div>
                 </div>
             )}
 
-            {/* Modals area (Use existing components or simplified versions as needed for Add/Edit) */}
+            {/* Modals area */}
             {isModalOpen && (
-                <div className="fixed inset-0 z-[200] bg-black/50 flex items-center justify-center p-4 backdrop-blur-sm">
-                    <div className="bg-white dark:bg-[#1A2633] rounded-2xl w-full max-w-md shadow-2xl p-6 animate-in zoom-in-95">
-                        <div className="flex justify-between items-center mb-6">
-                            <h3 className="font-bold text-lg text-slate-900 dark:text-white">{modalMode === 'edit' ? 'Edit Lead' : 'Add New Lead'}</h3>
+                <div className="fixed inset-0 z-[200] bg-black/50 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in">
+                    <div className="bg-white dark:bg-[#1A2633] rounded-2xl w-full max-w-lg shadow-2xl p-6 animate-in zoom-in-95 max-h-[90vh] overflow-y-auto">
+                        <div className="flex justify-between items-center mb-6 border-b border-slate-100 dark:border-slate-800 pb-4">
+                            <h3 className="font-bold text-lg text-slate-900 dark:text-white">{modalMode === 'edit' ? 'Edit Lead Details' : 'Add New Lead'}</h3>
                             <button onClick={() => setIsModalOpen(false)}><X size={20} className="text-slate-400" /></button>
                         </div>
                         <form onSubmit={handleFormSubmit} className="space-y-4">
-                            <input required placeholder="Full Name" value={leadForm.name || ''} onChange={e => setLeadForm({ ...leadForm, name: e.target.value })} className="w-full bg-slate-50 border-slate-200 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary" />
-                            <div className="grid grid-cols-2 gap-3">
-                                <input required placeholder="Phone" value={leadForm.phone || ''} onChange={e => setLeadForm({ ...leadForm, phone: e.target.value })} className="w-full bg-slate-50 border-slate-200 rounded-xl px-4 py-3 text-sm outline-none" />
-                                <input placeholder="Email" value={leadForm.email || ''} onChange={e => setLeadForm({ ...leadForm, email: e.target.value })} className="w-full bg-slate-50 border-slate-200 rounded-xl px-4 py-3 text-sm outline-none" />
+                            <div>
+                                <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">Full Name</label>
+                                <input required placeholder="Client Name" value={leadForm.name || ''} onChange={e => setLeadForm({ ...leadForm, name: e.target.value })} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm font-bold text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-primary" />
                             </div>
-                            <input required placeholder="Destination" value={leadForm.destination || ''} onChange={e => setLeadForm({ ...leadForm, destination: e.target.value })} className="w-full bg-slate-50 border-slate-200 rounded-xl px-4 py-3 text-sm outline-none" />
-                            <input type="number" placeholder="Budget" value={leadForm.budget || ''} onChange={e => setLeadForm({ ...leadForm, budget: e.target.value })} className="w-full bg-slate-50 border-slate-200 rounded-xl px-4 py-3 text-sm outline-none" />
-                            <button type="submit" className="w-full bg-primary text-white py-3 rounded-xl font-bold">Save Lead</button>
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">Phone</label>
+                                    <input required placeholder="Phone Number" value={leadForm.phone || ''} onChange={e => setLeadForm({ ...leadForm, phone: e.target.value })} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm font-bold text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-primary" />
+                                </div>
+                                <div>
+                                    <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">Email</label>
+                                    <input placeholder="Email Address" value={leadForm.email || ''} onChange={e => setLeadForm({ ...leadForm, email: e.target.value })} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm font-bold text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-primary" />
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">Destination</label>
+                                    <input required placeholder="e.g. Kyoto, Japan" value={leadForm.destination || ''} onChange={e => setLeadForm({ ...leadForm, destination: e.target.value })} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm font-bold text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-primary" />
+                                </div>
+                                <div>
+                                    <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">Budget (₹)</label>
+                                    <input type="number" placeholder="0" value={leadForm.budget || ''} onChange={e => setLeadForm({ ...leadForm, budget: e.target.value })} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm font-bold text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-primary" />
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">Status</label>
+                                    <select value={leadForm.status} onChange={e => setLeadForm({ ...leadForm, status: e.target.value as any })} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm font-bold text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-primary">
+                                        {['New', 'Warm', 'Hot', 'Cold', 'Offer Sent', 'Converted'].map(s => <option key={s} value={s}>{s}</option>)}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">Travelers</label>
+                                    <input placeholder="e.g. 2 Adults, 1 Child" value={leadForm.travelers || ''} onChange={e => setLeadForm({ ...leadForm, travelers: e.target.value })} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm font-bold text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-primary" />
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">Start Date</label>
+                                    <input type="date" value={leadForm.startDate || ''} onChange={e => setLeadForm({ ...leadForm, startDate: e.target.value })} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm font-bold text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-primary" />
+                                </div>
+                                <div>
+                                    <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">End Date</label>
+                                    <input type="date" value={leadForm.endDate || ''} onChange={e => setLeadForm({ ...leadForm, endDate: e.target.value })} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm font-bold text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-primary" />
+                                </div>
+                            </div>
+                            <button type="submit" className="w-full bg-primary text-white py-4 rounded-xl font-bold shadow-lg shadow-primary/20 hover:bg-primary-dark transition-all mt-2">
+                                {modalMode === 'edit' ? 'Update Lead' : 'Save Lead'}
+                            </button>
                         </form>
                     </div>
                 </div>
