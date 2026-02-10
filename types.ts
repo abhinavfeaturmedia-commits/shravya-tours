@@ -99,6 +99,18 @@ export interface LeadLog {
   timestamp: string; // ISO String
 }
 
+export interface Expense {
+  id: string;
+  title: string;
+  amount: number;
+  category: 'Rent' | 'Salaries' | 'Software' | 'Marketing' | 'Office Supplies' | 'Utilities' | 'Other';
+  date: string;
+  paymentMethod: 'Bank Transfer' | 'Cash' | 'Credit Card' | 'UPI';
+  status: 'Paid' | 'Pending';
+  notes?: string;
+  receiptUrl?: string;
+}
+
 
 
 export interface AuditLog {
@@ -493,8 +505,9 @@ export interface ItineraryPricing {
 
 export interface MasterRoomType {
   id: string;
-  name: string; // 'Standard', 'Deluxe', 'Super Deluxe', 'Suite', 'Villa'
+  name: string;
   description?: string;
+  image?: string;
   status: 'Active' | 'Inactive';
 }
 
@@ -503,8 +516,9 @@ export type MealPlanCode = 'EP' | 'CP' | 'MAP' | 'AP' | 'AI';
 export interface MasterMealPlan {
   id: string;
   code: MealPlanCode;
-  name: string; // 'European Plan', 'Continental Plan', 'Modified American Plan', 'American Plan', 'All Inclusive'
+  name: string;
   description: string;
+  image?: string;
   status: 'Active' | 'Inactive';
 }
 
@@ -518,8 +532,9 @@ export const MEAL_PLAN_DESCRIPTIONS: Record<MealPlanCode, string> = {
 
 export interface MasterLeadSource {
   id: string;
-  name: string; // 'Walk-in', 'Website', 'Referral', 'Facebook', 'Google Ads', etc.
+  name: string;
   category?: 'Organic' | 'Paid' | 'Referral' | 'Direct';
+  image?: string;
   status: 'Active' | 'Inactive';
 }
 
@@ -528,6 +543,7 @@ export type TermsCategory = 'Booking & Payment' | 'Pricing & Inclusions' | 'Canc
 export interface MasterTermsTemplate {
   id: string;
   title: string;
+  image?: string;
   category: TermsCategory;
   content: string; // Rich text HTML content
   isDefault: boolean;

@@ -1,16 +1,18 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useItinerary, ItineraryItem, ServiceType } from '../ItineraryContext';
+import { useData } from '../../../context/DataContext';
 import { ServiceSelector } from '../selectors/ServiceSelector';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { Plus, Hotel, Bike, Car, Plane, StickyNote, Trash2, Clock, DollarSign, MapPin, MoreVertical, Sparkles } from 'lucide-react';
+import { Plus, Hotel, Bike, Car, Plane, StickyNote, Trash2, Clock, IndianRupee, MapPin, MoreVertical, Sparkles, ChevronUp, ChevronDown, Image as ImageIcon } from 'lucide-react';
 import { generateItinerary } from '../../../src/lib/gemini';
 import { toast } from 'sonner';
+import { ImageUpload } from '../../../components/ui/ImageUpload';
 
 gsap.registerPlugin(ScrollTrigger);
 
 export const StepDayPlanner: React.FC = () => {
-    const { tripDetails, getItemsForDay, setStep, removeItem, updateItem, replaceAllItems } = useItinerary();
+    const { tripDetails, getItemsForDay, setStep, removeItem, updateItem, replaceAllItems, getDayMeta, updateDayMeta } = useItinerary();
     const [addingToDay, setAddingToDay] = useState<number | null>(null);
     const [isGenerating, setIsGenerating] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
@@ -119,6 +121,8 @@ export const StepDayPlanner: React.FC = () => {
                         onRemove={removeItem}
                         onUpdate={updateItem}
                         isLast={index === days.length - 1}
+                        meta={getDayMeta(day)}
+                        onUpdateMeta={(meta) => updateDayMeta(day, meta)}
                     />
                 ))}
             </div>
@@ -140,7 +144,9 @@ const DayContainer: React.FC<{
     onRemove: (id: string) => void;
     onUpdate: (id: string, updates: Partial<ItineraryItem>) => void;
     isLast: boolean;
-}> = ({ day, items, onAdd, onRemove, onUpdate, isLast }) => {
+    meta: any;
+    onUpdateMeta: (meta: any) => void;
+}> = ({ day, items, onAdd, onRemove, onUpdate, isLast, meta, onUpdateMeta }) => {
 
     return (
         <div className="max-w-5xl mx-auto flex gap-3 md:gap-10 group relative isolate">
@@ -163,12 +169,24 @@ const DayContainer: React.FC<{
                     <h3 className="text-sm md:text-base font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
                         Day {day}
                     </h3>
-                    <button
-                        onClick={onAdd}
-                        className="text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 px-3 py-1.5 rounded-lg text-[10px] md:text-xs font-bold transition-all flex items-center gap-1 md:gap-1.5 border border-transparent hover:border-indigo-100 dark:hover:border-indigo-800"
-                    >
-                        <Plus size={12} strokeWidth={3} /> Add <span className="hidden md:inline">Service</span>
-                    </button>
+
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={onAdd}
+                            className="text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 px-3 py-1.5 rounded-lg text-[10px] md:text-xs font-bold transition-all flex items-center gap-1 md:gap-1.5 border border-transparent hover:border-indigo-100 dark:hover:border-indigo-800"
+                        >
+                            <Plus size={12} strokeWidth={3} /> Add <span className="hidden md:inline">Service</span>
+                        </button>
+                    </div>
+                </div>
+
+                {/* Day Meta (Image) */}
+                <div className="mb-4">
+                    <ImageUpload
+                        label="Day Cover Image"
+                        value={meta?.image}
+                        onChange={(url) => onUpdateMeta({ image: url })}
+                    />
                 </div>
 
                 <div className={`
@@ -187,19 +205,21 @@ const DayContainer: React.FC<{
                             <span className="text-[10px] md:text-sm font-bold uppercase tracking-wide">Empty Day • Click to Plan</span>
                         </div>
                     ) : (
-                        items.sort((a, b) => (a.time || '').localeCompare(b.time || '')).map((item, idx) => (
-                            <ServiceCard key={item.id} item={item} onRemove={() => onRemove(item.id)} onUpdate={onUpdate} index={idx} />
+                        items.sort((a, b) => (a.order || 0) - (b.order || 0) || (a.time || '').localeCompare(b.time || '')).map((item, idx) => (
+                            <ServiceCard key={item.id} item={item} onRemove={() => onRemove(item.id)} onUpdate={onUpdate} index={idx} isFirst={idx === 0} isLast={idx === items.length - 1} />
                         ))
                     )}
                 </div>
             </div>
-        </div>
+        </div >
     );
 };
 
 // --- Sub Component: Service Card ---
 
-const ServiceCard: React.FC<{ item: ItineraryItem; onRemove: () => void; onUpdate: (id: string, u: any) => void; index: number }> = ({ item, onRemove, onUpdate, index }) => {
+const ServiceCard: React.FC<{ item: ItineraryItem; onRemove: () => void; onUpdate: (id: string, u: any) => void; index: number; isFirst: boolean; isLast: boolean }> = ({ item, onRemove, onUpdate, index, isFirst, isLast }) => {
+    const { masterRoomTypes, masterMealPlans } = useData();
+    const { moveItem } = useItinerary();
 
     const getStyles = (type: ServiceType) => {
         switch (type) {
@@ -227,11 +247,16 @@ const ServiceCard: React.FC<{ item: ItineraryItem; onRemove: () => void; onUpdat
 
             <div className="flex gap-3 items-start pl-2 md:pl-3">
                 {/* Icon Box */}
+                {/* Icon Box or Master Image */}
                 <div className={`
-                    size-8 md:size-10 rounded-lg flex items-center justify-center shrink-0 shadow-sm
+                    size-12 md:size-16 rounded-lg flex items-center justify-center shrink-0 shadow-sm overflow-hidden relative group/image
                     ${style.accent} bg-slate-50 dark:bg-slate-800
                 `}>
-                    {React.cloneElement(style.icon as React.ReactElement, { size: 16 })}
+                    {item.masterData?.image ? (
+                        <img src={item.masterData.image} alt={item.title} className="w-full h-full object-cover transition-transform group-hover/image:scale-110" />
+                    ) : (
+                        React.cloneElement(style.icon as any, { size: 24 })
+                    )}
                 </div>
 
                 <div className="flex-1 min-w-0 space-y-1.5 md:space-y-2">
@@ -244,8 +269,8 @@ const ServiceCard: React.FC<{ item: ItineraryItem; onRemove: () => void; onUpdat
                             placeholder="Service Name"
                         />
                         <div className="flex w-fit items-center gap-1 text-slate-900 dark:text-white font-black bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md text-[10px] md:text-xs">
-                            <DollarSign size={10} className="text-slate-400" />
-                            {item.netCost?.toLocaleString() ?? 0}
+                            <IndianRupee size={10} className="text-slate-400" />
+                            {item.netCost?.toLocaleString('en-IN') ?? 0}
                         </div>
                     </div>
 
@@ -268,6 +293,49 @@ const ServiceCard: React.FC<{ item: ItineraryItem; onRemove: () => void; onUpdat
                         )}
                     </div>
 
+                    {/* Hotel Specific Selectors */}
+                    {item.type === 'hotel' && (
+                        <div className="flex flex-wrap gap-2 animate-in fade-in slide-in-from-top-1">
+                            {/* Room Type */}
+                            <div className="flex items-center gap-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg pl-1 pr-2 py-1">
+                                {item.roomTypeId && masterRoomTypes.find(r => r.id === item.roomTypeId)?.image && (
+                                    <div className="size-6 rounded overflow-hidden">
+                                        <img src={masterRoomTypes.find(r => r.id === item.roomTypeId)?.image} className="w-full h-full object-cover" />
+                                    </div>
+                                )}
+                                <select
+                                    value={item.roomTypeId || ''}
+                                    onChange={e => onUpdate(item.id, { roomTypeId: e.target.value })}
+                                    className="bg-transparent text-[10px] md:text-xs font-bold text-slate-600 dark:text-slate-300 outline-none w-24 md:w-32"
+                                >
+                                    <option value="">Select Room</option>
+                                    {masterRoomTypes.filter(rt => rt.status === 'Active').map(rt => (
+                                        <option key={rt.id} value={rt.id}>{rt.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            {/* Meal Plan */}
+                            <div className="flex items-center gap-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg pl-1 pr-2 py-1">
+                                {item.mealPlanId && masterMealPlans.find(mp => mp.id === item.mealPlanId)?.image && (
+                                    <div className="size-6 rounded overflow-hidden">
+                                        <img src={masterMealPlans.find(mp => mp.id === item.mealPlanId)?.image} className="w-full h-full object-cover" />
+                                    </div>
+                                )}
+                                <select
+                                    value={item.mealPlanId || ''}
+                                    onChange={e => onUpdate(item.id, { mealPlanId: e.target.value })}
+                                    className="bg-transparent text-[10px] md:text-xs font-bold text-slate-600 dark:text-slate-300 outline-none w-24 md:w-32"
+                                >
+                                    <option value="">Select Meal Plan</option>
+                                    {masterMealPlans.filter(mp => mp.status === 'Active').map(mp => (
+                                        <option key={mp.id} value={mp.id}>{mp.code} - {mp.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
+                    )}
+
                     {/* Description */}
                     <input
                         value={item.description || ''}
@@ -286,7 +354,24 @@ const ServiceCard: React.FC<{ item: ItineraryItem; onRemove: () => void; onUpdat
                     >
                         <Trash2 size={16} />
                     </button>
-                    {/* Future: Edit button */}
+
+                    <button
+                        onClick={() => moveItem(item.id, 'up')}
+                        disabled={isFirst}
+                        className="size-8 flex items-center justify-center text-slate-300 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                        title="Move Up"
+                    >
+                        <ChevronUp size={16} />
+                    </button>
+
+                    <button
+                        onClick={() => moveItem(item.id, 'down')}
+                        disabled={isLast}
+                        className="size-8 flex items-center justify-center text-slate-300 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                        title="Move Down"
+                    >
+                        <ChevronDown size={16} />
+                    </button>
                 </div>
             </div>
         </div>

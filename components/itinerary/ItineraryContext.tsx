@@ -26,6 +26,14 @@ export interface ItineraryItem {
     // Master Data Link
     masterId?: string;
     masterData?: MasterHotel | MasterActivity | MasterTransport | any;
+    roomTypeId?: string;
+    mealPlanId?: string;
+    order?: number; // For manual sorting
+}
+
+export interface DayMeta {
+    image?: string;
+    notes?: string;
 }
 
 // Helper to calculate sell price
@@ -80,13 +88,17 @@ interface ItineraryContextType {
     addItem: (item: Omit<ItineraryItem, 'sellPrice'>) => void;
     updateItem: (id: string, updates: Partial<Omit<ItineraryItem, 'sellPrice'>>) => void;
     removeItem: (id: string) => void;
-    replaceAllItems: (items: ItineraryItem[]) => void;
+    replaceAllItems: (items: Omit<ItineraryItem, 'sellPrice'>[]) => void;
     reorderItems: (destDay: number, newOrder: ItineraryItem[]) => void;
     setCurrency: (currency: CurrencyCode) => void;
     updateTaxConfig: (config: Partial<TaxConfig>) => void;
 
     // Helpers
+    // Helpers
     getItemsForDay: (day: number) => ItineraryItem[];
+    getDayMeta: (day: number) => DayMeta;
+    updateDayMeta: (day: number, meta: DayMeta) => void;
+    moveItem: (id: string, direction: 'up' | 'down') => void;
     formatCurrency: (amount: number) => string;
     convertCurrency: (amountInINR: number) => number;
 }
@@ -108,6 +120,7 @@ export const useItinerary = () => {
 export const ItineraryProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     const [step, setStep] = useState(1);
     const [items, setItems] = useState<ItineraryItem[]>([]);
+    const [dayMeta, setDayMeta] = useState<Record<number, DayMeta>>({});
     const [currency, setCurrency] = useState<CurrencyCode>('INR');
     const [taxConfig, setTaxConfig] = useState<TaxConfig>(DEFAULT_TAX_CONFIG);
 
@@ -175,7 +188,7 @@ export const ItineraryProvider: React.FC<{ children: ReactNode }> = ({ children 
         setItems(prev => prev.filter(item => item.id !== id));
     }, []);
 
-    const replaceAllItems = useCallback((newItems: ItineraryItem[]) => {
+    const replaceAllItems = useCallback((newItems: Omit<ItineraryItem, 'sellPrice'>[]) => {
         setItems(newItems.map(item => ({
             ...item,
             sellPrice: calculateSellPrice(item.netCost, item.baseMarkupPercent, item.extraMarkupFlat, item.quantity)
@@ -187,8 +200,67 @@ export const ItineraryProvider: React.FC<{ children: ReactNode }> = ({ children 
     }, []);
 
     const getItemsForDay = useCallback((day: number) => {
-        return items.filter(i => i.day === day);
+        return items.filter(i => i.day === day).sort((a, b) => (a.order || 0) - (b.order || 0));
     }, [items]);
+
+    const getDayMeta = useCallback((day: number) => dayMeta[day] || {}, [dayMeta]);
+
+    const updateDayMeta = useCallback((day: number, meta: DayMeta) => {
+        setDayMeta(prev => ({ ...prev, [day]: { ...prev[day], ...meta } }));
+    }, []);
+
+    const moveItem = useCallback((id: string, direction: 'up' | 'down') => {
+        setItems(prev => {
+            const targetItem = prev.find(i => i.id === id);
+            if (!targetItem) return prev;
+
+            // Get all items for this day, sorted by current order
+            const dayItems = prev.filter(i => i.day === targetItem.day)
+                .sort((a, b) => (a.order || 0) - (b.order || 0));
+
+            const index = dayItems.findIndex(i => i.id === id);
+            if (index === -1) return prev;
+
+            // Calculate new orders if strictly needed, but let's just swap orders
+            const newItems = [...prev];
+
+            if (direction === 'up' && index > 0) {
+                const itemA = dayItems[index];
+                const itemB = dayItems[index - 1];
+
+                // Swap their order values
+                // If orders are undefined or same, we need to re-index everything first
+                const orderA = itemA.order ?? index;
+                const orderB = itemB.order ?? (index - 1);
+
+                // If they are equal (collisions), rely on index
+                const newOrderA = orderB;
+                const newOrderB = orderA;
+
+                // But simpler: just re-assign order based on swapped index
+                // Let's re-normalize all orders for the day to be safe 0, 1, 2...
+                const reorderedDayItems = [...dayItems];
+                [reorderedDayItems[index], reorderedDayItems[index - 1]] = [reorderedDayItems[index - 1], reorderedDayItems[index]];
+
+                return prev.map(p => {
+                    const foundIndex = reorderedDayItems.findIndex(r => r.id === p.id);
+                    if (foundIndex !== -1) return { ...p, order: foundIndex };
+                    return p;
+                });
+            } else if (direction === 'down' && index < dayItems.length - 1) {
+                const reorderedDayItems = [...dayItems];
+                [reorderedDayItems[index], reorderedDayItems[index + 1]] = [reorderedDayItems[index + 1], reorderedDayItems[index]];
+
+                return prev.map(p => {
+                    const foundIndex = reorderedDayItems.findIndex(r => r.id === p.id);
+                    if (foundIndex !== -1) return { ...p, order: foundIndex };
+                    return p;
+                });
+            }
+
+            return prev;
+        });
+    }, []);
 
     const updateTaxConfig = useCallback((config: Partial<TaxConfig>) => {
         setTaxConfig(prev => ({ ...prev, ...config }));
@@ -211,6 +283,9 @@ export const ItineraryProvider: React.FC<{ children: ReactNode }> = ({ children 
         replaceAllItems,
         reorderItems,
         getItemsForDay,
+        getDayMeta,
+        updateDayMeta,
+        moveItem,
         setCurrency,
         updateTaxConfig,
         formatCurrency,

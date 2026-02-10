@@ -3,21 +3,9 @@ import { useData } from '../../context/DataContext';
 import { toast } from 'sonner';
 import {
     Wallet, TrendingDown, Calendar, Plus, Filter,
-    FileText, CheckCircle, AlertCircle, Trash2
+    FileText, CheckCircle, AlertCircle, Trash2, Pencil
 } from 'lucide-react';
-
-// Types (Ideally move to types.ts later)
-interface Expense {
-    id: string;
-    title: string;
-    amount: number;
-    category: 'Rent' | 'Salaries' | 'Software' | 'Marketing' | 'Office Supplies' | 'Utilities' | 'Other';
-    date: string;
-    paymentMethod: 'Bank Transfer' | 'Cash' | 'Credit Card' | 'UPI';
-    status: 'Paid' | 'Pending';
-    notes?: string;
-    receiptUrl?: string;
-}
+import { Expense } from '../../types';
 
 export const Expenses: React.FC = () => {
     // For now, local state. In real app, move to DataContext.
@@ -30,6 +18,7 @@ export const Expenses: React.FC = () => {
 
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [filterCategory, setFilterCategory] = useState<string>('All');
+    const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
     const [newExpense, setNewExpense] = useState<Partial<Expense>>({
         category: 'Other', paymentMethod: 'UPI', status: 'Paid', date: new Date().toISOString().split('T')[0]
     });
@@ -47,22 +36,40 @@ export const Expenses: React.FC = () => {
         return { total, paid, pending };
     }, [filteredExpenses]);
 
-    const handleAddExpense = (e: React.FormEvent) => {
+    const handleOpenModal = (expense?: Expense) => {
+        if (expense) {
+            setEditingExpense(expense);
+            setNewExpense({ ...expense });
+        } else {
+            setEditingExpense(null);
+            setNewExpense({ category: 'Other', paymentMethod: 'UPI', status: 'Paid', date: new Date().toISOString().split('T')[0] });
+        }
+        setIsModalOpen(true);
+    };
+
+    const handleSaveExpense = (e: React.FormEvent) => {
         e.preventDefault();
-        const expense: Expense = {
-            id: `EXP-${Date.now()}`,
-            title: newExpense.title!,
-            amount: Number(newExpense.amount),
-            category: newExpense.category as any,
-            date: newExpense.date!,
-            paymentMethod: newExpense.paymentMethod as any,
-            status: newExpense.status as any,
-            notes: newExpense.notes
-        };
-        setExpenses([expense, ...expenses]);
+
+        if (editingExpense) {
+            // Update existing
+            setExpenses(prev => prev.map(exp => exp.id === editingExpense.id ? { ...exp, ...newExpense } as Expense : exp));
+            toast.success("Expense updated successfully");
+        } else {
+            // Create new
+            const expense: Expense = {
+                id: `EXP-${Date.now()}`,
+                title: newExpense.title!,
+                amount: Number(newExpense.amount),
+                category: newExpense.category as any,
+                date: newExpense.date!,
+                paymentMethod: newExpense.paymentMethod as any,
+                status: newExpense.status as any,
+                notes: newExpense.notes
+            };
+            setExpenses([expense, ...expenses]);
+            toast.success("Expense recorded successfully");
+        }
         setIsModalOpen(false);
-        setNewExpense({ category: 'Other', paymentMethod: 'UPI', status: 'Paid', date: new Date().toISOString().split('T')[0] });
-        toast.success("Expense recorded successfully");
     };
 
     const handleDelete = (id: string) => {
@@ -85,7 +92,7 @@ export const Expenses: React.FC = () => {
                     <p className="text-slate-500 dark:text-slate-400 text-sm">Track monthly operational costs (Rent, Salaries, etc.)</p>
                 </div>
                 <button
-                    onClick={() => setIsModalOpen(true)}
+                    onClick={() => handleOpenModal()}
                     className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl text-sm px-5 py-2.5 shadow-lg shadow-red-600/20 active:scale-95 transition-all"
                 >
                     <Plus size={18} /> Record Expense
@@ -182,9 +189,14 @@ export const Expenses: React.FC = () => {
                                                 {fmt(expense.amount)}
                                             </td>
                                             <td className="px-6 py-4 text-right">
-                                                <button onClick={() => handleDelete(expense.id)} className="p-2 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded-lg transition-colors">
-                                                    <Trash2 size={16} />
-                                                </button>
+                                                <div className="flex items-center justify-end gap-2">
+                                                    <button onClick={() => handleOpenModal(expense)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 hover:text-primary rounded-lg transition-colors">
+                                                        <Pencil size={16} />
+                                                    </button>
+                                                    <button onClick={() => handleDelete(expense.id)} className="p-2 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded-lg transition-colors">
+                                                        <Trash2 size={16} />
+                                                    </button>
+                                                </div>
                                             </td>
                                         </tr>
                                     ))
@@ -201,18 +213,20 @@ export const Expenses: React.FC = () => {
                 </div>
             </div>
 
-            {/* Create Modal */}
+            {/* Create/Edit Modal */}
             {isModalOpen && (
                 <div className="fixed inset-0 z-[200] bg-black/60 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in">
                     <div className="bg-white dark:bg-[#1A2633] w-full max-w-lg rounded-2xl shadow-2xl animate-in zoom-in-95">
                         <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
-                            <h2 className="text-xl font-black text-slate-900 dark:text-white">Record New Expense</h2>
+                            <h2 className="text-xl font-black text-slate-900 dark:text-white">
+                                {editingExpense ? 'Edit Expense' : 'Record New Expense'}
+                            </h2>
                             <button onClick={() => setIsModalOpen(false)}><span className="material-symbols-outlined text-slate-400">close</span></button>
                         </div>
-                        <form onSubmit={handleAddExpense} className="p-6 space-y-4">
+                        <form onSubmit={handleSaveExpense} className="p-6 space-y-4">
                             <div>
                                 <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">Expense Title</label>
-                                <input required className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-3 rounded-xl w-full font-bold outline-none focus:ring-2 focus:ring-red-500"
+                                <input required className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-3 rounded-xl w-full font-bold outline-none focus:ring-2 focus:ring-red-500 text-slate-900 dark:text-white"
                                     placeholder="e.g. November Rent"
                                     value={newExpense.title || ''}
                                     onChange={e => setNewExpense({ ...newExpense, title: e.target.value })}
@@ -221,14 +235,14 @@ export const Expenses: React.FC = () => {
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">Amount (₹)</label>
-                                    <input required type="number" className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-3 rounded-xl w-full font-black outline-none focus:ring-2 focus:ring-red-500"
+                                    <input required type="number" className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-3 rounded-xl w-full font-black outline-none focus:ring-2 focus:ring-red-500 text-slate-900 dark:text-white"
                                         value={newExpense.amount || ''}
                                         onChange={e => setNewExpense({ ...newExpense, amount: Number(e.target.value) })}
                                     />
                                 </div>
                                 <div>
                                     <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">Date</label>
-                                    <input required type="date" className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-3 rounded-xl w-full font-bold outline-none focus:ring-2 focus:ring-red-500"
+                                    <input required type="date" className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-3 rounded-xl w-full font-bold outline-none focus:ring-2 focus:ring-red-500 text-slate-900 dark:text-white"
                                         value={newExpense.date}
                                         onChange={e => setNewExpense({ ...newExpense, date: e.target.value })}
                                     />
@@ -237,7 +251,7 @@ export const Expenses: React.FC = () => {
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">Category</label>
-                                    <select className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-3 rounded-xl w-full font-bold outline-none focus:ring-2 focus:ring-red-500"
+                                    <select className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-3 rounded-xl w-full font-bold outline-none focus:ring-2 focus:ring-red-500 text-slate-900 dark:text-white"
                                         value={newExpense.category}
                                         onChange={e => setNewExpense({ ...newExpense, category: e.target.value as any })}
                                     >
@@ -246,7 +260,7 @@ export const Expenses: React.FC = () => {
                                 </div>
                                 <div>
                                     <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">Status</label>
-                                    <select className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-3 rounded-xl w-full font-bold outline-none focus:ring-2 focus:ring-red-500"
+                                    <select className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-3 rounded-xl w-full font-bold outline-none focus:ring-2 focus:ring-red-500 text-slate-900 dark:text-white"
                                         value={newExpense.status}
                                         onChange={e => setNewExpense({ ...newExpense, status: e.target.value as any })}
                                     >
@@ -257,7 +271,7 @@ export const Expenses: React.FC = () => {
                             </div>
                             <div>
                                 <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">Payment Method</label>
-                                <select className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-3 rounded-xl w-full font-bold outline-none focus:ring-2 focus:ring-red-500"
+                                <select className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-3 rounded-xl w-full font-bold outline-none focus:ring-2 focus:ring-red-500 text-slate-900 dark:text-white"
                                     value={newExpense.paymentMethod}
                                     onChange={e => setNewExpense({ ...newExpense, paymentMethod: e.target.value as any })}
                                 >
@@ -269,7 +283,7 @@ export const Expenses: React.FC = () => {
                             </div>
 
                             <button type="submit" className="w-full py-4 bg-red-600 text-white font-bold rounded-xl shadow-lg shadow-red-600/20 hover:bg-red-700 transition-all mt-4">
-                                Record Expense
+                                {editingExpense ? 'Update Expense' : 'Record Expense'}
                             </button>
                         </form>
                     </div>

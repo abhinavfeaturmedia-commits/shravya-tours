@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
+import { ImageUpload } from '../../components/ui/ImageUpload';
 
 type MasterTab = 'analytics' | 'locations' | 'hotels' | 'activities' | 'transports' | 'plans' | 'room-types' | 'meal-plans' | 'lead-sources' | 'terms';
 type ViewMode = 'grid' | 'list';
@@ -128,6 +129,17 @@ const MasterModal: React.FC<{
 
     return (
         <div className="space-y-4">
+            {/* Image Upload for Supported Types */}
+            {['locations', 'hotels', 'activities', 'transports', 'room-types', 'meal-plans'].includes(activeTab) && (
+                <div className="flex justify-center mb-4">
+                    <ImageUpload
+                        label="Cover Image"
+                        value={form.image}
+                        onChange={(url) => setForm({ ...form, image: url })}
+                    />
+                </div>
+            )}
+
             {/* Common Name/Title Field */}
             {activeTab !== 'plans' && activeTab !== 'room-types' && activeTab !== 'meal-plans' && activeTab !== 'lead-sources' && activeTab !== 'terms' ? (
                 <div>
@@ -456,7 +468,7 @@ export const Masters: React.FC = () => {
 
     // --- State ---
     const [activeTab, setActiveTab] = useState<MasterTab>('locations');
-    const [viewMode, setViewMode] = useState<ViewMode>('grid');
+    const [viewMode, setViewMode] = useState<ViewMode>('list');
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
     const [showModal, setShowModal] = useState(false);
@@ -1140,6 +1152,7 @@ export const Masters: React.FC = () => {
                                 className="size-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
                             />
                         </th>
+                        <th className="px-6 py-4 font-bold text-slate-500 uppercase tracking-wider text-xs w-20">Image</th>
                         <th className="px-6 py-4 font-bold text-slate-500 uppercase tracking-wider text-xs">Name/Title</th>
                         <th className="px-6 py-4 font-bold text-slate-500 uppercase tracking-wider text-xs">Details</th>
                         <th className="px-6 py-4 font-bold text-slate-500 uppercase tracking-wider text-xs">Relations</th>
@@ -1229,6 +1242,17 @@ export const Masters: React.FC = () => {
                                         onChange={() => handleSelectOne(item.id)}
                                         className="size-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
                                     />
+                                </td>
+                                <td className="px-6 py-4">
+                                    <div className="size-10 rounded-lg bg-slate-100 dark:bg-slate-800 overflow-hidden border border-slate-200 dark:border-slate-700">
+                                        {item.image ? (
+                                            <img src={item.image} alt="" className="w-full h-full object-cover" />
+                                        ) : (
+                                            <div className="w-full h-full flex items-center justify-center text-slate-400">
+                                                <span className="material-symbols-outlined text-lg">image</span>
+                                            </div>
+                                        )}
+                                    </div>
                                 </td>
                                 <td className="px-6 py-4">
                                     <p className="font-bold text-slate-900 dark:text-white">{item.name || item.title}</p>

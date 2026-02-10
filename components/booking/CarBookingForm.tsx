@@ -45,9 +45,20 @@ export const CarBookingForm: React.FC<CarBookingFormProps> = ({ onSubmit }) => {
     });
 
     const onFormSubmit = (data: CarFormData) => {
+        // If Drop-off is provided, use it.
+        // If NOT provided AND it's a Round Trip (sameDropOff), default to Pickup.
+        // If NOT provided AND One Way, it's technically optional by schema but usually implies Destination? 
+        // Schema says optional. If one-way and empty, let's also default to pickup or keep empty? 
+        // User likely wont leave it empty for One Way.
+        // For Round Trip, empty means "Same as Pickup".
+
+        const finalDropOff = data.dropoffLocation
+            ? data.dropoffLocation
+            : (sameDropOff ? data.pickupLocation : '');
+
         onSubmit({
             ...data,
-            dropoffLocation: sameDropOff ? data.pickupLocation : (data.dropoffLocation || data.pickupLocation),
+            dropoffLocation: finalDropOff,
             sameDropOff
         });
     };
@@ -75,7 +86,7 @@ export const CarBookingForm: React.FC<CarBookingFormProps> = ({ onSubmit }) => {
 
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-start">
                     {/* Pickup Location */}
-                    <div className={`${sameDropOff ? 'md:col-span-4' : 'md:col-span-3'} relative group`}>
+                    <div className="md:col-span-3 relative group">
                         <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 block pl-1">Pickup Location</label>
                         <div className="relative">
                             <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors text-xl">my_location</span>
@@ -89,21 +100,19 @@ export const CarBookingForm: React.FC<CarBookingFormProps> = ({ onSubmit }) => {
                         {errors.pickupLocation && <p className="text-red-500 text-xs mt-1 pl-1">{errors.pickupLocation.message}</p>}
                     </div>
 
-                    {/* Drop-off Location (only if different) */}
-                    {!sameDropOff && (
-                        <div className="md:col-span-3 relative group">
-                            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 block pl-1">Drop-off Location</label>
-                            <div className="relative">
-                                <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors text-xl">location_on</span>
-                                <input
-                                    {...register('dropoffLocation')}
-                                    className="w-full pl-12 pr-4 py-4 bg-slate-100 dark:bg-slate-800 border-2 border-transparent rounded-2xl focus:ring-2 focus:ring-primary/50 text-slate-900 dark:text-white font-bold text-base placeholder:text-slate-400/80 transition-all"
-                                    placeholder="Destination"
-                                    type="text"
-                                />
-                            </div>
+                    {/* Drop-off Location */}
+                    <div className="md:col-span-3 relative group">
+                        <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 block pl-1">Drop-off Location</label>
+                        <div className="relative">
+                            <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors text-xl">location_on</span>
+                            <input
+                                {...register('dropoffLocation')}
+                                className="w-full pl-12 pr-4 py-4 bg-slate-100 dark:bg-slate-800 border-2 border-transparent rounded-2xl focus:ring-2 focus:ring-primary/50 text-slate-900 dark:text-white font-bold text-base placeholder:text-slate-400/80 transition-all"
+                                placeholder={sameDropOff ? "Same as Pickup (Optional)" : "Destination"}
+                                type="text"
+                            />
                         </div>
-                    )}
+                    </div>
 
                     {/* Date & Time */}
                     <div className="md:col-span-2">
