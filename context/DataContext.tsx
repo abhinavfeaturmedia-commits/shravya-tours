@@ -398,13 +398,13 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Inventory
   const [inventory, setInventory] = useState<Record<number, DailySlot>>(() => {
-    const saved = loadFromStorage<Record<number, DailySlot> | null>(`${STORAGE_KEY}_inventory`, null);
+    const saved = loadFromStorage<Record<number, DailySlot> | null>(`${STORAGE_KEY}_inventory_v2`, null);
     if (saved) return saved;
     const initialInv: Record<number, DailySlot> = {};
     const now = new Date();
     const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
     for (let i = 1; i <= daysInMonth; i++) {
-      initialInv[i] = { date: i, capacity: 20, booked: Math.floor(Math.random() * 3), price: 35000, isBlocked: false };
+      initialInv[i] = { date: i, capacity: 20, booked: 0, price: 35000, isBlocked: false };
     }
     return initialInv;
   });
@@ -479,8 +479,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           toast.error(`Date ${booking.date} is fully booked!`);
           throw new Error("Date is fully booked");
         }
-        // Return updated inventory
-        return { ...prev, [day]: { ...slot, booked: slot.booked + 1 } };
+        // Return updated inventory (no change to properties for now, just validation passed)
+        return prev;
       }
       return prev;
     });
@@ -493,51 +493,19 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setBookings(prev => {
       const oldBooking = prev.find(b => b.id === id);
       if (!oldBooking) return prev;
-
-      // Handle Status Change (Cancellation -> Restore Inventory)
-      if (booking.status === BookingStatus.CANCELLED && oldBooking.status !== BookingStatus.CANCELLED) {
-        const day = new Date(oldBooking.date).getDate();
-        setInventory(inv => {
-          const slot = inv[day];
-          return slot ? { ...inv, [day]: { ...slot, booked: Math.max(0, slot.booked - 1) } } : inv;
-        });
-      }
-
       return prev.map(x => x.id === id ? { ...x, ...booking } : x);
     });
+    // Inventory logic removed (dynamic)
   }, []);
 
   const updateBookingStatus = useCallback(async (id: string, status: BookingStatus) => {
-    // Reuse updateBooking logic for inventory if needed, or just manual handle
-    setBookings(b => b.map(x => {
-      if (x.id === id) {
-        // If cancelling via status update
-        if (status === BookingStatus.CANCELLED && x.status !== BookingStatus.CANCELLED) {
-          const day = new Date(x.date).getDate();
-          setInventory(inv => {
-            const slot = inv[day];
-            return slot ? { ...inv, [day]: { ...slot, booked: Math.max(0, slot.booked - 1) } } : inv;
-          });
-        }
-        return { ...x, status };
-      }
-      return x;
-    }));
+    setBookings(b => b.map(x => x.id === id ? { ...x, status } : x));
     try { await api.updateBookingStatus(id, status); } catch (e) { }
   }, []);
 
-  const deleteBooking = useCallback((id: string) => {
-    setBookings(prev => {
-      const booking = prev.find(b => b.id === id);
-      if (booking && booking.status !== BookingStatus.CANCELLED) {
-        const day = new Date(booking.date).getDate();
-        setInventory(inv => {
-          const slot = inv[day];
-          return slot ? { ...inv, [day]: { ...slot, booked: Math.max(0, slot.booked - 1) } } : inv;
-        });
-      }
-      return prev.filter(x => x.id !== id);
-    });
+  const deleteBooking = useCallback(async (id: string) => {
+    setBookings(prev => prev.filter(b => b.id !== id));
+    try { await api.deleteBooking(id); } catch (e) { }
   }, []);
 
   // Booking Transaction Handlers
