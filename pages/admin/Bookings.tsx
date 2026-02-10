@@ -259,7 +259,7 @@ export const Bookings: React.FC = () => {
                     /* Header */
                     .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 2px solid #374151; }
                     .logo-section { display: flex; align-items: center; gap: 15px; }
-                    .logo-icon { width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; }
+                    .logo-icon { width: 100px; height: 100px; display: flex; align-items: center; justify-content: center; }
                     .company-name { font-size: 22px; font-weight: 800; color: #374151; margin: 0; text-transform: uppercase; line-height: 1; }
                     .company-tagline { font-size: 11px; color: #6B7280; font-weight: 500; margin-top: 4px; }
                     
@@ -324,11 +324,7 @@ export const Bookings: React.FC = () => {
                     <div class="header">
                         <div class="logo-section">
                             <div class="logo-icon">
-                                <svg width="50" height="50" viewBox="0 0 50 50" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                    <circle cx="25" cy="25" r="25" fill="#F3F4F6"/>
-                                    <path d="M25 10L10 40H40L25 10Z" fill="#374151"/>
-                                    <path d="M18 40L25 25L32 40H18Z" fill="#9CA3AF"/>
-                                </svg>
+                                <img src="/logo.png" alt="Shravya Tours" style="width: 100%; height: 100%; object-fit: contain;" />
                             </div>
                             <div>
                                 <h1 class="company-name">Shravya Tours</h1>
@@ -347,7 +343,7 @@ export const Bookings: React.FC = () => {
                         <div class="addr-col">
                             <div class="addr-title">BILLED FROM</div>
                             <h3 class="addr-name">Shravya Tours</h3>
-                            <p class="addr-text">Pimpri Chinchwad, Pune<br>Maharashtra, India - 411062</p>
+                            <p class="addr-text">A508, Wisteria, Patil Nagar, Chikhali<br>PCMC, Pune, Maharashtra - 411062</p>
                             <div class="contact-info">
                                 <div class="contact-item">✉ shravyatours23@gmail.com</div>
                                 <div class="contact-item">📞 +91 80109 55675</div>
