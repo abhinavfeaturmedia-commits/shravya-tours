@@ -38,9 +38,33 @@ export const Bookings: React.FC = () => {
         status: BookingStatus.PENDING,
         payment: 'Unpaid',
         packageId: '',
-        guests: '2 Adults',
+        guests: '2 Adults, 0 Children',
         details: ''
     });
+
+    // Guest State
+    const [guestCounts, setGuestCounts] = useState({ adults: 2, children: 0 });
+
+    // Sync guestCounts to formData.guests
+    useEffect(() => {
+        const guestsStr = `${guestCounts.adults} Adults, ${guestCounts.children} Children`;
+        setFormData(prev => ({ ...prev, guests: guestsStr }));
+    }, [guestCounts]);
+
+    // Sync formData.guests to guestCounts (when editing)
+    useEffect(() => {
+        if (isEditMode && formData.guests) {
+            const parts = formData.guests.split(',');
+            let a = 2, c = 0;
+            parts.forEach(p => {
+                if (p.toLowerCase().includes('adult')) a = parseInt(p) || 2;
+                if (p.toLowerCase().includes('child')) c = parseInt(p) || 0;
+            });
+            setGuestCounts({ adults: a, children: c });
+        }
+    }, [isEditMode, formData.guests]);
+
+
 
     // Check for navigation state from Leads page
     useEffect(() => {
@@ -528,7 +552,28 @@ export const Bookings: React.FC = () => {
                                     </div>
                                     <div className="space-y-1">
                                         <label className="text-xs font-bold text-slate-500">Guests</label>
-                                        <input value={formData.guests} onChange={e => setFormData({ ...formData, guests: e.target.value })} type="text" className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary outline-none" placeholder="e.g. 2 Adults, 1 Child" />
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <div>
+                                                <label className="text-[10px] uppercase font-bold text-slate-400">Adults</label>
+                                                <input
+                                                    type="number"
+                                                    min="1"
+                                                    value={guestCounts.adults}
+                                                    onChange={e => setGuestCounts({ ...guestCounts, adults: parseInt(e.target.value) || 1 })}
+                                                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary outline-none"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="text-[10px] uppercase font-bold text-slate-400">Children</label>
+                                                <input
+                                                    type="number"
+                                                    min="0"
+                                                    value={guestCounts.children}
+                                                    onChange={e => setGuestCounts({ ...guestCounts, children: parseInt(e.target.value) || 0 })}
+                                                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary outline-none"
+                                                />
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>

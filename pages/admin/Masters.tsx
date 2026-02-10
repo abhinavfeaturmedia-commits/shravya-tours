@@ -21,6 +21,7 @@ import {
     Users, FileText, Globe
 } from 'lucide-react';
 import { toast } from 'sonner';
+import * as XLSX from 'xlsx';
 
 type MasterTab = 'analytics' | 'locations' | 'hotels' | 'activities' | 'transports' | 'plans' | 'room-types' | 'meal-plans' | 'lead-sources' | 'terms';
 type ViewMode = 'grid' | 'list';
@@ -516,12 +517,12 @@ export const Masters: React.FC = () => {
             return { total: count, details: `Used in ${count} Plans` };
         }
         if (type === 'room-types') {
-            const count = masterHotels.filter(h => h.roomTypes?.includes(id)).length; // Assuming hotels can list room types
-            return { total: count, details: `Used in ${count} Hotels` };
+            // const count = masterHotels.filter(h => h.roomTypes?.includes(id)).length; // Properties not yet on MasterHotel
+            return { total: 0, details: `Not currently linked to Hotels` };
         }
         if (type === 'meal-plans') {
-            const count = masterHotels.filter(h => h.mealPlans?.includes(id)).length; // Assuming hotels can list meal plans
-            return { total: count, details: `Used in ${count} Hotels` };
+            // const count = masterHotels.filter(h => h.mealPlans?.includes(id)).length; // Properties not yet on MasterHotel
+            return { total: 0, details: `Not currently linked to Hotels` };
         }
         // Lead sources and terms templates are generally not directly linked to other master data items in this way
         return { total: 0, details: '' };
@@ -607,12 +608,19 @@ export const Masters: React.FC = () => {
         if (activeTab === 'analytics') return toast.error('Please select a data tab to export.');
 
         const dataToExport = getProcessedData();
-        const jsonString = JSON.stringify(dataToExport, null, 2);
-        const blob = new Blob([jsonString], { type: 'application/json' });
+
+        // Convert data to worksheet
+        const ws = XLSX.utils.json_to_sheet(dataToExport);
+
+        // specific handling for arrays if needed, but json_to_sheet handles them reasonably well
+        // Convert worksheet to CSV
+        const csv = XLSX.utils.sheet_to_csv(ws);
+
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
         const href = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = href;
-        link.download = `shravya-${activeTab}-export-${new Date().toISOString().split('T')[0]}.json`;
+        link.download = `shravya-${activeTab}-export-${new Date().toISOString().split('T')[0]}.csv`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -621,30 +629,53 @@ export const Masters: React.FC = () => {
 
     const handleImportClick = () => {
         if (activeTab === 'analytics') return toast.error('Please select a data tab to import into.');
-        fileInputRef.current?.click();
+        if (fileInputRef.current) {
+            fileInputRef.current.accept = ".csv"; // Restrict to CSV
+            fileInputRef.current.click();
+        }
     };
 
     const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
         if (!file) return;
 
+        if (!file.name.endsWith('.csv')) {
+            toast.error('Please upload a valid CSV file.');
+            return;
+        }
+
         const reader = new FileReader();
         reader.onload = (e) => {
             try {
-                const content = e.target?.result as string;
-                const data = JSON.parse(content);
+                const content = e.target?.result;
+                if (!content) return;
 
-                if (!Array.isArray(data)) throw new Error('Invalid format: Expected an array');
+                const workbook = XLSX.read(content, { type: 'binary' });
+                const sheetName = workbook.SheetNames[0];
+                const sheet = workbook.Sheets[sheetName];
+                const data: any[] = XLSX.utils.sheet_to_json(sheet);
+
+                if (!Array.isArray(data)) throw new Error('Invalid format: Expected an array of rows');
 
                 let count = 0;
                 data.forEach(item => {
+                    // Normalize ID to prevent overwriting
                     const newItem = { ...item, id: generateId(activeTab.toUpperCase().substring(0, 3) + 'IMP') };
+
+                    // Handle Amenities Array if it comes as string from CSV
+                    if (newItem.amenities && typeof newItem.amenities === 'string') {
+                        newItem.amenities = newItem.amenities.split(',').map((s: string) => s.trim());
+                    }
+                    // Handle Days Array for Plans (basic string parsing if applicable, otherwise keep empty)
+                    if (activeTab === 'plans') {
+                        newItem.days = []; // Reset days for safety as complex objects in CSV are tricky
+                    }
 
                     if (activeTab === 'locations') addMasterLocation(newItem);
                     else if (activeTab === 'hotels') addMasterHotel(newItem);
                     else if (activeTab === 'activities') addMasterActivity(newItem);
                     else if (activeTab === 'transports') addMasterTransport(newItem);
-                    else if (activeTab === 'plans') addMasterPlan({ ...newItem, days: newItem.days || [] });
+                    else if (activeTab === 'plans') addMasterPlan(newItem);
                     else if (activeTab === 'room-types') addMasterRoomType(newItem);
                     else if (activeTab === 'meal-plans') addMasterMealPlan(newItem);
                     else if (activeTab === 'lead-sources') addMasterLeadSource(newItem);
@@ -659,7 +690,7 @@ export const Masters: React.FC = () => {
                 toast.error('Failed to import: ' + (err as Error).message);
             }
         };
-        reader.readAsText(file);
+        reader.readAsBinaryString(file);
     };
 
     const handleOpenModal = (item?: any) => {
