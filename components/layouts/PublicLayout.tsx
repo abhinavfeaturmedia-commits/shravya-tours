@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import { PillNav, PillNavItem } from '../ui/PillNav';
 import { UrgencyNotification } from '../ui/UrgencyNotification';
-import { COMPANY_EMAIL, COMPANY_PHONE, COMPANY_PHONE_DISPLAY } from '../../src/lib/constants';
+import { COMPANY_EMAIL, COMPANY_PHONE, COMPANY_PHONE_DISPLAY, COMPANY_ADDRESS } from '../../src/lib/constants';
 import { WhatsAppModal } from '../booking/WhatsAppModal';
 
 export const PublicLayout: React.FC = () => {
@@ -110,7 +110,7 @@ export const PublicLayout: React.FC = () => {
                 <a href={`mailto:${COMPANY_EMAIL}`} className="flex items-center gap-3 hover:text-primary transition-colors"><span className="material-symbols-outlined text-primary text-[20px]">mail</span> {COMPANY_EMAIL}</a>
                 {/* Clicking phone number also opens WhatsApp Modal for better lead capture? Or just calls? Keeping as call for now as standard behavior */}
                 <a href={`tel:${COMPANY_PHONE}`} className="flex items-center gap-3 hover:text-primary transition-colors"><span className="material-symbols-outlined text-primary text-[20px]">call</span> {COMPANY_PHONE_DISPLAY}</a>
-                <p className="flex items-center gap-3"><span className="material-symbols-outlined text-primary text-[20px]">location_on</span> Pune, Maharashtra</p>
+                <p className="flex items-center gap-3"><span className="material-symbols-outlined text-primary text-[20px]">location_on</span> {COMPANY_ADDRESS}</p>
               </div>
             </div>
           </div>

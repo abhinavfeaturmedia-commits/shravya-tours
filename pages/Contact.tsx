@@ -102,7 +102,7 @@ export const Contact: React.FC = () => {
 
                             <div className="space-y-8">
                                 {[
-                                    { icon: 'location_on', title: 'Headquarters', text: 'Wisteria housing society, gaon,\nPatil Nagar, Patilnagar, Chikhali,\nPimpri-Chinchwad, Pune, Maharashtra 411062', color: 'blue' },
+                                    { icon: 'location_on', title: 'Headquarters', text: COMPANY_ADDRESS, color: 'blue' },
                                     { icon: 'call', title: 'Phone Support', text: COMPANY_PHONE_DISPLAY, color: 'green' },
                                     { icon: 'mail', title: 'Email Us', text: COMPANY_EMAIL, color: 'purple' },
                                 ].map((item, i) => (
