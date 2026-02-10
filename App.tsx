@@ -16,6 +16,12 @@ const About = lazy(() => import('./pages/About').then(module => ({ default: modu
 const Contact = lazy(() => import('./pages/Contact').then(module => ({ default: module.Contact })));
 const Login = lazy(() => import('./pages/Login').then(module => ({ default: module.Login })));
 const BookingConfirmation = lazy(() => import('./pages/BookingConfirmation').then(module => ({ default: module.BookingConfirmation })));
+const Terms = lazy(() => import('./pages/Terms').then(module => ({ default: module.Terms })));
+const Privacy = lazy(() => import('./pages/Privacy').then(module => ({ default: module.Privacy })));
+const Cancellation = lazy(() => import('./pages/Cancellation').then(module => ({ default: module.Cancellation })));
+
+
+
 
 const AdminDashboard = lazy(() => import('./pages/AdminDashboard').then(module => ({ default: module.AdminDashboard })));
 const Inventory = lazy(() => import('./pages/admin/Inventory').then(module => ({ default: module.Inventory })));
@@ -66,6 +72,9 @@ const App: React.FC = () => {
                   <Route path="about" element={<About />} />
                   <Route path="contact" element={<Contact />} />
                   <Route path="booking-confirmation" element={<BookingConfirmation />} />
+                  <Route path="terms" element={<Terms />} />
+                  <Route path="privacy" element={<Privacy />} />
+                  <Route path="cancellation" element={<Cancellation />} />
                 </Route>
 
                 <Route path="/login" element={<Login />} />

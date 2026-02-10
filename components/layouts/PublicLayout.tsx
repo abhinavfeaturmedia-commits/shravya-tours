@@ -99,9 +99,9 @@ export const PublicLayout: React.FC = () => {
               <h4 className="font-bold text-slate-900 dark:text-white mb-6 uppercase text-xs tracking-[0.2em]">Support</h4>
               <ul className="space-y-3 text-sm text-slate-500 dark:text-slate-400 font-medium">
                 <li><Link to="/contact" className="hover:text-primary transition-colors">Help Center</Link></li>
-                <li><button onClick={(e) => handlePlaceholder(e, 'Terms of Service')} className="hover:text-primary transition-colors">Terms of Service</button></li>
-                <li><button onClick={(e) => handlePlaceholder(e, 'Privacy Policy')} className="hover:text-primary transition-colors">Privacy Policy</button></li>
-                <li><button onClick={(e) => handlePlaceholder(e, 'Refund Policy')} className="hover:text-primary transition-colors">Refund Policy</button></li>
+                <li><Link to="/terms" className="hover:text-primary transition-colors">Terms of Service</Link></li>
+                <li><Link to="/privacy" className="hover:text-primary transition-colors">Privacy Policy</Link></li>
+                <li><Link to="/cancellation" className="hover:text-primary transition-colors">Cancellation Policy</Link></li>
               </ul>
             </div>
             <div>
