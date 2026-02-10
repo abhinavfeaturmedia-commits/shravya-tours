@@ -1,13 +1,40 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { SEO } from '../components/ui/SEO';
 import { OptimizedImage } from '../components/ui/OptimizedImage';
 
 export const About: React.FC = () => {
+    useEffect(() => {
+        window.scrollTo(0, 0);
+    }, []);
+
+    const goals = [
+        {
+            title: "Customer Satisfaction",
+            icon: "sentiment_satisfied",
+            description: "Deliver exceptional travel experiences that exceed customer expectations, ensuring repeat business, long-term relationships, and positive referrals."
+        },
+        {
+            title: "Innovative Travel Solutions",
+            icon: "lightbulb",
+            description: "Leverage technology to enhance the customer experience through streamlined bookings, personalized itineraries, and unique, value-driven travel offerings."
+        },
+        {
+            title: "Brand Recognition",
+            icon: "verified",
+            description: "Establish Shravya Tours & Travels as a trusted and preferred travel brand, recognized for quality, reliability, and customer-centric services."
+        },
+        {
+            title: "Partnership Development",
+            icon: "handshake",
+            description: "Build strong and lasting relationships with hotels, corporate companies, destination management companies, and local authorities to create mutually beneficial travel solutions."
+        }
+    ];
+
     return (
         <>
             <SEO
-                title="About Us"
-                description="Learn about Shravya Tours - your trusted travel partner since 2015. We craft personalized travel experiences with 24/7 support and best price guarantee."
+                title="About Us | Shravya Tours & Travels"
+                description="Shravya Tours & Travels is a trusted travel company dedicated to creating memorable and personalized travel experiences."
             />
 
             <div className="bg-slate-50 dark:bg-slate-900 min-h-screen pb-20">
@@ -17,50 +44,88 @@ export const About: React.FC = () => {
                         <OptimizedImage
                             src="https://lh3.googleusercontent.com/aida-public/AB6AXuARvjLJnqBIV09joV5MO4NCFRzmlZ-bbKPc1eoo9A-7TudM37NfT7pwyGWL8SKJsQz3haG3HdOgcYWr0HVXVNhbu-XiaBbvV4rMCx3NcCaiO_eQ9LFJTA69YLnPbsJXp1whEaBMmP7FgfhDhOwfAv7ROqrGj1TfqED1pPb7-eTzxh__HuN-lLTZS3TO3mcaIG5lzHVZPM1aXZvTKyaczGqk0y5JxmYFFC_g3Cd0BZqrPEKe1q-DM-6kkxWzTfUU1rbC62qVacapPJrT"
                             alt="About Shravya Tours"
-                            className="w-full h-full opacity-40"
+                            className="w-full h-full opacity-40 object-cover"
                         />
                     </div>
-                    <div className="relative z-10 max-w-3xl">
-                        <h1 className="text-4xl md:text-6xl font-black text-white mb-6">We Craft Memories, Not Just Trips.</h1>
-                        <p className="text-lg md:text-xl text-slate-200">Shravya Tours is dedicated to making every journey an unforgettable story.</p>
+                    <div className="relative z-10 max-w-4xl">
+                        <h1 className="text-4xl md:text-6xl font-black text-white mb-6">About Shravya Tours & Travels</h1>
+                        <p className="text-lg md:text-xl text-slate-200">Creating memorable and personalized travel experiences since 2023.</p>
                     </div>
                 </div>
 
                 <div className="container mx-auto px-6 -mt-20 relative z-20">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                        {[
-                            { title: 'Passionate Experts', icon: 'favorite', text: 'Our team consists of travel enthusiasts who have explored the corners of the globe to bring you the best.' },
-                            { title: '24/7 Support', icon: 'support_agent', text: 'We are with you at every step. From the moment you book until you return home safely.' },
-                            { title: 'Best Price Guarantee', icon: 'savings', text: 'We partner directly with hotels and operators to ensure you get premium experiences at the best rates.' }
-                        ].map((card, i) => (
-                            <div key={i} className="bg-white dark:bg-slate-800 p-8 rounded-2xl shadow-xl border border-slate-100 dark:border-slate-700 text-center">
-                                <div className="size-16 mx-auto bg-primary/10 rounded-full flex items-center justify-center text-primary mb-6">
-                                    <span className="material-symbols-outlined text-4xl">{card.icon}</span>
-                                </div>
-                                <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-3">{card.title}</h3>
-                                <p className="text-slate-600 dark:text-slate-400 leading-relaxed">{card.text}</p>
+
+                    {/* Introduction Card */}
+                    <div className="bg-white dark:bg-slate-800 p-8 md:p-12 rounded-2xl shadow-xl border border-slate-100 dark:border-slate-700 mb-20">
+                        <h2 className="text-3xl font-black text-slate-900 dark:text-white mb-6">Who We Are</h2>
+                        <div className="space-y-6 text-slate-600 dark:text-slate-300 leading-relaxed text-lg">
+                            <p>
+                                Shravya Tours & Travels is a trusted travel company dedicated to creating memorable and personalized travel experiences. With a strong focus on comfort, safety, and customer satisfaction, we deliver seamless travel solutions tailored to every journey.
+                            </p>
+                            <p>
+                                We offer Airline ticketing, Hotel bookings, Taxi/Cab services, and customized Tour Packages through our website, ensuring a smooth, reliable, and hassle-free booking experience for our customers.
+                            </p>
+                            <p>
+                                Established in 2023, Shravya Tours & Travels has quickly earned a reputation for providing best-in-class travel and tour services, backed by professional standards and dependable operations.
+                            </p>
+                            <div className="bg-primary/5 p-6 rounded-xl border-l-4 border-primary mt-8">
+                                <p className="font-medium text-slate-800 dark:text-slate-200">
+                                    We are proudly associated with <strong>100+ taxi operators</strong>, <strong>20+ DMCs</strong>, and reliable flight & hotel booking APIs across India. Currently, we serve customers extensively in the Maharashtra region, offering domestic and international tour packages along with complete travel solutions.
+                                </p>
                             </div>
-                        ))}
+                        </div>
                     </div>
 
-                    <div className="mt-20 flex flex-col md:flex-row gap-12 items-center">
-                        <div className="flex-1 space-y-6">
-                            <h2 className="text-3xl font-black text-slate-900 dark:text-white">Our Story</h2>
-                            <p className="text-slate-600 dark:text-slate-300 leading-relaxed">
-                                Founded in 2015, Shravya Tours started with a simple mission: to make travel accessible, personalized, and stress-free. What began as a small family-run agency has grown into a premier travel partner for thousands of explorers.
-                            </p>
-                            <p className="text-slate-600 dark:text-slate-300 leading-relaxed">
-                                We believe that travel is the best education. Whether it's a spiritual journey through the temples of India, a relaxing beach vacation in Bali, or an adventurous trek in the Himalayas, we curate every detail to suit your unique style.
-                            </p>
+                    {/* Goals Section */}
+                    <div className="mb-20">
+                        <div className="text-center mb-12">
+                            <span className="inline-block py-1 px-3 rounded-full bg-primary/10 text-primary font-bold text-sm tracking-wide uppercase mb-4">Our Focus</span>
+                            <h2 className="text-3xl md:text-4xl font-black text-slate-900 dark:text-white">Our Goals</h2>
                         </div>
-                        <div className="flex-1">
-                            <OptimizedImage
-                                src="https://lh3.googleusercontent.com/aida-public/AB6AXuATmrejY5wv4HJwrrT-XOL_k-4PmnUHmnh4tjjQVt_Jw-Yo2zwDrK0qkbFaSFg2oZ4QPuHofCwI5g76BzH8C2PVia4SwkhV7mSizKnFAVWvJ3o-g1OEwmLpMGLVQxjM3imAoioqwI2CrsaGtpVfFii-U7u-sNV--nk7myLX0TMF7KyKkBsLBWBkFkLJdw0Iuddd42GzNf0skyKiejwy7EFQmDIf8GfhitO7eqMnXD1t5P3BqowcJBiS0Flc1nMXXumi-gqaajd5JSWt"
-                                alt="Our Story"
-                                className="rounded-3xl shadow-2xl rotate-3 hover:rotate-0 transition-transform duration-500"
-                            />
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                            {goals.map((goal, i) => (
+                                <div key={i} className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-lg border border-slate-100 dark:border-slate-700 hover:-translate-y-1 transition-transform duration-300">
+                                    <div className="size-12 bg-primary/10 rounded-full flex items-center justify-center text-primary mb-4">
+                                        <span className="material-symbols-outlined">{goal.icon}</span>
+                                    </div>
+                                    <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-3">{goal.title}</h3>
+                                    <p className="text-slate-600 dark:text-slate-400 text-sm leading-relaxed">{goal.description}</p>
+                                </div>
+                            ))}
                         </div>
                     </div>
+
+                    {/* Mission & Vision */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12">
+                        {/* Mission */}
+                        <div className="bg-gradient-to-br from-primary/90 to-primary p-8 md:p-10 rounded-3xl shadow-xl text-white relative overflow-hidden group">
+                            <div className="absolute top-0 right-0 -mr-16 -mt-16 bg-white/10 w-64 h-64 rounded-full blur-3xl group-hover:bg-white/20 transition-colors duration-500"></div>
+                            <div className="relative z-10">
+                                <div className="flex items-center gap-4 mb-6">
+                                    <span className="material-symbols-outlined text-4xl bg-white/20 p-3 rounded-full">flag</span>
+                                    <h2 className="text-3xl font-black">Our Mission</h2>
+                                </div>
+                                <p className="text-white/90 text-lg leading-relaxed font-medium">
+                                    To provide reliable, safe, and high-quality travel services by offering personalized solutions, seamless travel arrangements, and responsible tourism practices, ensuring customer satisfaction and long-term relationships.
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Vision */}
+                        <div className="bg-white dark:bg-slate-800 p-8 md:p-10 rounded-3xl shadow-xl border border-slate-100 dark:border-slate-700 relative overflow-hidden group">
+                            <div className="absolute bottom-0 right-0 -mr-16 -mb-16 bg-primary/5 w-64 h-64 rounded-full blur-3xl group-hover:bg-primary/10 transition-colors duration-500"></div>
+                            <div className="relative z-10">
+                                <div className="flex items-center gap-4 mb-6">
+                                    <span className="material-symbols-outlined text-4xl text-primary bg-primary/10 p-3 rounded-full">visibility</span>
+                                    <h2 className="text-3xl font-black text-slate-900 dark:text-white">Our Vision</h2>
+                                </div>
+                                <p className="text-slate-600 dark:text-slate-300 text-lg leading-relaxed font-medium">
+                                    To emerge as a leading and trusted travel service provider in India, recognized for professionalism, innovation, and customer-centric travel solutions, while promoting sustainable and responsible tourism.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
                 </div>
             </div>
         </>
