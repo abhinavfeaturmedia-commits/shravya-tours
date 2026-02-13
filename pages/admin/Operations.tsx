@@ -20,11 +20,14 @@ export const Operations: React.FC = () => {
         const completed: Booking[] = [];
 
         bookings.forEach(b => {
-            // For simplicity, assuming b.date is the start date
-            // In real app, we'd use b.startDate and b.endDate if available
-            // But Booking type currently has 'date' string (YYYY-MM-DD usually)
-            // Let's assume duration is ~5 days if not specified for this mock logic
-            const start = new Date(b.date);
+            // Parse the booking date and normalize to local midnight
+            // new Date("YYYY-MM-DD") parses as UTC midnight, which causes timezone issues
+            // We split and construct manually to ensure local midnight
+            const dateParts = b.date ? b.date.split('-') : null;
+            if (!dateParts || dateParts.length < 3) return;
+            const start = new Date(parseInt(dateParts[0]), parseInt(dateParts[1]) - 1, parseInt(dateParts[2]));
+            start.setHours(0, 0, 0, 0);
+
             const end = new Date(start);
             end.setDate(start.getDate() + 5);
 
