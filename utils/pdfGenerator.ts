@@ -123,9 +123,9 @@ export const generateProformaInvoice = (proposal: Proposal, optionId: string, le
     // --- Mock Company Data ---
     const company = {
         name: "SHRAVYA TOURS",
-        address: "123, Travel Plaza, Main Road, Manali, HP, 175131",
-        phone: "+91 98765 43210",
-        email: "bookings@shravyatours.com",
+        address: "A508, Wisteria, Patil Nagar, Chikhali, PCMC, Pune, Maharashtra - 411062",
+        phone: "+91 80109 55675",
+        email: "toursshravya@gmail.com",
         gstin: "02ABCDE1234F1Z5", // Himachal Pradesh Code 02
         bank: {
             name: "HDFC Bank",
