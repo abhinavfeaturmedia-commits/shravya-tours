@@ -79,7 +79,9 @@ export const api = {
             amount: row.amount,
             status: row.status as BookingStatus,
             payment: row.payment_status === 'Paid' ? 'Paid' : 'Unpaid',
-            packageId: row.package_id
+
+            packageId: row.package_id,
+            invoiceNo: row.invoice_no // Map from DB
         }));
     },
 
@@ -92,7 +94,8 @@ export const api = {
             amount: booking.amount,
             package_id: booking.packageId,
             status: 'Pending',
-            payment_status: 'Unpaid'
+            payment_status: 'Unpaid',
+            invoice_no: booking.invoiceNo // Attempt to save invoice number
         }).select().single();
 
         if (error) throw error;

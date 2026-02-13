@@ -44,7 +44,8 @@ export interface Package {
 }
 
 export interface Booking {
-  id: string;
+  id: string; // Internal ID
+  invoiceNo?: string; // Custom Invoice Number (e.g. BU-2602-0001)
   type: BookingType;
   customerId?: string; // Link to Customer Profile
   customer: string; // Keep for display/historic

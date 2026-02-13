@@ -125,7 +125,7 @@ export const generateProformaInvoice = (proposal: Proposal, optionId: string, le
         name: "SHRAVYA TOURS",
         address: "A508, Wisteria, Patil Nagar, Chikhali, PCMC, Pune, Maharashtra - 411062",
         phone: "+91 80109 55675",
-        email: "toursshravya@gmail.com",
+        email: "shravyatours23@gmail.com",
         gstin: "02ABCDE1234F1Z5", // Himachal Pradesh Code 02
         bank: {
             name: "HDFC Bank",
@@ -154,6 +154,8 @@ export const generateProformaInvoice = (proposal: Proposal, optionId: string, le
     doc.text(`Date: ${new Date().toLocaleDateString()}`, pageWidth - 15, 30, { align: 'right' });
     doc.text(`Ref No: PI-${proposal.id.slice(-6).toUpperCase()}`, pageWidth - 15, 35, { align: 'right' });
 
+
+
     // Company Info
     doc.setFontSize(14);
     doc.setFont("helvetica", "bold");
@@ -163,7 +165,7 @@ export const generateProformaInvoice = (proposal: Proposal, optionId: string, le
     doc.text(company.address, 15, 26);
     doc.text(`Phone: ${company.phone}`, 15, 31);
     doc.text(`Email: ${company.email}`, 15, 36);
-    doc.text(`GSTIN: ${company.gstin}`, 15, 41);
+
 
     // Bill To
     doc.line(15, 45, pageWidth - 15, 45);
@@ -224,4 +226,96 @@ export const generateProformaInvoice = (proposal: Proposal, optionId: string, le
     doc.text("3. Payment to be made 100% in advance for confirmation.", 15, yPos + 14);
 
     doc.save(`Proforma_${lead.name.replace(/\s+/g, '_')}_${proposal.id}.pdf`);
+};
+
+export const generateBookingInvoice = (booking: any, customer: any) => {
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.width;
+
+    // --- Mock Company Data ---
+    const company = {
+        name: "SHRAVYA TOURS",
+        address: "A508, Wisteria, Patil Nagar, Chikhali, PCMC, Pune, Maharashtra - 411062",
+        phone: "+91 80109 55675",
+        email: "shravyatours23@gmail.com",
+        gstin: "02ABCDE1234F1Z5", // Himachal Pradesh Code 02
+        bank: {
+            name: "HDFC Bank",
+            accountName: "Shravya Tours & Travels",
+            accountNo: "50200012345678",
+            ifsc: "HDFC0001234",
+            branch: "Manali Main"
+        }
+    };
+
+    // --- Header ---
+    doc.setFillColor(255, 255, 255);
+    doc.setFontSize(20);
+    doc.setFont("helvetica", "bold");
+    doc.text("INVOICE", pageWidth - 15, 20, { align: 'right' });
+
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    doc.text(`Invoice No: ${booking.invoiceNo || 'DRAFT'}`, pageWidth - 15, 30, { align: 'right' });
+    doc.text(`Date: ${new Date(booking.date).toLocaleDateString()}`, pageWidth - 15, 35, { align: 'right' });
+
+    // Company Info
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "bold");
+    doc.text(company.name, 15, 20);
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+    doc.text(company.address, 15, 26);
+    doc.text(`Phone: ${company.phone}`, 15, 31);
+    doc.text(`Email: ${company.email}`, 15, 36);
+    doc.text(`GSTIN: ${company.gstin}`, 15, 41);
+
+    // Bill To
+    doc.line(15, 45, pageWidth - 15, 45);
+    doc.setFont("helvetica", "bold");
+    doc.text("Bill To:", 15, 52);
+    doc.setFont("helvetica", "normal");
+    doc.text(customer?.name || booking.customer || 'Valued Customer', 15, 58);
+    if (customer?.email || booking.email) doc.text(customer?.email || booking.email, 15, 63);
+    if (customer?.phone || booking.phone) doc.text(customer?.phone || booking.phone, 15, 68);
+    doc.text(`Place of Supply: ${customer?.location || 'State Code 00'}`, 15, 73);
+
+    // --- Table ---
+    autoTable(doc, {
+        startY: 80,
+        head: [['S.No', 'Description', 'HSN/SAC', 'Taxable Val', 'GST (5%)', 'Total']],
+        body: [[
+            '1',
+            `Booking Ref: ${booking.title}`,
+            '9985',
+            (booking.amount / 1.05).toFixed(2),
+            (booking.amount - (booking.amount / 1.05)).toFixed(2),
+            booking.amount.toLocaleString('en-IN')
+        ]],
+        foot: [[
+            '', 'Total', '', '', '', `INR ${booking.amount.toLocaleString('en-IN')}`
+        ]],
+        theme: 'grid',
+        headStyles: { fillColor: [88, 28, 135], textColor: 255 },
+        footStyles: { fillColor: [243, 244, 246], textColor: 0, fontStyle: 'bold' }
+    });
+
+    // --- Bank Details ---
+    // @ts-ignore
+    let yPos = doc.lastAutoTable.finalY + 15;
+
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "bold");
+    doc.text("Bank Details:", 15, yPos);
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    yPos += 6;
+    doc.text(`Account Name: ${company.bank.accountName}`, 15, yPos);
+    doc.text(`Bank Name: ${company.bank.name}`, 15, yPos + 5);
+    doc.text(`Account Number: ${company.bank.accountNo}`, 15, yPos + 10);
+    doc.text(`IFSC Code: ${company.bank.ifsc}`, 15, yPos + 15);
+
+    // --- Footer ---
+    doc.save(`Invoice_${booking.invoiceNo || booking.id}.pdf`);
 };

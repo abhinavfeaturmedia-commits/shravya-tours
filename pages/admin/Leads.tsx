@@ -87,7 +87,7 @@ export const Leads: React.FC = () => {
 
         if (isReminderSet && reminderDate) {
             addFollowUp({
-                id: `FU-${crypto.randomUUID().substring(0, 8)}`,
+                id: `FU-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
                 leadId: selectedLeadId,
                 leadName: selectedLead?.name || 'Unknown',
                 scheduledAt: reminderDate,
@@ -135,7 +135,7 @@ export const Leads: React.FC = () => {
         const now = new Date().toISOString();
         if (modalMode === 'add') {
             const newLead: Lead = {
-                id: `LD-${crypto.randomUUID().substring(0, 8)}`, // More robust ID
+                id: `LD-${Date.now()}`, // More robust ID matching other components
                 addedOn: now,
                 logs: [],
                 avatarColor: 'bg-slate-100 text-slate-600',
@@ -186,7 +186,7 @@ export const Leads: React.FC = () => {
                 targetCustomerId = existingCustomer.id;
             } else {
                 // Create new customer
-                const newCustomerId = `CU-${crypto.randomUUID().substring(0, 8)}`;
+                const newCustomerId = `CU-${Date.now()}`;
                 const newCustomer: Customer = {
                     id: newCustomerId,
                     name: selectedLead.name,
@@ -203,7 +203,7 @@ export const Leads: React.FC = () => {
             }
 
             addBooking({
-                id: `BK-${crypto.randomUUID().substring(0, 8)}`,
+                id: `BK-${Date.now()}`,
                 type: 'Tour',
                 customer: selectedLead.name,
                 customerId: targetCustomerId, // Linked Customer
@@ -219,7 +219,7 @@ export const Leads: React.FC = () => {
 
             updateLead(selectedLead.id, { status: 'Converted' });
             addLeadLog(selectedLead.id, {
-                id: `lg-conv-${crypto.randomUUID().substring(0, 8)}`,
+                id: `lg-conv-${Date.now()}`,
                 type: 'System',
                 content: `Lead converted to Booking. Customer profile ${existingCustomer ? 'linked' : 'created'}.`,
                 timestamp: new Date().toISOString()

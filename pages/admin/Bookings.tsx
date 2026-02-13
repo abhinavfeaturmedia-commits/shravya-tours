@@ -357,7 +357,7 @@ export const Bookings: React.FC = () => {
                         </div>
                         <div class="invoice-details">
                             <h2 class="invoice-title">INVOICE</h2>
-                            <div class="detail-row"><span>Invoice No:</span> ${booking.id.replace('#', '')}</div>
+                            <div class="detail-row"><span>Invoice No:</span> ${booking.invoiceNo || booking.id.replace('#', '')}</div>
                             <div class="detail-row"><span>Invoice Date:</span> ${invoiceDate}</div>
                             <div class="detail-row"><span>Due Date:</span> ${dueDate}</div>
                         </div>

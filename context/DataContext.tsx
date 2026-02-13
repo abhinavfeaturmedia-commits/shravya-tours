@@ -485,6 +485,35 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return prev;
     });
 
+    // 0. Auto-Assign Invoice Number if missing
+    // 0. Auto-Assign Invoice Number if missing
+    if (!booking.invoiceNo) {
+      const typeCodeMap: Record<string, string> = {
+        'Bus': 'BU',      // BU – Bus Booking
+        'Car': 'CB',      // CB – Cab/Taxi Booking
+        'Hotel': 'HL',    // HL – Hotel Booking
+        'Flight': 'FL',   // FL – Flight Booking
+        'Tour': 'TP',     // TP – Tour Package booking
+        'Train': 'RL',    // RL – Railway Booking
+        'Activity': 'AT', // AT – Activity Booking
+        'Visa': 'VS',     // (Keeping default)
+        'Other': 'G'      // G – General booking
+      };
+
+      const code = typeCodeMap[booking.type] || 'G';
+      const dateObj = new Date();
+      const year = dateObj.getFullYear().toString().slice(-2); // 26
+      const month = (dateObj.getMonth() + 1).toString().padStart(2, '0'); // 02
+
+      const prefix = `${code}-${year}${month}`; // e.g., BU-2602
+
+      // Count existing bookings starting with this prefix to determine sequence
+      const existingCount = bookings.filter(b => b.invoiceNo?.startsWith(prefix)).length;
+      const sequence = (existingCount + 1).toString().padStart(4, '0'); // 0001
+
+      booking.invoiceNo = `${prefix}-${sequence}`; // BU-2602-0001
+    }
+
     setBookings(b => [booking, ...b]);
     try { await api.createBooking(booking); } catch (e) { }
   }, []);
@@ -624,11 +653,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Lead
   const addLead = useCallback(async (lead: Lead) => {
-    // Deduplication Check
-    if (leads.some(l => l.email.toLowerCase() === lead.email.toLowerCase() || (l.phone && l.phone === lead.phone))) {
-      toast.error("Lead with this email or phone already exists!");
-      return; // Stop execution
-    }
+
     setLeads(l => [lead, ...l]);
     try { await api.createLead(lead); } catch (e) { }
   }, [leads]);
