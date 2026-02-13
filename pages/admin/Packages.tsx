@@ -5,7 +5,7 @@ import { Package } from '../../types';
 import { ImageUpload } from '../../components/ui/ImageUpload';
 
 export const AdminPackages: React.FC = () => {
-    const { packages, updatePackage, deletePackage } = useData();
+    const { packages, updatePackage, deletePackage, cmsGallery } = useData();
     const navigate = useNavigate();
     const [search, setSearch] = useState('');
 
@@ -132,8 +132,14 @@ export const AdminPackages: React.FC = () => {
                                         <input value={editForm.tag} onChange={e => setEditForm({ ...editForm, tag: e.target.value })} type="text" className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-primary outline-none" placeholder="e.g. Best Seller" />
                                     </div>
                                     <div>
-                                        <label className="text-xs font-bold text-slate-500 mb-1 block">Theme</label>
-                                        <input value={editForm.theme} onChange={e => setEditForm({ ...editForm, theme: e.target.value })} type="text" className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-primary outline-none" placeholder="e.g. Adventure" />
+                                        <label className="text-xs font-bold text-slate-500 mb-1 block">Theme (Collection)</label>
+                                        <select value={editForm.theme} onChange={e => setEditForm({ ...editForm, theme: e.target.value })} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-primary outline-none">
+                                            <option value="">Select a Collection</option>
+                                            {cmsGallery.map(item => (
+                                                <option key={item.id} value={item.title}>{item.title}</option>
+                                            ))}
+                                            <option value="Other">Other</option>
+                                        </select>
                                     </div>
                                     <div>
                                         <label className="text-xs font-bold text-slate-500 mb-1 block">Badge Color Class</label>

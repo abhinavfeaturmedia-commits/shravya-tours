@@ -93,6 +93,7 @@ const App: React.FC = () => {
                   <Route path="proposals" element={<AdminProposals />} />
                   <Route path="proposals/:id" element={<ProposalBuilder />} />
 
+                  <Route path="customers" element={<AdminCustomers />} />
                   <Route path="leads" element={<AdminLeads />} />
                   <Route path="audit" element={<AuditLogs />} />
                   <Route path="productivity" element={<Productivity />} />

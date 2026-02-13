@@ -209,7 +209,7 @@ export const Packages: React.FC = () => {
                   <div className="space-y-4">
                     <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Experience Type</p>
                     <div className="flex flex-wrap gap-2">
-                      {['Adventure', 'Honeymoon', 'Family', 'Religious', 'Wildlife', 'Luxury'].map((theme) => (
+                      {['Adventure', 'Honeymoon', 'Family', 'Pilgrim Yatra', 'Religious', 'Wildlife', 'Luxury'].map((theme) => (
                         <button
                           key={theme}
                           onClick={() => toggleTheme(theme)}

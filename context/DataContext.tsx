@@ -63,7 +63,15 @@ const INITIAL_CUSTOMERS: Customer[] = [
     totalSpent: 45000,
     bookingsCount: 3,
     joinedDate: '2025-01-15',
-    tags: ['Frequent Traveler', 'High Value']
+    tags: ['Frequent Traveler', 'High Value'],
+    preferences: {
+      dietary: ['Vegetarian'],
+      flight: ['Aisle Seat', 'Extra Legroom'],
+      accommodation: ['High Floor', 'Quiet Room']
+    },
+    notes: [
+      { id: 'NOTE-001', text: 'Prefer early morning flights.', date: '2025-01-20T10:00:00.000Z', author: 'System', isPinned: true }
+    ]
   },
   {
     id: 'CUST-002',
@@ -76,7 +84,12 @@ const INITIAL_CUSTOMERS: Customer[] = [
     totalSpent: 12000,
     bookingsCount: 1,
     joinedDate: '2025-02-01',
-    tags: []
+    tags: [],
+    preferences: {
+      dietary: [],
+      flight: [],
+      accommodation: []
+    }
   }
 ];
 
@@ -137,6 +150,8 @@ const INITIAL_CMS_GALLERY: CMSGalleryImage[] = [
   { id: 'GAL-002', title: 'Adrenaline Adventures', category: 'Activity', imageUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuATmrejY5wv4HJwrrT-XOL_k-4PmnUHmnh4tjjQVt_Jw-Yo2zwDrK0qkbFaSFg2oZ4QPuHofCwI5g76BzH8C2PVia4SwkhV7mSizKnFAVWvJ3o-g1OEwmLpMGLVQxjM3imAoioqwI2CrsaGtpVfFii-U7u-sNV--nk7myLX0TMF7KyKkBsLBWBkFkLJdw0Iuddd42GzNf0skyKiejwy7EFQmDIf8GfhitO7eqMnXD1t5P3BqowcJBiS0Flc1nMXXumi-gqaajd5JSWt' },
   { id: 'GAL-003', title: 'Family Bonding', category: 'Other', imageUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDPD4VWIRjjm4gr_QRgaRIZ8pQo93GDnfYzDlR9kIXr-4_ovKaMUunDA0hG-FrMzvOD0VPKw7XAJwEUOtDdivx3uWITXO0jqZC_mNA0eKHNJM4D3eHvE34SBmVAet7T_hOJXWXFr_jk15uFbQz7c3rv866ihvaVcCYv7fwsG-96EC2P8qq1OqRTB3RXe_9r1dL0e0aou7sEuPrYf5Va4s6UnXZvlC7HePL_M8zzsQr4IW2s4MRfbquq0greYrr53I3w8OCAB9RTLFbf' },
   { id: 'GAL-004', title: 'Cultural Deep Dives', category: 'Other', imageUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuARvjLJnqBIV09joV5MO4NCFRzmlZ-bbKPc1eoo9A-7TudM37NfT7pwyGWL8SKJsQz3haG3HdOgcYWr0HVXVNhbu-XiaBbvV4rMCx3NcCaiO_eQ9LFJTA69YLnPbsJXp1whEaBMmP7FgfhDhOwfAv7ROqrGj1TfqED1pPb7-eTzxh__HuN-lLTZS3TO3mcaIG5lzHVZPM1aXZvTKyaczGqk0y5JxmYFFC_g3Cd0BZqrPEKe1q-DM-6kkxWzTfUU1rbC62qVacapPJrT' },
+  { id: 'GAL-005', title: 'Pilgrim Yatra', category: 'Other', imageUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuB_g5Jg7yR2b7d5m0W4x8q9n5j4t6k7l5p3o9r2s5v8u9x4y7z1a3b6c9d2e5f8g1h4j7k0m3n6o9p2q5r8s1t4u7v-w9x2y5z8a1b4c7d0e3f6g9h2i5j8k1l4m7n0o3p6q9r2s5t8u1v4w7x0y3z6a9b2c5d8e1f4g7h0i3j6k9l2m5n8o1p4q7r0s3t6u9v2w5x8y1z4a7b0c3d6e9f2g5h8i1j4k7m0n3p6q9r2s5t8u1v4w7x0y3z6-' }, // AI Generated placeholder - replace in prod
+  { id: 'GAL-006', title: 'Wildlife Safari', category: 'Landscape', imageUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuC1h4Jg7yR2b7d5m0W4x8q9n5j4t6k7l5p3o9r2s5v8u9x4y7z1a3b6c9d2e5f8g1h4j7k0m3n6o9p2q5r8s1t4u7v-w9x2y5z8a1b4c7d0e3f6g9h2i5j8k1l4m7n0o3p6q9r2s5t8u1v4w7x0y3z6a9b2c5d8e1f4g7h0i3j6k9l2m5n8o1p4q7r0s3t6u9v2w5x8y1z4a7b0c3d6e9f2g5h8i1j4k7m0n3p6q9r2s5t8u1v4w7x0y3z6-' }, // AI Generated placeholder - replace in prod
 ];
 
 const INITIAL_CMS_POSTS: CMSPost[] = [];

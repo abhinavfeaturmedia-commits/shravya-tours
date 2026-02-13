@@ -155,6 +155,20 @@ export interface Lead {
   paxInfant?: number; // New: Number of infants
 }
 
+export interface CustomerPreference {
+  dietary: string[]; // e.g. ['Vegan', 'Nut-Free']
+  flight: string[]; // e.g. ['Aisle Seat', 'Forward Cabin']
+  accommodation: string[]; // e.g. ['King Bed', 'High Floor']
+}
+
+export interface CustomerNote {
+  id: string;
+  text: string;
+  date: string;
+  author: string;
+  isPinned?: boolean;
+}
+
 export interface Customer {
   id: string;
   name: string;
@@ -168,6 +182,8 @@ export interface Customer {
   joinedDate: string;
   tags?: string[];
   lastActive?: string;
+  preferences?: CustomerPreference;
+  notes?: CustomerNote[];
 }
 
 
