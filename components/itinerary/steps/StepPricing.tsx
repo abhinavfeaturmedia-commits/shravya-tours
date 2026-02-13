@@ -8,8 +8,8 @@ const CURRENCIES: CurrencyCode[] = ['INR', 'USD', 'AED', 'EUR', 'GBP'];
 export const StepPricing: React.FC = () => {
     const {
         items, updateItem, setStep, currency, setCurrency,
-        taxConfig, updateTaxConfig, subtotal, taxAmount, grandTotal,
-        formatCurrency, tripDetails
+        taxConfig, updateTaxConfig, subtotal, packageMarkupAmount, taxAmount, grandTotal,
+        formatCurrency, tripDetails, packageMarkupPercent, packageMarkupFlat, setPackageMarkup
     } = useItinerary();
 
     const [showTaxSettings, setShowTaxSettings] = useState(false);
@@ -218,15 +218,80 @@ export const StepPricing: React.FC = () => {
                         </div>
                     )}
 
+                    {/* Package-Level Markup */}
+                    {items.length > 0 && (
+                        <div className="bg-gradient-to-br from-indigo-50 to-violet-50 dark:from-indigo-900/20 dark:to-violet-900/20 rounded-2xl border border-indigo-200 dark:border-indigo-800 overflow-hidden">
+                            <div className="px-6 py-4 border-b border-indigo-200/50 dark:border-indigo-800/50">
+                                <h3 className="font-bold text-indigo-800 dark:text-indigo-300 flex items-center gap-2">
+                                    <Percent size={18} /> Package-Level Markup
+                                </h3>
+                                <p className="text-xs text-indigo-600/70 dark:text-indigo-400/70 mt-0.5">Apply a markup to the entire package on top of individual item markups</p>
+                            </div>
+                            <div className="px-6 py-5">
+                                <div className="flex flex-col sm:flex-row items-start sm:items-end gap-4 sm:gap-6">
+                                    {/* Markup % */}
+                                    <div className="flex-1 w-full sm:w-auto">
+                                        <label className="text-xs font-bold text-indigo-700 dark:text-indigo-400 uppercase mb-1.5 block">Markup %</label>
+                                        <div className="flex items-center gap-2">
+                                            <input
+                                                type="number"
+                                                min="0"
+                                                step="0.5"
+                                                className="w-full sm:w-28 bg-white dark:bg-slate-800 border border-indigo-300 dark:border-indigo-700 rounded-lg px-3 py-2.5 text-sm font-bold text-indigo-700 dark:text-indigo-300 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-all"
+                                                value={packageMarkupPercent}
+                                                onChange={e => setPackageMarkup(parseFloat(e.target.value) || 0, packageMarkupFlat)}
+                                            />
+                                            <span className="text-indigo-500 font-black text-lg">%</span>
+                                        </div>
+                                    </div>
+
+                                    {/* Extra Flat ₹ */}
+                                    <div className="flex-1 w-full sm:w-auto">
+                                        <label className="text-xs font-bold text-purple-700 dark:text-purple-400 uppercase mb-1.5 block">Extra Amount</label>
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-purple-400 font-bold">₹</span>
+                                            <input
+                                                type="number"
+                                                min="0"
+                                                className="w-full sm:w-28 bg-white dark:bg-slate-800 border border-purple-300 dark:border-purple-700 rounded-lg px-3 py-2.5 text-sm font-bold text-purple-700 dark:text-purple-300 focus:ring-2 focus:ring-purple-500/20 focus:border-purple-400 transition-all"
+                                                value={packageMarkupFlat}
+                                                onChange={e => setPackageMarkup(packageMarkupPercent, parseFloat(e.target.value) || 0)}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {/* Computed Markup */}
+                                    <div className="sm:ml-auto text-right">
+                                        <div className="text-xs font-bold text-slate-500 uppercase mb-1">Total Package Markup</div>
+                                        <div className="text-xl font-black text-indigo-600 dark:text-indigo-400">
+                                            + {formatCurrency(packageMarkupAmount)}
+                                        </div>
+                                        <div className="text-[10px] text-slate-400 mt-0.5">
+                                            On subtotal of {formatCurrency(subtotal)}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                     {/* Totals */}
                     {items.length > 0 && (
                         <div className="bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 p-6 rounded-2xl border border-emerald-200 dark:border-emerald-800">
                             <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
                                 <div className="space-y-2">
                                     <div className="flex justify-between gap-16 text-sm">
-                                        <span className="text-slate-600 dark:text-slate-400">Subtotal</span>
+                                        <span className="text-slate-600 dark:text-slate-400">Item Subtotal</span>
                                         <span className="font-bold text-slate-800 dark:text-slate-200">{formatCurrency(subtotal)}</span>
                                     </div>
+                                    {packageMarkupAmount > 0 && (
+                                        <div className="flex justify-between gap-16 text-sm">
+                                            <span className="text-indigo-600 dark:text-indigo-400">
+                                                Package Markup {packageMarkupPercent > 0 ? `(${packageMarkupPercent}%)` : ''} {packageMarkupFlat > 0 ? `+ ₹${packageMarkupFlat.toLocaleString()}` : ''}
+                                            </span>
+                                            <span className="font-bold text-indigo-600 dark:text-indigo-400">+ {formatCurrency(packageMarkupAmount)}</span>
+                                        </div>
+                                    )}
                                     <div className="flex justify-between gap-16 text-sm">
                                         <span className="text-slate-600 dark:text-slate-400">
                                             Tax ({taxConfig.cgstPercent + taxConfig.sgstPercent + taxConfig.igstPercent + taxConfig.tcsPercent}%)

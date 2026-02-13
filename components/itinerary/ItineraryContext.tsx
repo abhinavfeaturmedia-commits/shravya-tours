@@ -76,9 +76,12 @@ interface ItineraryContextType {
     items: ItineraryItem[];
     currency: CurrencyCode;
     taxConfig: TaxConfig;
+    packageMarkupPercent: number;
+    packageMarkupFlat: number;
 
     // Computed
     subtotal: number;
+    packageMarkupAmount: number;
     taxAmount: number;
     grandTotal: number;
 
@@ -92,8 +95,8 @@ interface ItineraryContextType {
     reorderItems: (destDay: number, newOrder: ItineraryItem[]) => void;
     setCurrency: (currency: CurrencyCode) => void;
     updateTaxConfig: (config: Partial<TaxConfig>) => void;
+    setPackageMarkup: (percent: number, flat: number) => void;
 
-    // Helpers
     // Helpers
     getItemsForDay: (day: number) => ItineraryItem[];
     getDayMeta: (day: number) => DayMeta;
@@ -123,6 +126,8 @@ export const ItineraryProvider: React.FC<{ children: ReactNode }> = ({ children 
     const [dayMeta, setDayMeta] = useState<Record<number, DayMeta>>({});
     const [currency, setCurrency] = useState<CurrencyCode>('INR');
     const [taxConfig, setTaxConfig] = useState<TaxConfig>(DEFAULT_TAX_CONFIG);
+    const [packageMarkupPercent, setPackageMarkupPercent] = useState<number>(0);
+    const [packageMarkupFlat, setPackageMarkupFlat] = useState<number>(0);
 
     const [tripDetails, setTripDetails] = useState<TripDetails>({
         title: '',
@@ -149,22 +154,34 @@ export const ItineraryProvider: React.FC<{ children: ReactNode }> = ({ children 
         return items.reduce((sum, item) => sum + (item.sellPrice || 0), 0);
     }, [items]);
 
+    // Package-level markup: applied on top of item subtotal, before tax
+    const packageMarkupAmount = useMemo(() => {
+        return Math.round(subtotal * (packageMarkupPercent / 100)) + packageMarkupFlat;
+    }, [subtotal, packageMarkupPercent, packageMarkupFlat]);
+
+    const preTaxTotal = useMemo(() => subtotal + packageMarkupAmount, [subtotal, packageMarkupAmount]);
+
     const taxAmount = useMemo(() => {
         const { cgstPercent, sgstPercent, igstPercent, tcsPercent, gstOnTotal } = taxConfig;
-        const taxableAmount = gstOnTotal ? subtotal : items.reduce((sum, item) => {
+        const taxableAmount = gstOnTotal ? preTaxTotal : items.reduce((sum, item) => {
             const markup = item.sellPrice - (item.netCost * item.quantity);
             return sum + markup;
-        }, 0);
+        }, 0) + packageMarkupAmount;
 
         const cgst = taxableAmount * (cgstPercent / 100);
         const sgst = taxableAmount * (sgstPercent / 100);
         const igst = taxableAmount * (igstPercent / 100);
-        const tcs = subtotal * (tcsPercent / 100);
+        const tcs = preTaxTotal * (tcsPercent / 100);
 
         return Math.round((cgst + sgst + igst + tcs) * 100) / 100;
-    }, [subtotal, taxConfig, items]);
+    }, [preTaxTotal, taxConfig, items, packageMarkupAmount]);
 
-    const grandTotal = useMemo(() => subtotal + taxAmount, [subtotal, taxAmount]);
+    const grandTotal = useMemo(() => preTaxTotal + taxAmount, [preTaxTotal, taxAmount]);
+
+    const setPackageMarkup = useCallback((percent: number, flat: number) => {
+        setPackageMarkupPercent(percent);
+        setPackageMarkupFlat(flat);
+    }, []);
 
     const updateTripDetails = useCallback((details: Partial<TripDetails>) => {
         setTripDetails(prev => ({ ...prev, ...details }));
@@ -172,7 +189,11 @@ export const ItineraryProvider: React.FC<{ children: ReactNode }> = ({ children 
 
     const addItem = useCallback((item: Omit<ItineraryItem, 'sellPrice'>) => {
         const sellPrice = calculateSellPrice(item.netCost, item.baseMarkupPercent, item.extraMarkupFlat, item.quantity);
-        setItems(prev => [...prev, { ...item, sellPrice }]);
+        setItems(prev => {
+            // Assign explicit order based on how many items already exist in this day
+            const dayItemCount = prev.filter(i => i.day === item.day).length;
+            return [...prev, { ...item, sellPrice, order: item.order ?? dayItemCount }];
+        });
     }, []);
 
     const updateItem = useCallback((id: string, updates: Partial<Omit<ItineraryItem, 'sellPrice'>>) => {
@@ -273,7 +294,10 @@ export const ItineraryProvider: React.FC<{ children: ReactNode }> = ({ children 
         items,
         currency,
         taxConfig,
+        packageMarkupPercent,
+        packageMarkupFlat,
         subtotal,
+        packageMarkupAmount,
         taxAmount,
         grandTotal,
         updateTripDetails,
@@ -288,11 +312,13 @@ export const ItineraryProvider: React.FC<{ children: ReactNode }> = ({ children 
         moveItem,
         setCurrency,
         updateTaxConfig,
+        setPackageMarkup,
         formatCurrency,
         convertCurrency
-    }), [step, tripDetails, items, currency, taxConfig, subtotal, taxAmount, grandTotal,
+    }), [step, tripDetails, items, currency, taxConfig, packageMarkupPercent, packageMarkupFlat,
+        subtotal, packageMarkupAmount, taxAmount, grandTotal,
         updateTripDetails, addItem, updateItem, removeItem, replaceAllItems, reorderItems,
-        getItemsForDay, updateTaxConfig, formatCurrency, convertCurrency]);
+        getItemsForDay, updateTaxConfig, setPackageMarkup, formatCurrency, convertCurrency]);
 
     return (
         <ItineraryContext.Provider value={value}>

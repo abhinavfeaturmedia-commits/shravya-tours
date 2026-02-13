@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useItinerary, ItineraryItem } from '../ItineraryContext';
 import { useData } from '../../../context/DataContext';
 import { useNavigate } from 'react-router-dom';
@@ -7,22 +7,15 @@ import { Check, DollarSign, Save, ArrowLeft, MapPin, Calendar, Users, FileText, 
 import { toast } from 'sonner';
 
 export const StepReview: React.FC = () => {
-    const { tripDetails, items, subtotal, grandTotal, setStep } = useItinerary();
+    const { tripDetails, items, subtotal, grandTotal, setStep, packageMarkupPercent, packageMarkupFlat, packageMarkupAmount, setPackageMarkup, formatCurrency } = useItinerary();
     const { addPackage } = useData();
     const navigate = useNavigate();
-
-    const [markupType, setMarkupType] = useState<'percentage' | 'fixed'>('percentage');
-    const [markupValue, setMarkupValue] = useState<number>(20); // Default 20%
 
     // Guest count helper
     const guestCount = (tripDetails.adults || 0) + (tripDetails.children || 0);
 
-    // Calculate Final Price
-    const markupAmount = markupType === 'percentage'
-        ? Math.round(grandTotal * (markupValue / 100))
-        : markupValue;
-
-    const finalPrice = grandTotal + markupAmount;
+    // The finalPrice now comes from context grandTotal which already includes package markup + tax
+    const finalPrice = grandTotal;
 
     // Helper to format itinerary for the Package object
     const generatePackageItinerary = () => {
@@ -147,43 +140,48 @@ export const StepReview: React.FC = () => {
 
                     {/* Net Cost Display */}
                     <div className="bg-slate-50 dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
-                        <div className="text-[10px] font-bold uppercase text-slate-400 mb-0.5">Net Cost (Expenses)</div>
-                        <div className="text-lg md:text-xl font-black text-slate-900 dark:text-white">₹{grandTotal.toLocaleString()}</div>
+                        <div className="text-[10px] font-bold uppercase text-slate-400 mb-0.5">Item Subtotal</div>
+                        <div className="text-lg md:text-xl font-black text-slate-900 dark:text-white">{formatCurrency(subtotal)}</div>
                     </div>
 
-                    {/* Markup Controls */}
+                    {/* Package Markup Controls */}
                     <div className="space-y-4">
                         <div className="flex items-center justify-between">
-                            <label className="text-sm font-bold text-slate-700 dark:text-slate-300">Markup Strategy</label>
-                            <span className="text-xs font-bold text-green-600 bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded">
-                                + ₹{markupAmount.toLocaleString()}
-                            </span>
+                            <label className="text-sm font-bold text-slate-700 dark:text-slate-300">Package Markup</label>
+                            {packageMarkupAmount > 0 && (
+                                <span className="text-xs font-bold text-indigo-600 bg-indigo-50 dark:bg-indigo-900/20 px-2 py-1 rounded">
+                                    + {formatCurrency(packageMarkupAmount)}
+                                </span>
+                            )}
                         </div>
 
-                        <div className="flex bg-slate-100 dark:bg-slate-900 rounded-xl p-1">
-                            <button
-                                onClick={() => setMarkupType('percentage')}
-                                className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${markupType === 'percentage' ? 'bg-white dark:bg-slate-800 shadow-sm text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}
-                            >
-                                Percentage %
-                            </button>
-                            <button
-                                onClick={() => setMarkupType('fixed')}
-                                className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${markupType === 'fixed' ? 'bg-white dark:bg-slate-800 shadow-sm text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}
-                            >
-                                Fixed Amount
-                            </button>
-                        </div>
-
-                        <div className="relative">
-                            <input
-                                type="number"
-                                value={markupValue}
-                                onChange={(e) => setMarkupValue(parseFloat(e.target.value) || 0)}
-                                className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-4 font-black text-lg focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
-                            />
-                            <div className="absolute right-4 top-1/2 -translate-y-1/2 font-bold text-slate-400 pointer-events-none">
-                                {markupType === 'percentage' ? '%' : '₹'}
+                        <div className="grid grid-cols-2 gap-3">
+                            <div>
+                                <label className="text-[10px] font-bold text-indigo-500 uppercase mb-1 block">Markup %</label>
+                                <div className="relative">
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        step="0.5"
+                                        value={packageMarkupPercent}
+                                        onChange={(e) => setPackageMarkup(parseFloat(e.target.value) || 0, packageMarkupFlat)}
+                                        className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 font-black text-base focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                                    />
+                                    <div className="absolute right-3 top-1/2 -translate-y-1/2 font-bold text-indigo-400 pointer-events-none">%</div>
+                                </div>
+                            </div>
+                            <div>
+                                <label className="text-[10px] font-bold text-purple-500 uppercase mb-1 block">Extra ₹</label>
+                                <div className="relative">
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        value={packageMarkupFlat}
+                                        onChange={(e) => setPackageMarkup(packageMarkupPercent, parseFloat(e.target.value) || 0)}
+                                        className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 font-black text-base focus:ring-2 focus:ring-purple-500 outline-none transition-all"
+                                    />
+                                    <div className="absolute right-3 top-1/2 -translate-y-1/2 font-bold text-purple-400 pointer-events-none">₹</div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -192,8 +190,8 @@ export const StepReview: React.FC = () => {
 
                     {/* Final Price */}
                     <div>
-                        <label className="text-[10px] font-bold uppercase text-slate-500 tracking-wider">Suggested Selling Price</label>
-                        <div className="text-2xl md:text-3xl font-black text-slate-900 dark:text-white mt-1 tracking-tight">₹{finalPrice.toLocaleString()}</div>
+                        <label className="text-[10px] font-bold uppercase text-slate-500 tracking-wider">Grand Total (incl. markup + tax)</label>
+                        <div className="text-2xl md:text-3xl font-black text-slate-900 dark:text-white mt-1 tracking-tight">{formatCurrency(finalPrice)}</div>
                     </div>
 
                 </div>

@@ -205,7 +205,7 @@ const DayContainer: React.FC<{
                             <span className="text-[10px] md:text-sm font-bold uppercase tracking-wide">Empty Day • Click to Plan</span>
                         </div>
                     ) : (
-                        items.sort((a, b) => (a.order || 0) - (b.order || 0) || (a.time || '').localeCompare(b.time || '')).map((item, idx) => (
+                        items.sort((a, b) => (a.order ?? 0) - (b.order ?? 0)).map((item, idx) => (
                             <ServiceCard key={item.id} item={item} onRemove={() => onRemove(item.id)} onUpdate={onUpdate} index={idx} isFirst={idx === 0} isLast={idx === items.length - 1} />
                         ))
                     )}
