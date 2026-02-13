@@ -259,7 +259,8 @@ export interface VendorNote {
 export interface Vendor {
   id: string;
   name: string;
-  category: 'Hotel' | 'Transport' | 'Guide' | 'Activity';
+  category: 'Hotel' | 'Transport' | 'Guide' | 'Activity' | 'DMC';
+  subCategory?: 'Flight' | 'Bus' | 'Taxi/Cab' | 'Other';
   location: string;
   contactName: string;
   contactPhone: string;
@@ -465,7 +466,7 @@ export interface ProposalOption {
 
 // --- Pricing Engine Types ---
 
-export type PricingCategory = 'Hotel' | 'Activity' | 'Transport' | 'Visa' | 'Flight' | 'Guide' | 'Other';
+export type PricingCategory = 'Hotel' | 'Activity' | 'Transport' | 'Visa' | 'Flight' | 'Guide' | 'DMC' | 'Other';
 export type CurrencyCode = 'INR' | 'USD' | 'AED' | 'EUR' | 'GBP';
 
 export interface PricingItem {

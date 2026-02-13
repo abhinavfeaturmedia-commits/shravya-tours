@@ -221,7 +221,9 @@ export const Vendors: React.FC = () => {
             const newVendor: Vendor = {
                 id: `VND-${Date.now()}`,
                 name: vendorForm.name || 'New Vendor',
+                name: vendorForm.name || 'New Vendor',
                 category: (vendorForm.category as any) || 'Hotel',
+                subCategory: vendorForm.subCategory as any,
                 location: vendorForm.location || '',
                 contactName: vendorForm.contactName || '',
                 contactPhone: vendorForm.contactPhone || '',
@@ -389,12 +391,21 @@ export const Vendors: React.FC = () => {
         }
     };
 
-    const getCategoryMeta = (category: string) => {
+    const getCategoryMeta = (category: string, subCategory?: string) => {
+        if (category === 'Transport' && subCategory) {
+            switch (subCategory) {
+                case 'Flight': return { icon: 'flight', color: 'bg-sky-100 text-sky-600 dark:bg-sky-900/40 dark:text-sky-400', badge: 'bg-sky-50 text-sky-600 border-sky-200 dark:bg-sky-900/20 dark:text-sky-400 dark:border-sky-800' };
+                case 'Bus': return { icon: 'directions_bus', color: 'bg-orange-100 text-orange-600 dark:bg-orange-900/40 dark:text-orange-400', badge: 'bg-orange-50 text-orange-600 border-orange-200 dark:bg-orange-900/20 dark:text-orange-400 dark:border-orange-800' };
+                case 'Taxi/Cab': return { icon: 'local_taxi', color: 'bg-yellow-100 text-yellow-600 dark:bg-yellow-900/40 dark:text-yellow-400', badge: 'bg-yellow-50 text-yellow-600 border-yellow-200 dark:bg-yellow-900/20 dark:text-yellow-400 dark:border-yellow-800' };
+                default: return { icon: 'commute', color: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400', badge: 'bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700' };
+            }
+        }
         switch (category) {
             case 'Hotel': return { icon: 'hotel', color: 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/40 dark:text-indigo-400', badge: 'bg-indigo-50 text-indigo-600 border-indigo-200 dark:bg-indigo-900/20 dark:text-indigo-400 dark:border-indigo-800' };
             case 'Transport': return { icon: 'directions_car', color: 'bg-amber-100 text-amber-600 dark:bg-amber-900/40 dark:text-amber-400', badge: 'bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800' };
             case 'Guide': return { icon: 'person_pin', color: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-400', badge: 'bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800' };
             case 'Activity': return { icon: 'kayaking', color: 'bg-rose-100 text-rose-600 dark:bg-rose-900/40 dark:text-rose-400', badge: 'bg-rose-50 text-rose-600 border-rose-200 dark:bg-rose-900/20 dark:text-rose-400 dark:border-rose-800' };
+            case 'DMC': return { icon: 'public', color: 'bg-teal-100 text-teal-600 dark:bg-teal-900/40 dark:text-teal-400', badge: 'bg-teal-50 text-teal-600 border-teal-200 dark:bg-teal-900/20 dark:text-teal-400 dark:border-teal-800' };
             default: return { icon: 'storefront', color: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400', badge: 'bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700' };
         }
     };
@@ -519,7 +530,7 @@ export const Vendors: React.FC = () => {
                                 <input className="w-full pl-12 pr-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#1A2633] outline-none focus:ring-2 focus:ring-primary shadow-sm transition-shadow text-sm" placeholder="Search vendors..." value={search} onChange={e => setSearch(e.target.value)} />
                             </div>
                             <div className="flex bg-white dark:bg-[#1A2633] rounded-xl p-1 shadow-sm border border-slate-200 dark:border-slate-700 overflow-x-auto no-scrollbar">
-                                {['All', 'Hotel', 'Transport', 'Guide', 'Activity'].map(cat => (
+                                {['All', 'Hotel', 'Transport', 'DMC', 'Guide', 'Activity'].map(cat => (
                                     <button key={cat} onClick={() => setCategoryFilter(cat)} className={`px-4 py-2 rounded-lg text-xs font-bold uppercase transition-all whitespace-nowrap ${categoryFilter === cat ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}>{cat}</button>
                                 ))}
                             </div>
@@ -533,13 +544,16 @@ export const Vendors: React.FC = () => {
                                         <div key={vendor.id} onClick={() => setSelectedVendorId(vendor.id)} className="bg-white dark:bg-[#1A2633] p-4 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 active:scale-[0.98] transition-transform">
                                             <div className="flex items-start justify-between mb-4">
                                                 <div className="flex items-center gap-3">
-                                                    <div className={`size-12 rounded-lg flex items-center justify-center ${getCategoryMeta(vendor.category).color}`}>
-                                                        <span className="material-symbols-outlined text-2xl">{getCategoryMeta(vendor.category).icon}</span>
+                                                    <div className={`size-12 rounded-lg flex items-center justify-center ${getCategoryMeta(vendor.category, vendor.subCategory).color}`}>
+                                                        <span className="material-symbols-outlined text-2xl">{getCategoryMeta(vendor.category, vendor.subCategory).icon}</span>
                                                     </div>
                                                     <div>
                                                         <h3 className="font-bold text-slate-900 dark:text-white">{vendor.name}</h3>
                                                         <div className="flex items-center gap-2 mt-1">
-                                                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${getCategoryMeta(vendor.category).badge}`}>{vendor.category}</span>
+                                                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${getCategoryMeta(vendor.category, vendor.subCategory).badge}`}>
+                                                                {vendor.category}
+                                                                {vendor.subCategory && <span className="opacity-70 font-normal ml-1">• {vendor.subCategory}</span>}
+                                                            </span>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -595,13 +609,16 @@ export const Vendors: React.FC = () => {
                                                     </td>
                                                     <td className="px-6 py-4" onClick={() => setSelectedVendorId(vendor.id)}>
                                                         <div className="flex items-center gap-3">
-                                                            <div className={`size-10 rounded-lg flex items-center justify-center ${getCategoryMeta(vendor.category).color}`}>
-                                                                <span className="material-symbols-outlined text-xl">{getCategoryMeta(vendor.category).icon}</span>
+                                                            <div className={`size-10 rounded-lg flex items-center justify-center ${getCategoryMeta(vendor.category, vendor.subCategory).color}`}>
+                                                                <span className="material-symbols-outlined text-xl">{getCategoryMeta(vendor.category, vendor.subCategory).icon}</span>
                                                             </div>
                                                             <div>
                                                                 <p className="font-bold text-slate-900 dark:text-white text-sm">{vendor.name}</p>
                                                                 <div className="flex items-center gap-1.5">
-                                                                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${getCategoryMeta(vendor.category).badge}`}>{vendor.category}</span>
+                                                                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${getCategoryMeta(vendor.category, vendor.subCategory).badge}`}>
+                                                                        {vendor.category}
+                                                                        {vendor.subCategory && <span className="opacity-70 font-normal ml-1">• {vendor.subCategory}</span>}
+                                                                    </span>
                                                                     <span className="text-[10px] text-slate-400">•</span>
                                                                     <p className="text-[11px] text-slate-500 flex items-center gap-0.5"><span className="material-symbols-outlined text-[12px]">location_on</span>{vendor.location}</p>
                                                                 </div>
@@ -1092,8 +1109,8 @@ export const Vendors: React.FC = () => {
                             <div className="space-y-4">
                                 <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">Basic Information</h3>
                                 <div className="flex justify-center mb-4">
-                                    <div className={`size-16 rounded-2xl flex items-center justify-center shadow-md ${getCategoryMeta(vendorForm.category || 'Hotel').color}`}>
-                                        <span className="material-symbols-outlined text-4xl">{getCategoryMeta(vendorForm.category || 'Hotel').icon}</span>
+                                    <div className={`size-16 rounded-2xl flex items-center justify-center shadow-md ${getCategoryMeta(vendorForm.category || 'Hotel', vendorForm.subCategory).color}`}>
+                                        <span className="material-symbols-outlined text-4xl">{getCategoryMeta(vendorForm.category || 'Hotel', vendorForm.subCategory).icon}</span>
                                     </div>
                                 </div>
                                 <div className="grid grid-cols-2 gap-4">
@@ -1103,11 +1120,20 @@ export const Vendors: React.FC = () => {
                                     </div>
                                     <div className="space-y-1">
                                         <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">Category</label>
-                                        <select className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-3 text-sm outline-none focus:ring-2 focus:ring-primary" value={vendorForm.category} onChange={e => setVendorForm({ ...vendorForm, category: e.target.value as any })}>
-                                            <option>Hotel</option><option>Transport</option><option>Guide</option><option>Activity</option>
+                                        <select className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-3 text-sm outline-none focus:ring-2 focus:ring-primary" value={vendorForm.category} onChange={e => setVendorForm({ ...vendorForm, category: e.target.value as any, subCategory: undefined })}>
+                                            <option>Hotel</option><option>Transport</option><option>DMC</option><option>Guide</option><option>Activity</option>
                                         </select>
                                     </div>
                                 </div>
+                                {vendorForm.category === 'Transport' && (
+                                    <div className="space-y-1 animate-in fade-in slide-in-from-top-2">
+                                        <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">Transport Type</label>
+                                        <select className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-3 text-sm outline-none focus:ring-2 focus:ring-primary" value={vendorForm.subCategory || ''} onChange={e => setVendorForm({ ...vendorForm, subCategory: e.target.value as any })}>
+                                            <option value="" disabled>Select Type</option>
+                                            <option>Flight</option><option>Bus</option><option>Taxi/Cab</option><option>Other</option>
+                                        </select>
+                                    </div>
+                                )}
                                 <div className="space-y-1">
                                     <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">Location</label>
                                     <input required placeholder="Location" className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-3 text-sm outline-none focus:ring-2 focus:ring-primary" value={vendorForm.location} onChange={e => setVendorForm({ ...vendorForm, location: e.target.value })} />
