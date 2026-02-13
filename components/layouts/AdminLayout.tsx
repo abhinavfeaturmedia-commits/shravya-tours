@@ -52,7 +52,7 @@ const NAV_GROUPS = [
 ];
 
 export const AdminLayout: React.FC = () => {
-  const { currentUser, logout, isAuthenticated, isMasquerading, stopMasquerading, realUser, hasPermission } = useAuth();
+  const { currentUser, logout, isAuthenticated, isLoading, isMasquerading, stopMasquerading, realUser, hasPermission } = useAuth();
   const { bookings, leads, followUps } = useData(); // Connect to real data
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
@@ -99,12 +99,12 @@ export const AdminLayout: React.FC = () => {
     return () => clearInterval(timer);
   }, [followUps, notifiedIds, navigate]);
 
-  // Route Protection: Redirect if not logged in
+  // Route Protection: Redirect if not logged in (wait for auth to finish loading first)
   useEffect(() => {
-    if (!isAuthenticated) {
+    if (!isLoading && !isAuthenticated) {
       navigate('/login', { replace: true, state: { from: location } });
     }
-  }, [isAuthenticated, navigate]);
+  }, [isLoading, isAuthenticated, navigate]);
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
   const closeSidebar = () => setIsSidebarOpen(false);
@@ -201,6 +201,20 @@ export const AdminLayout: React.FC = () => {
       item.name.toLowerCase().includes(commandSearch.toLowerCase())
     )
     : allNavItems;
+
+  // Show loading state while auth is initializing
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-slate-50 dark:bg-[#0B1116]">
+        <div className="flex flex-col items-center gap-4">
+          <div className="size-12 rounded-2xl bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center text-white shadow-lg shadow-indigo-500/30 animate-pulse">
+            <span className="material-symbols-outlined text-[24px]">travel_explore</span>
+          </div>
+          <p className="text-sm font-semibold text-slate-400">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!isAuthenticated || !currentUser) return null;
 

@@ -104,6 +104,11 @@ export const api = {
         if (error) throw error;
     },
 
+    deleteBooking: async (id: string) => {
+        const { error } = await supabase.from('bookings').delete().eq('id', id);
+        if (error) throw error;
+    },
+
     // --- LEADS ---
     getLeads: async (): Promise<Lead[]> => {
         const { data, error } = await supabase.from('leads').select('*').order('created_at', { ascending: false });

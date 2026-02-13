@@ -62,6 +62,7 @@ interface AuthContextType {
     staff: StaffMember[];
     currentUser: StaffMember | null;
     isAuthenticated: boolean;
+    isLoading: boolean;
     login: (email: string, password: string) => Promise<boolean>;
     logout: () => void;
     addStaff: (member: StaffMember) => void;
@@ -81,77 +82,41 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [currentUser, setCurrentUser] = useState<StaffMember | null>(null);
     const [loading, setLoading] = useState(true);
 
-    // Initial Load - Fetch from Supabase
-    const fetchStaff = useCallback(async () => {
-        try {
-            const data = await api.getStaff();
-            setStaff(data);
-        } catch (e) {
-            console.error('Failed to fetch staff:', e);
+    // Mock persistence key
+    const STORAGE_KEY_MOCK = 'shravya_mock_session';
+
+    // Mock Admin User Constant
+    const MOCK_ADMIN_USER: StaffMember = {
+        id: 999,
+        name: 'Admin User',
+        email: 'admin@shravyatours.com',
+        role: 'Administrator',
+        userType: 'Admin',
+        initials: 'AD',
+        department: 'Executive',
+        status: 'Active',
+        lastActive: new Date().toISOString(),
+        color: 'indigo',
+        queryScope: 'Show All Queries',
+        whatsappScope: 'All Messages',
+        permissions: ADMIN_PERMISSIONS,
+    };
+
+    const mapUserToStaff = useCallback(async (email: string | undefined, distinctStaffList?: StaffMember[]) => {
+        if (!email) {
+            setLoading(false);
+            return;
         }
-    }, []);
 
-    useEffect(() => {
-        fetchStaff();
-    }, [fetchStaff]);
+        // Use provided list or current state
+        let currentList = distinctStaffList || staff;
 
-    // Keep a Ref for event listeners
-    const staffRef = React.useRef(staff);
-    useEffect(() => { staffRef.current = staff; }, [staff]);
-
-    // Initialize Supabase Auth
-    useEffect(() => {
-        // Check active session
-        supabase.auth.getSession().then(({ data: { session } }) => {
-            if (session?.user) {
-                mapUserToStaff(session.user.email);
-            } else {
-                setLoading(false);
-            }
-        });
-
-        // Listen for changes
-        const {
-            data: { subscription },
-        } = supabase.auth.onAuthStateChange((_event, session) => {
-            if (session?.user) {
-                mapUserToStaff(session.user.email);
-            } else {
-                setCurrentUser(null);
-                setLoading(false);
-            }
-        });
-
-        return () => subscription.unsubscribe();
-    }, []);
-
-    // Re-run mapping if staff list changes
-    useEffect(() => {
-        supabase.auth.getSession().then(({ data: { session } }) => {
-            if (session?.user && !currentUser) {
-                mapUserToStaff(session.user.email);
-            } else if (session?.user && currentUser) {
-                const updatedUser = staff.find(s => s.email.toLowerCase() === session.user.email?.toLowerCase());
-                if (updatedUser && JSON.stringify(updatedUser) !== JSON.stringify(currentUser)) {
-                    setCurrentUser(updatedUser);
-                }
-            }
-        });
-    }, [staff]);
-
-    const mapUserToStaff = async (email: string | undefined) => {
-        if (!email) return;
-
-        // Note: In a real app, we might need to await fetchStaff() if it hasn't finished,
-        // but for now we rely on the staff state being populated shortly.
-        // A better approach is to fetch 'me' from an API endpoint, but we are simulating 'mapping'.
-
-        // Wait briefly for staff to load if empty (race condition hack for MVP)
-        let currentList = staffRef.current;
+        // Final fallback if list is empty (shouldn't happen with initializeAuth sequence)
         if (currentList.length === 0) {
-            const fresh = await api.getStaff();
-            setStaff(fresh);
-            currentList = fresh;
+            try {
+                currentList = await api.getStaff();
+                setStaff(currentList);
+            } catch (e) { console.error(e); }
         }
 
         const matchedStaff = currentList.find(s => s.email.toLowerCase() === email.toLowerCase());
@@ -187,32 +152,80 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             }
         }
         setLoading(false);
-    };
+    }, []); // No deps needed: staff is always passed explicitly as distinctStaffList
+
+    // Consolidated Initialization
+    const initializeAuth = useCallback(async () => {
+        try {
+            // 1. Check for Mock Session first (Fastest)
+            const isMockSession = localStorage.getItem(STORAGE_KEY_MOCK) === 'true';
+
+            // 2. Fetch Staff List (Required for mapping real users too)
+            let currentStaff: StaffMember[] = [];
+            try {
+                currentStaff = await api.getStaff();
+                setStaff(currentStaff);
+            } catch (e) {
+                console.error("Failed to fetch staff list during auth init", e);
+            }
+
+            // 3. Restore Session
+            if (isMockSession) {
+                // Ensure mock admin is in the staff list
+                if (!currentStaff.find(s => s.id === 999)) {
+                    setStaff(prev => [MOCK_ADMIN_USER, ...prev]);
+                }
+                setCurrentUser(MOCK_ADMIN_USER);
+                setLoading(false);
+                return;
+            }
+
+            // 4. Check Supabase Session
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session?.user) {
+                await mapUserToStaff(session.user.email, currentStaff);
+            } else {
+                setLoading(false);
+            }
+
+        } catch (error) {
+            console.error("Auth initialization failed", error);
+            setLoading(false);
+        }
+    }, [mapUserToStaff]);
+
+    useEffect(() => {
+        initializeAuth();
+
+        // Listen for changes
+        const {
+            data: { subscription },
+        } = supabase.auth.onAuthStateChange(async (_event, session) => {
+            if (session?.user) {
+                const freshStaff = await api.getStaff();
+                setStaff(freshStaff);
+                mapUserToStaff(session.user.email, freshStaff);
+            } else {
+                if (localStorage.getItem(STORAGE_KEY_MOCK) !== 'true') {
+                    setCurrentUser(null);
+                    setLoading(false);
+                }
+            }
+        });
+
+        return () => subscription.unsubscribe();
+    }, [initializeAuth, mapUserToStaff]);
 
     const login = useCallback(async (email: string, password: string): Promise<boolean> => {
         // Dev/Demo Bypass
         if (email === 'admin@shravyatours.com' && password === 'admin') {
-            const adminUser: StaffMember = {
-                id: 999,
-                name: 'Admin User',
-                email: 'admin@shravyatours.com',
-                role: 'Administrator',
-                userType: 'Admin',
-                initials: 'AD',
-                department: 'Executive',
-                status: 'Active',
-                lastActive: new Date().toISOString(),
-                color: 'indigo',
-                queryScope: 'Show All Queries',
-                whatsappScope: 'All Messages',
-                permissions: ADMIN_PERMISSIONS,
-            };
-            setCurrentUser(adminUser);
-            // Also ensure it's in the staff list
+            localStorage.setItem(STORAGE_KEY_MOCK, 'true');
+            // Ensure it's in the staff list
             setStaff(prev => {
-                if (!prev.find(s => s.id === 999)) return [...prev, adminUser];
+                if (!prev.find(s => s.id === 999)) return [MOCK_ADMIN_USER, ...prev];
                 return prev;
             });
+            setCurrentUser(MOCK_ADMIN_USER);
             return true;
         }
 
@@ -225,6 +238,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }, []);
 
     const logout = useCallback(async () => {
+        localStorage.removeItem(STORAGE_KEY_MOCK);
         await supabase.auth.signOut();
         setCurrentUser(null);
     }, []);

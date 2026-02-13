@@ -7,19 +7,22 @@ import { Check, DollarSign, Save, ArrowLeft, MapPin, Calendar, Users, FileText, 
 import { toast } from 'sonner';
 
 export const StepReview: React.FC = () => {
-    const { tripDetails, items, totalCost, setStep } = useItinerary();
+    const { tripDetails, items, subtotal, grandTotal, setStep } = useItinerary();
     const { addPackage } = useData();
     const navigate = useNavigate();
 
     const [markupType, setMarkupType] = useState<'percentage' | 'fixed'>('percentage');
     const [markupValue, setMarkupValue] = useState<number>(20); // Default 20%
 
+    // Guest count helper
+    const guestCount = (tripDetails.adults || 0) + (tripDetails.children || 0);
+
     // Calculate Final Price
     const markupAmount = markupType === 'percentage'
-        ? Math.round(totalCost * (markupValue / 100))
+        ? Math.round(grandTotal * (markupValue / 100))
         : markupValue;
 
-    const finalPrice = totalCost + markupAmount;
+    const finalPrice = grandTotal + markupAmount;
 
     // Helper to format itinerary for the Package object
     const generatePackageItinerary = () => {
@@ -54,9 +57,9 @@ export const StepReview: React.FC = () => {
             id: `pkg-${Date.now()}`,
             title: tripDetails.title,
             days: tripDetails.duration,
-            groupSize: tripDetails.guests,
+            groupSize: String(guestCount),
             location: tripDetails.destination || 'Custom',
-            description: `Custom itinerary created for ${tripDetails.guests || 'Valued Guests'}.`,
+            description: `Custom itinerary created for ${guestCount || 'Valued Guests'}.`,
             price: finalPrice,
             image: tripDetails.coverImage,
             theme: 'Custom',
@@ -97,7 +100,7 @@ export const StepReview: React.FC = () => {
                             <div className="flex flex-wrap items-center gap-3 md:gap-4 text-xs font-bold text-slate-500">
                                 <span className="flex items-center gap-1"><MapPin size={12} /> {tripDetails.destination}</span>
                                 <span className="flex items-center gap-1"><Calendar size={12} /> {tripDetails.startDate}</span>
-                                <span className="flex items-center gap-1"><Users size={12} /> {tripDetails.guests}</span>
+                                <span className="flex items-center gap-1"><Users size={12} /> {guestCount} Guests</span>
                             </div>
                         </div>
                         <div className="text-left md:text-right">
@@ -145,7 +148,7 @@ export const StepReview: React.FC = () => {
                     {/* Net Cost Display */}
                     <div className="bg-slate-50 dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
                         <div className="text-[10px] font-bold uppercase text-slate-400 mb-0.5">Net Cost (Expenses)</div>
-                        <div className="text-lg md:text-xl font-black text-slate-900 dark:text-white">₹{totalCost.toLocaleString()}</div>
+                        <div className="text-lg md:text-xl font-black text-slate-900 dark:text-white">₹{grandTotal.toLocaleString()}</div>
                     </div>
 
                     {/* Markup Controls */}
@@ -215,7 +218,7 @@ export const StepReview: React.FC = () => {
                     </div>
                     <div className="flex gap-2">
                         <button onClick={() => {
-                            const text = `🏝️ *Trip to ${tripDetails.destination || 'Paradise'}*\n📅 ${tripDetails.duration} Days | ${tripDetails.guests} Guests\n💰 ₹${finalPrice.toLocaleString()}\n\n*Itinerary:*\n${items.map((item, i) => `Day ${i + 1}: ${item.title}`).join('\n')}\n\nBook now with Shravya Tours! 🚀`;
+                            const text = `🏝️ *Trip to ${tripDetails.destination || 'Paradise'}*\n📅 ${tripDetails.duration} Days | ${guestCount} Guests\n💰 ₹${finalPrice.toLocaleString()}\n\n*Itinerary:*\n${items.map((item, i) => `Day ${i + 1}: ${item.title}`).join('\n')}\n\nBook now with Shravya Tours! 🚀`;
                             navigator.clipboard.writeText(text);
                             toast.success("Itinerary copied to clipboard!");
                         }} className="w-full py-3 bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-bold rounded-xl shadow-lg hover:opacity-90 transition-all flex items-center justify-center gap-2">
