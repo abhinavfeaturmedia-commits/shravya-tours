@@ -221,7 +221,6 @@ export const Vendors: React.FC = () => {
             const newVendor: Vendor = {
                 id: `VND-${Date.now()}`,
                 name: vendorForm.name || 'New Vendor',
-                name: vendorForm.name || 'New Vendor',
                 category: (vendorForm.category as any) || 'Hotel',
                 subCategory: vendorForm.subCategory as any,
                 location: vendorForm.location || '',
