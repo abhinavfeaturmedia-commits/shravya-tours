@@ -151,7 +151,7 @@ export const ItineraryProvider: React.FC<{ children: ReactNode }> = ({ children 
 
     // Calculate totals
     const subtotal = useMemo(() => {
-        return items.reduce((sum, item) => sum + (item.sellPrice || 0), 0);
+        return items.filter(i => i.type !== 'note' && i.type !== 'other').reduce((sum, item) => sum + (item.sellPrice || 0), 0);
     }, [items]);
 
     // Package-level markup: applied on top of item subtotal, before tax
@@ -163,7 +163,7 @@ export const ItineraryProvider: React.FC<{ children: ReactNode }> = ({ children 
 
     const taxAmount = useMemo(() => {
         const { cgstPercent, sgstPercent, igstPercent, tcsPercent, gstOnTotal } = taxConfig;
-        const taxableAmount = gstOnTotal ? preTaxTotal : items.reduce((sum, item) => {
+        const taxableAmount = gstOnTotal ? preTaxTotal : items.filter(i => i.type !== 'note' && i.type !== 'other').reduce((sum, item) => {
             const markup = item.sellPrice - (item.netCost * item.quantity);
             return sum + markup;
         }, 0) + packageMarkupAmount;

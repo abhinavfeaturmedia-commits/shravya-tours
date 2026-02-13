@@ -14,7 +14,7 @@ export const StepPricing: React.FC = () => {
 
     const [showTaxSettings, setShowTaxSettings] = useState(false);
 
-    const categoryGroups: Record<string, ItineraryItem[]> = items.reduce((groups, item) => {
+    const categoryGroups: Record<string, ItineraryItem[]> = items.filter(i => i.type !== 'note' && i.type !== 'other').reduce((groups, item) => {
         const cat = item.type.charAt(0).toUpperCase() + item.type.slice(1);
         if (!groups[cat]) groups[cat] = [];
         groups[cat].push(item);
