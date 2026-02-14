@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useData } from '../../context/DataContext';
+import { useNavigate } from 'react-router-dom';
 import {
     Map, Calendar, Users, Briefcase, CheckCircle,
     XCircle, Clock, AlertTriangle, Phone, MoreHorizontal
@@ -7,7 +8,8 @@ import {
 import { Booking } from '../../types';
 
 export const Operations: React.FC = () => {
-    const { bookings } = useData();
+    const { bookings, packages } = useData();
+    const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState<'Tours' | 'Attendance'>('Tours');
 
     // --- Tour Operations Logic ---
@@ -15,33 +17,47 @@ export const Operations: React.FC = () => {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
-        const live: Booking[] = [];
-        const upcoming: Booking[] = [];
+        const live: (Booking & { paxCount: number, duration: number, endDate: Date })[] = [];
+        const upcoming: (Booking & { paxCount: number })[] = [];
         const completed: Booking[] = [];
 
         bookings.forEach(b => {
-            // Parse the booking date and normalize to local midnight
-            // new Date("YYYY-MM-DD") parses as UTC midnight, which causes timezone issues
-            // We split and construct manually to ensure local midnight
+            // Robust Date Parsing
             const dateParts = b.date ? b.date.split('-') : null;
             if (!dateParts || dateParts.length < 3) return;
+
             const start = new Date(parseInt(dateParts[0]), parseInt(dateParts[1]) - 1, parseInt(dateParts[2]));
             start.setHours(0, 0, 0, 0);
 
+            // Dynamic Duration from Package
+            const pkg = packages.find(p => p.id === b.packageId) || packages.find(p => p.title === b.title);
+            const duration = pkg?.days || 1; // Default to 1 day if unknown
+
             const end = new Date(start);
-            end.setDate(start.getDate() + 5);
+            end.setDate(start.getDate() + (duration - 1)); // -1 because a 1-day tour ends on the same day
+            end.setHours(23, 59, 59, 999);
+
+            // Parse Pax Count
+            let paxCount = 0;
+            if (b.guests) {
+                const numbers = b.guests.match(/\d+/g);
+                if (numbers) {
+                    paxCount = numbers.reduce((acc, num) => acc + parseInt(num), 0);
+                }
+            }
+            if (paxCount === 0) paxCount = 1; // Fallback
 
             if (start <= today && end >= today && b.status === 'Confirmed') {
-                live.push(b);
+                live.push({ ...b, paxCount, duration, endDate: end });
             } else if (start > today && start <= new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000) && b.status === 'Confirmed') {
-                upcoming.push(b);
+                upcoming.push({ ...b, paxCount });
             } else if (end < today && b.status === 'Completed') {
                 completed.push(b);
             }
         });
 
         return { live, upcoming, completed };
-    }, [bookings]);
+    }, [bookings, packages]);
 
 
     // --- Attendance Logic (Mock) ---
@@ -98,7 +114,7 @@ export const Operations: React.FC = () => {
                                 Live Tours ({tourStats.live.length})
                             </h3>
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                {tourStats.live.length > 0 ? tourStats.live.map(tour => (
+                                {tourStats.live.map(tour => (
                                     <div key={tour.id} className="bg-white dark:bg-[#1A2633] p-5 rounded-2xl border border-green-200 dark:border-green-900/30 shadow-sm relative overflow-hidden">
                                         <div className="absolute top-0 right-0 p-3 opacity-10">
                                             <Map size={80} className="text-green-500" />
@@ -113,10 +129,15 @@ export const Operations: React.FC = () => {
 
                                             <div className="space-y-2">
                                                 <div className="flex items-center gap-2 text-xs font-bold text-slate-600 dark:text-slate-400">
-                                                    <Calendar size={14} /> Since {new Date(tour.date).toLocaleDateString()}
+                                                    <Calendar size={14} />
+                                                    Day {Math.ceil((new Date().getTime() - new Date(tour.date).getTime()) / (1000 * 60 * 60 * 24)) + 1} of {tour.duration}
+                                                    <span className="text-slate-400 font-normal ml-1">
+                                                        (Ends {tour.endDate.toLocaleDateString()})
+                                                    </span>
                                                 </div>
                                                 <div className="flex items-center gap-2 text-xs font-bold text-slate-600 dark:text-slate-400">
-                                                    <Users size={14} /> {tour.pax} Guests
+                                                    <Users size={14} /> {tour.paxCount} Guests
+                                                    <span className="text-slate-400 font-normal">({tour.guests})</span>
                                                 </div>
                                                 <div className="flex items-center gap-2 text-xs font-bold text-slate-600 dark:text-slate-400">
                                                     <Phone size={14} /> {tour.phone}
@@ -124,12 +145,23 @@ export const Operations: React.FC = () => {
                                             </div>
 
                                             <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800 flex gap-2">
-                                                <button className="flex-1 py-2 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 text-xs font-bold rounded-lg hover:bg-green-100">WhatsApp Group</button>
-                                                <button className="flex-1 py-2 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-bold rounded-lg hover:bg-slate-100">View Itinerary</button>
+                                                <button
+                                                    onClick={() => window.open(`https://wa.me/${tour.phone?.replace(/\D/g, '')}`, '_blank')}
+                                                    className="flex-1 py-2 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 text-xs font-bold rounded-lg hover:bg-green-100 transition-colors"
+                                                >
+                                                    WhatsApp Group
+                                                </button>
+                                                <button
+                                                    onClick={() => navigate(`/admin/bookings?search=${tour.id}`)}
+                                                    className="flex-1 py-2 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-bold rounded-lg hover:bg-slate-100 transition-colors"
+                                                >
+                                                    View Booking
+                                                </button>
                                             </div>
                                         </div>
                                     </div>
-                                )) : (
+                                ))}
+                                {tourStats.live.length === 0 && (
                                     <div className="col-span-3 py-10 text-center bg-white dark:bg-[#1A2633] rounded-2xl border border-dashed border-slate-300 dark:border-slate-700">
                                         <p className="text-slate-400 font-medium">No live tours at the moment.</p>
                                     </div>

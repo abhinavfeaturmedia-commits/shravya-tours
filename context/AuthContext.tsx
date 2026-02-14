@@ -156,40 +156,54 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // Consolidated Initialization
     const initializeAuth = useCallback(async () => {
+        // Safety Timeout to prevent infinite loading
+        const timeoutPromise = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('Auth initialization timed out')), 8000)
+        );
+
         try {
-            // 1. Check for Mock Session first (Fastest)
-            const isMockSession = localStorage.getItem(STORAGE_KEY_MOCK) === 'true';
+            await Promise.race([
+                (async () => {
+                    // 1. Check for Mock Session first (Fastest)
+                    const isMockSession = localStorage.getItem(STORAGE_KEY_MOCK) === 'true';
 
-            // 2. Fetch Staff List (Required for mapping real users too)
-            let currentStaff: StaffMember[] = [];
-            try {
-                currentStaff = await api.getStaff();
-                setStaff(currentStaff);
-            } catch (e) {
-                console.error("Failed to fetch staff list during auth init", e);
-            }
+                    // 2. Fetch Staff List (Required for mapping real users too)
+                    let currentStaff: StaffMember[] = [];
+                    try {
+                        // Add catch to api call to prevent it from throwing up completely
+                        currentStaff = await api.getStaff().catch(e => {
+                            console.warn("Staff fetch failed, proceeding with empty list", e);
+                            return [];
+                        });
+                        setStaff(currentStaff);
+                    } catch (e) {
+                        console.error("Critical error fetching staff", e);
+                    }
 
-            // 3. Restore Session
-            if (isMockSession) {
-                // Ensure mock admin is in the staff list
-                if (!currentStaff.find(s => s.id === 999)) {
-                    setStaff(prev => [MOCK_ADMIN_USER, ...prev]);
-                }
-                setCurrentUser(MOCK_ADMIN_USER);
-                setLoading(false);
-                return;
-            }
+                    // 3. Restore Session
+                    if (isMockSession) {
+                        // Ensure mock admin is in the staff list
+                        if (!currentStaff.find(s => s.id === 999)) {
+                            setStaff(prev => [MOCK_ADMIN_USER, ...prev]);
+                        }
+                        setCurrentUser(MOCK_ADMIN_USER);
+                        return;
+                    }
 
-            // 4. Check Supabase Session
-            const { data: { session } } = await supabase.auth.getSession();
-            if (session?.user) {
-                await mapUserToStaff(session.user.email, currentStaff);
-            } else {
-                setLoading(false);
-            }
+                    // 4. Check Supabase Session
+                    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+                    if (sessionError) throw sessionError;
 
+                    if (session?.user) {
+                        await mapUserToStaff(session.user.email, currentStaff);
+                    }
+                })(),
+                timeoutPromise
+            ]);
         } catch (error) {
-            console.error("Auth initialization failed", error);
+            console.error("Auth initialization failed or timed out", error);
+            // Ensure we don't leave the user in limbo - unauthorized state will trigger redirect to login
+        } finally {
             setLoading(false);
         }
     }, [mapUserToStaff]);
@@ -250,21 +264,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             // Actually, components should call Context.addStaff -> Context calls API -> Context updates state.
             const created = await api.createStaff(member);
             setStaff(prev => [created, ...prev]);
-        } catch (e) { console.error(e); }
+        } catch (e) {
+            console.error(e);
+            throw e;
+        }
     }, []);
 
     const updateStaff = useCallback(async (id: number, member: Partial<StaffMember>) => {
         try {
             await api.updateStaff(id, member);
             setStaff(prev => prev.map(s => s.id === id ? { ...s, ...member } : s));
-        } catch (e) { console.error(e); }
+        } catch (e) {
+            console.error(e);
+            throw e;
+        }
     }, []);
 
     const deleteStaff = useCallback(async (id: number) => {
         try {
             await api.deleteStaff(id);
             setStaff(prev => prev.filter(s => s.id !== id));
-        } catch (e) { console.error(e); }
+        } catch (e) {
+            console.error(e);
+            throw e;
+        }
     }, []);
 
     // Masquerade Logic (Client-side mainly)
