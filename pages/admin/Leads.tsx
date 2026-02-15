@@ -210,7 +210,7 @@ export const Leads: React.FC = () => {
                 email: selectedLead.email,
                 phone: selectedLead.phone,
                 title: `Trip to ${selectedLead.destination}`,
-                date: new Date().toISOString().split('T')[0],
+                date: selectedLead.startDate || new Date().toISOString().split('T')[0],
                 amount: selectedLead.potentialValue || 0,
                 status: BookingStatus.CONFIRMED,
                 payment: 'Unpaid',

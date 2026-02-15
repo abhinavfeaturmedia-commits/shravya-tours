@@ -226,6 +226,10 @@ export interface StaffMember {
   permissions?: StaffPermissions;
   queryScope?: 'Show Assigned Query Only' | 'Show All Queries';
   whatsappScope?: 'Assigned Queries Messages' | 'All Messages';
+  // Attendance
+  attendanceStatus?: 'Present' | 'Absent' | 'On Field' | 'Remote' | 'On Leave';
+  currentLocation?: string;
+  checkInTime?: string;
 }
 
 export interface DailySlot {

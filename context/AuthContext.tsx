@@ -204,9 +204,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             console.error("Auth initialization failed or timed out", error);
             // Ensure we don't leave the user in limbo - unauthorized state will trigger redirect to login
         } finally {
-            setLoading(false);
+            if (loading) setLoading(false);
         }
     }, [mapUserToStaff]);
+
+    // Force safety timeout for loading state
+    useEffect(() => {
+        const safetyTimer = setTimeout(() => {
+            setLoading(false);
+        }, 10000); // 10s absolute max loading time
+        return () => clearTimeout(safetyTimer);
+    }, []);
 
     useEffect(() => {
         initializeAuth();
@@ -243,13 +251,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             return true;
         }
 
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) {
-            console.error('Login failed:', error.message);
+        try {
+            const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+            if (error) {
+                console.error('Login failed:', error.message);
+                return false;
+            }
+
+            if (data.session?.user) {
+                // Explicitly map user immediately to avoid race condition with onAuthStateChange
+                await mapUserToStaff(data.session.user.email);
+            }
+            return true;
+        } catch (e) {
+            console.error("Login exception:", e);
             return false;
         }
-        return true;
-    }, []);
+    }, [mapUserToStaff]);
 
     const logout = useCallback(async () => {
         localStorage.removeItem(STORAGE_KEY_MOCK);

@@ -1,14 +1,18 @@
 import React, { useState, useMemo } from 'react';
 import { useData } from '../../context/DataContext';
+import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import {
     Map, Calendar, Users, Briefcase, CheckCircle,
-    XCircle, Clock, AlertTriangle, Phone, MoreHorizontal
+    XCircle, Clock, AlertTriangle, Phone, MoreHorizontal,
+    Car, Plus, Save
 } from 'lucide-react';
-import { Booking } from '../../types';
+import { Booking, SupplierBooking } from '../../types';
+import { toast } from 'sonner';
 
 export const Operations: React.FC = () => {
-    const { bookings, packages } = useData();
+    const { bookings, packages, vendors, addSupplierBooking } = useData();
+    const { staff, updateStaff, currentUser } = useAuth();
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState<'Tours' | 'Attendance'>('Tours');
 
@@ -34,7 +38,7 @@ export const Operations: React.FC = () => {
             const duration = pkg?.days || 1; // Default to 1 day if unknown
 
             const end = new Date(start);
-            end.setDate(start.getDate() + (duration - 1)); // -1 because a 1-day tour ends on the same day
+            end.setDate(start.getDate() + (duration - 1));
             end.setHours(23, 59, 59, 999);
 
             // Parse Pax Count
@@ -56,22 +60,83 @@ export const Operations: React.FC = () => {
             }
         });
 
+        // Sorting
+        live.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+        upcoming.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
         return { live, upcoming, completed };
     }, [bookings, packages]);
 
 
-    // --- Attendance Logic (Mock) ---
-    const [staffList, setStaffList] = useState([
-        { id: 1, name: 'Abhinav Sharma', role: 'Owner', status: 'Present', checkIn: '09:30 AM', location: 'Office' },
-        { id: 2, name: 'Sanya Gupta', role: 'Sales Manager', status: 'Present', checkIn: '09:45 AM', location: 'Office' },
-        { id: 3, name: 'Rohan Mehta', role: 'Field Agent', status: 'On Field', checkIn: '08:00 AM', location: 'Mumbai Airport' },
-        { id: 4, name: 'Priya Singh', role: 'Operations', status: 'Remote', checkIn: '10:00 AM', location: 'Home' },
-        { id: 5, name: 'Karan Patel', role: 'Accounts', status: 'Absent', checkIn: '-', location: '-' },
-    ]);
+    // --- Attendance Logic ---
+    const handleStatusChange = async (id: number, newStatus: string) => {
+        try {
+            const updates: any = { attendanceStatus: newStatus as any };
 
-    const handleStatusChange = (id: number, newStatus: string) => {
-        setStaffList(prev => prev.map(s => s.id === id ? { ...s, status: newStatus } : s));
+            // Auto-set check-in time if marking as Present and not already set
+            const targetStaff = staff.find(s => s.id === id);
+            if (newStatus === 'Present' && !targetStaff?.checkInTime) {
+                updates.checkInTime = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+            }
+            // Clear check-in if Absent
+            if (newStatus === 'Absent') {
+                updates.checkInTime = '-';
+            }
+
+            await updateStaff(id, updates);
+            toast.success("Attendance updated");
+        } catch (e) {
+            toast.error("Failed to update status");
+        }
     };
+
+    const handleLocationChange = async (id: number, newLocation: string) => {
+        try {
+            await updateStaff(id, { currentLocation: newLocation });
+            // toast.success("Location updated"); // Too noisy
+        } catch (e) {
+            console.error("Failed to update location");
+        }
+    };
+
+
+    // --- Preparation / Assignment Modal ---
+    const [selectedBookingForPrep, setSelectedBookingForPrep] = useState<Booking | null>(null);
+    const [prepModalOpen, setPrepModalOpen] = useState(false);
+    const [driverVendorId, setDriverVendorId] = useState('');
+    const [driverCost, setDriverCost] = useState('');
+
+    const openPrepModal = (booking: Booking) => {
+        setSelectedBookingForPrep(booking);
+        setDriverVendorId('');
+        setDriverCost('');
+        setPrepModalOpen(true);
+    };
+
+    const handleAssignDriver = () => {
+        if (!selectedBookingForPrep || !driverVendorId) return;
+
+        const newSupplierBooking: SupplierBooking = {
+            id: `SB-${Date.now()}`,
+            bookingId: selectedBookingForPrep.id,
+            vendorId: driverVendorId,
+            serviceType: 'Transport',
+            cost: parseFloat(driverCost) || 0,
+            paidAmount: 0,
+            paymentStatus: 'Unpaid',
+            bookingStatus: 'Confirmed',
+            notes: 'Assigned via Operations Console'
+        };
+
+        addSupplierBooking(selectedBookingForPrep.id, newSupplierBooking);
+        toast.success("Driver assigned successfully");
+        setPrepModalOpen(false);
+    };
+
+    // Filter vendors for Transport
+    const transportVendors = useMemo(() =>
+        vendors.filter(v => v.category === 'Transport' || v.category === 'Guide'),
+        [vendors]);
 
     return (
         <div className="flex flex-col h-full bg-slate-50 dark:bg-[#0B1116]">
@@ -114,53 +179,58 @@ export const Operations: React.FC = () => {
                                 Live Tours ({tourStats.live.length})
                             </h3>
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                {tourStats.live.map(tour => (
-                                    <div key={tour.id} className="bg-white dark:bg-[#1A2633] p-5 rounded-2xl border border-green-200 dark:border-green-900/30 shadow-sm relative overflow-hidden">
-                                        <div className="absolute top-0 right-0 p-3 opacity-10">
-                                            <Map size={80} className="text-green-500" />
-                                        </div>
-                                        <div className="relative z-10">
-                                            <div className="flex justify-between items-start mb-2">
-                                                <span className="bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400 text-[10px] font-black px-2 py-0.5 rounded uppercase">On Tour</span>
-                                                <span className="text-slate-400 text-xs font-mono">{tour.id}</span>
-                                            </div>
-                                            <h4 className="font-bold text-slate-900 dark:text-white text-lg">{tour.customer}</h4>
-                                            <p className="text-sm text-slate-500 font-medium mb-4">{tour.title}</p>
+                                {tourStats.live.map(tour => {
+                                    // Find Assigned Driver if any
+                                    const assignedTransport = tour.supplierBookings?.find(sb => sb.serviceType === 'Transport');
+                                    const driverName = assignedTransport ? vendors.find(v => v.id === assignedTransport.vendorId)?.name : 'Not Assigned';
 
-                                            <div className="space-y-2">
-                                                <div className="flex items-center gap-2 text-xs font-bold text-slate-600 dark:text-slate-400">
-                                                    <Calendar size={14} />
-                                                    Day {Math.ceil((new Date().getTime() - new Date(tour.date).getTime()) / (1000 * 60 * 60 * 24)) + 1} of {tour.duration}
-                                                    <span className="text-slate-400 font-normal ml-1">
-                                                        (Ends {tour.endDate.toLocaleDateString()})
-                                                    </span>
-                                                </div>
-                                                <div className="flex items-center gap-2 text-xs font-bold text-slate-600 dark:text-slate-400">
-                                                    <Users size={14} /> {tour.paxCount} Guests
-                                                    <span className="text-slate-400 font-normal">({tour.guests})</span>
-                                                </div>
-                                                <div className="flex items-center gap-2 text-xs font-bold text-slate-600 dark:text-slate-400">
-                                                    <Phone size={14} /> {tour.phone}
-                                                </div>
+                                    return (
+                                        <div key={tour.id} className="bg-white dark:bg-[#1A2633] p-5 rounded-2xl border border-green-200 dark:border-green-900/30 shadow-sm relative overflow-hidden">
+                                            <div className="absolute top-0 right-0 p-3 opacity-10">
+                                                <Map size={80} className="text-green-500" />
                                             </div>
+                                            <div className="relative z-10">
+                                                <div className="flex justify-between items-start mb-2">
+                                                    <span className="bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400 text-[10px] font-black px-2 py-0.5 rounded uppercase">On Tour</span>
+                                                    <span className="text-slate-400 text-xs font-mono">{tour.invoiceNo || tour.id}</span>
+                                                </div>
+                                                <h4 className="font-bold text-slate-900 dark:text-white text-lg truncate" title={tour.customer}>{tour.customer}</h4>
+                                                <p className="text-sm text-slate-500 font-medium mb-4 truncate" title={tour.title}>{tour.title}</p>
 
-                                            <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800 flex gap-2">
-                                                <button
-                                                    onClick={() => window.open(`https://wa.me/${tour.phone?.replace(/\D/g, '')}`, '_blank')}
-                                                    className="flex-1 py-2 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 text-xs font-bold rounded-lg hover:bg-green-100 transition-colors"
-                                                >
-                                                    WhatsApp Group
-                                                </button>
-                                                <button
-                                                    onClick={() => navigate(`/admin/bookings?search=${tour.id}`)}
-                                                    className="flex-1 py-2 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-bold rounded-lg hover:bg-slate-100 transition-colors"
-                                                >
-                                                    View Booking
-                                                </button>
+                                                <div className="space-y-2">
+                                                    <div className="flex items-center gap-2 text-xs font-bold text-slate-600 dark:text-slate-400">
+                                                        <Calendar size={14} />
+                                                        Day {Math.ceil((new Date().getTime() - new Date(tour.date).getTime()) / (1000 * 60 * 60 * 24)) + 1} of {tour.duration}
+                                                        <span className="text-slate-400 font-normal ml-1">
+                                                            (Ends {tour.endDate.toLocaleDateString()})
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex items-center gap-2 text-xs font-bold text-slate-600 dark:text-slate-400">
+                                                        <Users size={14} /> {tour.paxCount} Guests
+                                                    </div>
+                                                    <div className="flex items-center gap-2 text-xs font-bold text-slate-600 dark:text-slate-400">
+                                                        <Car size={14} /> {driverName}
+                                                    </div>
+                                                </div>
+
+                                                <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800 flex gap-2">
+                                                    <button
+                                                        onClick={() => window.open(`https://wa.me/${tour.phone?.replace(/\D/g, '')}`, '_blank')}
+                                                        className="flex-1 py-2 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 text-xs font-bold rounded-lg hover:bg-green-100 transition-colors"
+                                                    >
+                                                        WhatsApp Group
+                                                    </button>
+                                                    <button
+                                                        onClick={() => navigate(`/admin/bookings?search=${tour.id}`)}
+                                                        className="flex-1 py-2 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-bold rounded-lg hover:bg-slate-100 transition-colors"
+                                                    >
+                                                        Details
+                                                    </button>
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
-                                ))}
+                                    );
+                                })}
                                 {tourStats.live.length === 0 && (
                                     <div className="col-span-3 py-10 text-center bg-white dark:bg-[#1A2633] rounded-2xl border border-dashed border-slate-300 dark:border-slate-700">
                                         <p className="text-slate-400 font-medium">No live tours at the moment.</p>
@@ -182,24 +252,47 @@ export const Operations: React.FC = () => {
                                             <th className="px-6 py-4">Start Date</th>
                                             <th className="px-6 py-4">Customer</th>
                                             <th className="px-6 py-4">Package</th>
-                                            <th className="px-6 py-4">Guests</th>
+                                            <th className="px-6 py-4">Assignment</th>
                                             <th className="px-6 py-4 text-right">Action</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                                        {tourStats.upcoming.map(tour => (
-                                            <tr key={tour.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
-                                                <td className="px-6 py-4 font-bold text-blue-600">
-                                                    {new Date(tour.date).toLocaleDateString()}
-                                                </td>
-                                                <td className="px-6 py-4 font-medium text-slate-900 dark:text-white">{tour.customer}</td>
-                                                <td className="px-6 py-4 text-sm text-slate-500">{tour.title}</td>
-                                                <td className="px-6 py-4 text-sm text-slate-500">{tour.pax} Pax</td>
-                                                <td className="px-6 py-4 text-right">
-                                                    <button className="text-blue-600 hover:text-blue-700 font-bold text-xs">Preparations</button>
-                                                </td>
-                                            </tr>
-                                        ))}
+                                        {tourStats.upcoming.map(tour => {
+                                            const assignedTransport = tour.supplierBookings?.find(sb => sb.serviceType === 'Transport');
+                                            const driverName = assignedTransport ? vendors.find(v => v.id === assignedTransport.vendorId)?.name : null;
+
+                                            return (
+                                                <tr key={tour.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                                                    <td className="px-6 py-4 font-bold text-blue-600">
+                                                        {new Date(tour.date).toLocaleDateString()}
+                                                    </td>
+                                                    <td className="px-6 py-4 font-medium text-slate-900 dark:text-white">
+                                                        {tour.customer}
+                                                        <div className='text-[10px] text-slate-400 font-normal'>{tour.paxCount} Pax</div>
+                                                    </td>
+                                                    <td className="px-6 py-4 text-sm text-slate-500">{tour.title}</td>
+                                                    <td className="px-6 py-4 text-sm">
+                                                        {driverName ? (
+                                                            <span className="flex items-center gap-1 text-green-600 font-bold text-xs">
+                                                                <CheckCircle size={12} /> {driverName}
+                                                            </span>
+                                                        ) : (
+                                                            <span className="text-amber-500 flex items-center gap-1 text-xs font-medium">
+                                                                <AlertTriangle size={12} /> Pending
+                                                            </span>
+                                                        )}
+                                                    </td>
+                                                    <td className="px-6 py-4 text-right">
+                                                        <button
+                                                            onClick={() => openPrepModal(tour)}
+                                                            className="text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg font-bold text-xs transition-colors"
+                                                        >
+                                                            {driverName ? 'Manage' : 'Assign Driver'}
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            )
+                                        })}
                                         {tourStats.upcoming.length === 0 && (
                                             <tr><td colSpan={5} className="px-6 py-8 text-center text-slate-400">No active upcoming tours in next 7 days.</td></tr>
                                         )}
@@ -222,13 +315,10 @@ export const Operations: React.FC = () => {
                                 </div>
                                 <div className="flex gap-2">
                                     <div className="px-3 py-1 bg-green-100 text-green-700 rounded-lg text-xs font-bold flex items-center gap-1">
-                                        <div className="w-2 h-2 bg-green-500 rounded-full"></div> 3 Present
+                                        <div className="w-2 h-2 bg-green-500 rounded-full"></div> {staff.filter(s => s.attendanceStatus === 'Present').length} Present
                                     </div>
                                     <div className="px-3 py-1 bg-amber-100 text-amber-700 rounded-lg text-xs font-bold flex items-center gap-1">
-                                        <div className="w-2 h-2 bg-amber-500 rounded-full"></div> 1 Remote
-                                    </div>
-                                    <div className="px-3 py-1 bg-red-100 text-red-700 rounded-lg text-xs font-bold flex items-center gap-1">
-                                        <div className="w-2 h-2 bg-red-500 rounded-full"></div> 1 Absent
+                                        <div className="w-2 h-2 bg-amber-500 rounded-full"></div> {staff.filter(s => s.attendanceStatus === 'Remote' || s.attendanceStatus === 'On Field').length} Remote/Field
                                     </div>
                                 </div>
                             </div>
@@ -239,30 +329,32 @@ export const Operations: React.FC = () => {
                                         <th className="px-6 py-4">Employee</th>
                                         <th className="px-6 py-4">Status</th>
                                         <th className="px-6 py-4">Check-In</th>
-                                        <th className="px-6 py-4">Location</th>
-                                        <th className="px-6 py-4 text-right">Actions</th>
+                                        <th className="px-6 py-4">Current Location</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                                    {staffList.map(emp => (
+                                    {staff.map((emp, idx) => (
                                         <tr key={emp.id} className="group hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
                                             <td className="px-6 py-4">
                                                 <div className="font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs text-white ${['bg-blue-500', 'bg-purple-500', 'bg-pink-500', 'bg-teal-500', 'bg-indigo-500'][emp.id % 5]}`}>
-                                                        {emp.name.charAt(0)}
+                                                    <div className={`size-8 rounded-full flex items-center justify-center text-xs text-white font-bold bg-${emp.color}-500`}>
+                                                        {emp.initials}
                                                     </div>
                                                     {emp.name}
+                                                    {emp.id === currentUser?.id && (
+                                                        <span className="text-[10px] bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-1.5 py-0.5 rounded ml-1">YOU</span>
+                                                    )}
                                                 </div>
-                                                <div className="text-xs text-slate-500 pl-10">{emp.role}</div>
+                                                <div className="text-xs text-slate-500 pl-10 capitalize">{emp.role}</div>
                                             </td>
                                             <td className="px-6 py-4">
                                                 <select
-                                                    value={emp.status}
+                                                    value={emp.attendanceStatus || 'Absent'}
                                                     onChange={(e) => handleStatusChange(emp.id, e.target.value)}
                                                     className={`px-3 py-1.5 rounded-lg text-xs font-bold border-none outline-none cursor-pointer
-                                                        ${emp.status === 'Present' ? 'bg-green-100 text-green-700' :
-                                                            emp.status === 'Absent' ? 'bg-red-100 text-red-700' :
-                                                                emp.status === 'On Field' ? 'bg-blue-100 text-blue-700' :
+                                                        ${emp.attendanceStatus === 'Present' ? 'bg-green-100 text-green-700' :
+                                                            emp.attendanceStatus === 'Absent' || !emp.attendanceStatus ? 'bg-red-100 text-red-700' :
+                                                                emp.attendanceStatus === 'On Field' ? 'bg-blue-100 text-blue-700' :
                                                                     'bg-amber-100 text-amber-700'}`}
                                                 >
                                                     <option value="Present">Present</option>
@@ -273,34 +365,85 @@ export const Operations: React.FC = () => {
                                                 </select>
                                             </td>
                                             <td className="px-6 py-4 text-sm font-mono text-slate-600 dark:text-slate-400">
-                                                {emp.checkIn}
+                                                {emp.checkInTime || '-'}
                                             </td>
                                             <td className="px-6 py-4 text-sm font-medium text-slate-600 dark:text-slate-400">
-                                                <div className="flex items-center gap-1">
-                                                    {emp.status === 'On Field' && <Map size={14} className="text-blue-500" />}
-                                                    {emp.location}
+                                                <div className="flex items-center gap-2">
+                                                    {emp.attendanceStatus === 'On Field' && <Map size={14} className="text-blue-500" />}
+                                                    <input
+                                                        type="text"
+                                                        defaultValue={emp.currentLocation || (emp.attendanceStatus === 'Present' ? 'Office' : '')}
+                                                        onBlur={(e) => handleLocationChange(emp.id, e.target.value)}
+                                                        className="bg-transparent border-b border-transparent hover:border-slate-300 focus:border-blue-500 outline-none w-32 transition-colors text-xs"
+                                                        placeholder="Set Location..."
+                                                    />
                                                 </div>
-                                            </td>
-                                            <td className="px-6 py-4 text-right">
-                                                <button className="p-2 hover:bg-slate-100 rounded-full text-slate-400 hover:text-slate-600">
-                                                    <MoreHorizontal size={18} />
-                                                </button>
                                             </td>
                                         </tr>
                                     ))}
                                 </tbody>
                             </table>
                         </div>
-
-                        <div className="mt-6 flex justify-end">
-                            <button className="px-6 py-3 bg-blue-600 text-white font-bold rounded-xl shadow-lg hover:bg-blue-700 active:scale-95 transition-all">
-                                Download Attendance Report
-                            </button>
-                        </div>
                     </div>
                 )}
 
             </div>
+
+            {/* --- PREP MODAL --- */}
+            {prepModalOpen && selectedBookingForPrep && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
+                    <div className="bg-white dark:bg-[#1A2633] rounded-2xl w-full max-w-md shadow-2xl p-6 relative">
+                        <button
+                            onClick={() => setPrepModalOpen(false)}
+                            className="absolute top-4 right-4 p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full"
+                        >
+                            <XCircle size={20} className="text-slate-400" />
+                        </button>
+
+                        <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-1">Assign Transport</h3>
+                        <p className="text-sm text-slate-500 mb-6">Assign a driver or vehicle for {selectedBookingForPrep.customer}.</p>
+
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Select Driver / Agency</label>
+                                <select
+                                    value={driverVendorId}
+                                    onChange={(e) => setDriverVendorId(e.target.value)}
+                                    className="w-full px-4 py-2 bg-slate-50 dark:bg-slate-800 border-none rounded-xl outline-none focus:ring-2 ring-blue-500/20"
+                                >
+                                    <option value="">-- Select Vendor --</option>
+                                    {transportVendors.map(v => (
+                                        <option key={v.id} value={v.id}>{v.name} ({v.location})</option>
+                                    ))}
+                                </select>
+                                {transportVendors.length === 0 && (
+                                    <p className="text-xs text-red-500 mt-1">No Transport vendors found. Add one in Vendors tab.</p>
+                                )}
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Estimated Cost</label>
+                                <input
+                                    type="number"
+                                    value={driverCost}
+                                    onChange={(e) => setDriverCost(e.target.value)}
+                                    placeholder="0.00"
+                                    className="w-full px-4 py-2 bg-slate-50 dark:bg-slate-800 border-none rounded-xl outline-none focus:ring-2 ring-blue-500/20"
+                                />
+                            </div>
+
+                            <button
+                                onClick={handleAssignDriver}
+                                disabled={!driverVendorId}
+                                className="w-full py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed mt-2"
+                            >
+                                Confirm Assignment
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
+
