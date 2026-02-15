@@ -257,7 +257,16 @@ export const api = {
         }));
     },
 
-    createStaff: async (staff: Partial<StaffMember>) => {
+    createStaff: async (staff: Partial<StaffMember>, password?: string) => {
+        // 1. If password provided, create Auth User via Edge Function
+        if (password) {
+            const { error } = await supabase.functions.invoke('create-user', {
+                body: { email: staff.email, password, role: staff.role }
+            });
+            if (error) throw error;
+        }
+
+        // 2. Create Staff Profile
         const { data, error } = await supabase.from('staff_members').insert({
             name: staff.name,
             email: staff.email,
@@ -271,8 +280,25 @@ export const api = {
             query_scope: staff.queryScope,
             whatsapp_scope: staff.whatsappScope
         }).select().single();
+
         if (error) throw error;
-        return data;
+
+        // Map response to StaffMember type
+        return {
+            id: data.id,
+            name: data.name,
+            email: data.email,
+            role: data.role,
+            userType: data.user_type,
+            department: data.department,
+            status: data.status,
+            initials: data.initials,
+            color: data.color,
+            permissions: data.permissions,
+            queryScope: data.query_scope,
+            whatsappScope: data.whatsapp_scope,
+            lastActive: data.last_active
+        };
     },
 
     updateStaff: async (id: number, updates: Partial<StaffMember>) => {

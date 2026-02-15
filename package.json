@@ -29,6 +29,7 @@
     "@types/node": "^22.14.0",
     "@types/xlsx": "^0.0.35",
     "@vitejs/plugin-react": "^5.0.0",
+    "supabase": "^2.76.8",
     "typescript": "~5.8.2",
     "vite": "^6.2.0"
   }

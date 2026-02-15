@@ -13,6 +13,8 @@ export const StaffManagement: React.FC = () => {
     // Edit Mode State
     const [isEditing, setIsEditing] = useState(false);
     const [editingId, setEditingId] = useState<number | null>(null);
+    const [password, setPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
 
     const [formData, setFormData] = useState<{
         name: string;
@@ -60,6 +62,8 @@ export const StaffManagement: React.FC = () => {
             whatsappScope: 'Assigned Queries Messages',
             permissions: JSON.parse(JSON.stringify(DEFAULT_PERMISSIONS))
         });
+        setPassword('');
+        setConfirmPassword('');
         setIsModalOpen(true);
     };
 
@@ -101,6 +105,17 @@ export const StaffManagement: React.FC = () => {
         if (staff.some(s => s.email.toLowerCase() === formData.email.toLowerCase() && s.id !== editingId)) {
             toast.error('A staff member with this email already exists.');
             return;
+        }
+
+        if (!isEditing && password) {
+            if (password.length < 6) {
+                toast.error('Password must be at least 6 characters');
+                return;
+            }
+            if (password !== confirmPassword) {
+                toast.error('Passwords do not match');
+                return;
+            }
         }
 
         const initials = formData.name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
@@ -153,7 +168,7 @@ export const StaffManagement: React.FC = () => {
                 ...staffData,
                 lastActive: 'Never',
             };
-            addStaff(newMember);
+            addStaff(newMember, password);
             toast.success('New staff member added');
         }
         setIsModalOpen(false);
@@ -258,6 +273,19 @@ export const StaffManagement: React.FC = () => {
                                         <input value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} type="tel" className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-primary outline-none" placeholder="+91 98765 43210" />
                                     </div>
                                 </div>
+
+                                {!isEditing && (
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="text-xs font-bold uppercase text-slate-500 mb-1.5 block">Password</label>
+                                            <input required value={password} onChange={e => setPassword(e.target.value)} type="password" className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-primary outline-none" placeholder="******" />
+                                        </div>
+                                        <div>
+                                            <label className="text-xs font-bold uppercase text-slate-500 mb-1.5 block">Confirm Password</label>
+                                            <input required value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} type="password" className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-primary outline-none" placeholder="******" />
+                                        </div>
+                                    </div>
+                                )}
 
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>

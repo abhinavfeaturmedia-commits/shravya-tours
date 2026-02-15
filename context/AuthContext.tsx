@@ -65,7 +65,7 @@ interface AuthContextType {
     isLoading: boolean;
     login: (email: string, password: string) => Promise<boolean>;
     logout: () => void;
-    addStaff: (member: StaffMember) => void;
+    addStaff: (member: StaffMember, password?: string) => void;
     updateStaff: (id: number, member: Partial<StaffMember>) => void;
     deleteStaff: (id: number) => void;
     hasPermission: (module: keyof StaffPermissions, action: 'view' | 'manage') => boolean;
@@ -275,12 +275,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setCurrentUser(null);
     }, []);
 
-    const addStaff = useCallback(async (member: StaffMember) => {
+    const addStaff = useCallback(async (member: StaffMember, password?: string) => {
         try {
             // We use api.createStaff usually, but context might call this for UI optimism?
             // Let's assume the component calls API and simpler updates list.
             // Actually, components should call Context.addStaff -> Context calls API -> Context updates state.
-            const created = await api.createStaff(member);
+            const created = await api.createStaff(member, password);
             setStaff(prev => [created, ...prev]);
         } catch (e) {
             console.error(e);
