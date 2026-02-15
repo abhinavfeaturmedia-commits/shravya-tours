@@ -102,111 +102,87 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         permissions: ADMIN_PERMISSIONS,
     };
 
-    const mapUserToStaff = useCallback(async (email: string | undefined, distinctStaffList?: StaffMember[]) => {
-        if (!email) {
-            setLoading(false);
-            return;
-        }
 
-        // Use provided list or current state
-        let currentList = distinctStaffList || staff;
 
-        // Final fallback if list is empty (shouldn't happen with initializeAuth sequence)
-        if (currentList.length === 0) {
-            try {
-                currentList = await api.getStaff();
-                setStaff(currentList);
-            } catch (e) { console.error(e); }
-        }
-
-        const matchedStaff = currentList.find(s => s.email.toLowerCase() === email.toLowerCase());
-
-        if (matchedStaff) {
-            setCurrentUser(matchedStaff);
-        } else {
-            // New User Logic - Create in DB
-            const isFirstUser = currentList.length === 0;
-            const isAdminEmail = email === 'toursshravya@gmail.com';
-
-            const newStaff: Partial<StaffMember> = {
-                name: email.split('@')[0],
-                email: email,
-                role: (isFirstUser || isAdminEmail) ? 'Administrator' : 'Agent',
-                userType: (isFirstUser || isAdminEmail) ? 'Admin' : 'Staff',
-                initials: email.substring(0, 2).toUpperCase(),
-                department: (isFirstUser || isAdminEmail) ? 'Executive' : 'Sales',
-                status: 'Active',
-                lastActive: new Date().toISOString(),
-                color: 'indigo',
-                queryScope: 'Show All Queries',
-                whatsappScope: 'All Messages',
-                permissions: (isFirstUser || isAdminEmail) ? ADMIN_PERMISSIONS : DEFAULT_PERMISSIONS
-            };
-
-            try {
-                const created = await api.createStaff(newStaff as any); // Type assertion for partial
-                setStaff(prev => [created, ...prev]);
-                setCurrentUser(created);
-            } catch (e) {
-                console.error("Failed to auto-create staff", e);
+    // Unified User Loading Logic
+    const loadUserProfile = useCallback(async (email: string) => {
+        try {
+            // 1. Try single fetch first
+            const me = await api.getStaffByEmail(email);
+            if (me) {
+                setCurrentUser(me);
+                // Background fetch full list
+                api.getStaff().then(setStaff).catch(console.warn);
+                return;
             }
+
+            // 2. Fallback / Auto-create logic
+            console.warn("User profile not found via direct fetch. Checking full list/creating.");
+            const allStaff = await api.getStaff();
+            const found = allStaff.find(s => s.email.toLowerCase() === email.toLowerCase());
+
+            if (found) {
+                setCurrentUser(found);
+                setStaff(allStaff);
+            } else {
+                // Auto-create logic
+                const isFirst = allStaff.length === 0;
+                const isAdmin = email === 'toursshravya@gmail.com';
+
+                const newStaffData: Partial<StaffMember> = {
+                    name: email.split('@')[0],
+                    email: email,
+                    role: (isFirst || isAdmin) ? 'Administrator' : 'Agent',
+                    userType: (isFirst || isAdmin) ? 'Admin' : 'Staff',
+                    initials: email.substring(0, 2).toUpperCase(),
+                    department: (isFirst || isAdmin) ? 'Executive' : 'Sales',
+                    status: 'Active',
+                    lastActive: new Date().toISOString(),
+                    color: 'indigo',
+                    queryScope: 'Show All Queries',
+                    whatsappScope: 'All Messages',
+                    permissions: (isFirst || isAdmin) ? ADMIN_PERMISSIONS : DEFAULT_PERMISSIONS
+                };
+
+                const created = await api.createStaff(newStaffData as any);
+                setCurrentUser(created);
+                setStaff([created, ...allStaff]);
+            }
+        } catch (e) {
+            console.error("Error loading user profile", e);
         }
-        setLoading(false);
-    }, []); // No deps needed: staff is always passed explicitly as distinctStaffList
+    }, []);
 
     // Consolidated Initialization
     const initializeAuth = useCallback(async () => {
-        // Safety Timeout to prevent infinite loading
-        const timeoutPromise = new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('Auth initialization timed out')), 8000)
-        );
-
         try {
-            await Promise.race([
-                (async () => {
-                    // 1. Check for Mock Session first (Fastest)
-                    const isMockSession = localStorage.getItem(STORAGE_KEY_MOCK) === 'true';
+            // 1. Check for Mock Session first (Fastest)
+            const isMockSession = localStorage.getItem(STORAGE_KEY_MOCK) === 'true';
 
-                    // 2. Fetch Staff List (Required for mapping real users too)
-                    let currentStaff: StaffMember[] = [];
-                    try {
-                        // Add catch to api call to prevent it from throwing up completely
-                        currentStaff = await api.getStaff().catch(e => {
-                            console.warn("Staff fetch failed, proceeding with empty list", e);
-                            return [];
-                        });
-                        setStaff(currentStaff);
-                    } catch (e) {
-                        console.error("Critical error fetching staff", e);
-                    }
+            if (isMockSession) {
+                setCurrentUser(MOCK_ADMIN_USER);
+                setStaff([MOCK_ADMIN_USER]);
+                setLoading(false);
+                return;
+            }
 
-                    // 3. Restore Session
-                    if (isMockSession) {
-                        // Ensure mock admin is in the staff list
-                        if (!currentStaff.find(s => s.id === 999)) {
-                            setStaff(prev => [MOCK_ADMIN_USER, ...prev]);
-                        }
-                        setCurrentUser(MOCK_ADMIN_USER);
-                        return;
-                    }
+            // 2. Check Supabase Session
+            const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+            if (sessionError) throw sessionError;
 
-                    // 4. Check Supabase Session
-                    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-                    if (sessionError) throw sessionError;
+            if (session?.user?.email) {
+                await loadUserProfile(session.user.email);
+            } else {
+                setCurrentUser(null);
+            }
 
-                    if (session?.user) {
-                        await mapUserToStaff(session.user.email, currentStaff);
-                    }
-                })(),
-                timeoutPromise
-            ]);
         } catch (error) {
-            console.error("Auth initialization failed or timed out", error);
-            // Ensure we don't leave the user in limbo - unauthorized state will trigger redirect to login
+            console.error("Auth initialization failed", error);
+            setCurrentUser(null);
         } finally {
-            if (loading) setLoading(false);
+            setLoading(false);
         }
-    }, [mapUserToStaff]);
+    }, [loadUserProfile]);
 
     // Force safety timeout for loading state
     useEffect(() => {
@@ -222,21 +198,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Listen for changes
         const {
             data: { subscription },
-        } = supabase.auth.onAuthStateChange(async (_event, session) => {
-            if (session?.user) {
-                const freshStaff = await api.getStaff();
-                setStaff(freshStaff);
-                mapUserToStaff(session.user.email, freshStaff);
-            } else {
-                if (localStorage.getItem(STORAGE_KEY_MOCK) !== 'true') {
-                    setCurrentUser(null);
-                    setLoading(false);
+        } = supabase.auth.onAuthStateChange(async (event, session) => {
+            // Only react to specific events to avoid infinite loops or double-fetching
+            if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+                if (session?.user?.email) {
+                    // Check if we already have this user loaded?
+                    // Optimistic check:
+                    if (currentUser?.email === session.user.email) return;
+                    await loadUserProfile(session.user.email);
                 }
+            } else if (event === 'SIGNED_OUT') {
+                setCurrentUser(null);
+                setLoading(false);
+                // Clear any mock data
+                localStorage.removeItem(STORAGE_KEY_MOCK);
             }
         });
 
         return () => subscription.unsubscribe();
-    }, [initializeAuth, mapUserToStaff]);
+    }, [initializeAuth, currentUser, loadUserProfile]);
 
     const login = useCallback(async (email: string, password: string): Promise<boolean> => {
         // Dev/Demo Bypass
@@ -258,16 +238,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 return false;
             }
 
-            if (data.session?.user) {
-                // Explicitly map user immediately to avoid race condition with onAuthStateChange
-                await mapUserToStaff(data.session.user.email);
+            if (data.session?.user?.email) {
+                await loadUserProfile(data.session.user.email);
             }
             return true;
         } catch (e) {
             console.error("Login exception:", e);
             return false;
         }
-    }, [mapUserToStaff]);
+    }, [loadUserProfile]);
 
     const logout = useCallback(async () => {
         localStorage.removeItem(STORAGE_KEY_MOCK);

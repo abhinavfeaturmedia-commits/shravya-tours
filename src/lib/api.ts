@@ -257,6 +257,29 @@ export const api = {
         }));
     },
 
+    getStaffByEmail: async (email: string): Promise<StaffMember | null> => {
+        const { data, error } = await supabase.from('staff_members').select('*').eq('email', email).single();
+        if (error) {
+            if (error.code === 'PGRST116') return null; // Not found
+            throw error;
+        }
+        return {
+            id: data.id,
+            name: data.name,
+            email: data.email,
+            role: data.role,
+            userType: data.user_type,
+            department: data.department,
+            status: data.status,
+            initials: data.initials,
+            color: data.color,
+            permissions: data.permissions,
+            queryScope: data.query_scope,
+            whatsappScope: data.whatsapp_scope,
+            lastActive: data.last_active
+        };
+    },
+
     createStaff: async (staff: Partial<StaffMember>, password?: string) => {
         // 1. If password provided, create Auth User via Edge Function
         if (password) {
