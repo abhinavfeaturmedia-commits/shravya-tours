@@ -83,7 +83,7 @@ export const Home: React.FC = () => {
       <section className="relative w-full overflow-hidden bg-slate-900">
         <div className="absolute inset-0 z-0">
           <OptimizedImage
-            src={heroBanner?.imageUrl || "https://lh3.googleusercontent.com/aida-public/AB6AXuDe8BDAUta_Sad0sbfFPp3eGFuTDne-kjCHaSbEmPIsw2A35eYa_4cmO0qQIrrAUnyuBkmJYYx5BswvQ8xoNvi-V48GV78qtY2osp3mRT5dAgVv31-tcAdYZIYq5VwnghdHN-xLMZHlH8DhevC9MvU-RUVOzTxENfRuR9CornjT44jfRzEHiuwDi6on6RQISv-Sa7xPzXf6U61FblGpi9Ou2aXfsR5_PoyNJhX-aCt1zuv1ogRgtmIOXqYjfcAQ79z48VNTNX3nLemm"}
+            src={heroBanner?.imageUrl || "https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=1920&q=85&auto=format&fit=crop"}
             alt="Hero Background"
             className="w-full h-full"
           />
@@ -91,14 +91,13 @@ export const Home: React.FC = () => {
         </div>
 
         <div className="relative z-10 container mx-auto px-4 flex flex-col items-center gap-12 text-center pt-32 pb-24 lg:pt-40 lg:pb-32">
-          <div className="flex flex-col gap-6 max-w-5xl animate-in slide-in-from-bottom-10 duration-700">
-            <h1 className="text-white text-5xl md:text-7xl font-black leading-[1.1] tracking-tight drop-shadow-2xl">
+          <div className="flex flex-col gap-6 max-w-5xl reveal">
+            <h1 className="font-display text-white text-5xl md:text-7xl font-bold leading-[1.05] tracking-tight drop-shadow-2xl italic">
               {heroBanner?.title || "Experience the World"}
-              {/* Hack to keep the colored text styling if title matches default, otherwise plain text for custom titles to avoid breaking layout */}
             </h1>
-            <h2 className="text-slate-200 text-lg md:text-2xl font-medium leading-relaxed max-w-3xl mx-auto drop-shadow-lg will-change-transform">
+            <p className="text-slate-200 text-lg md:text-2xl font-light leading-relaxed max-w-3xl mx-auto drop-shadow-lg reveal reveal-delay-2">
               {heroBanner?.subtitle || "Premium tours, transparent pricing, and 24/7 expert support."}
-            </h2>
+            </p>
           </div>
 
           {/* Booking Widget */}
@@ -129,7 +128,7 @@ export const Home: React.FC = () => {
 
             {/* Form Container */}
             <div className="bg-white/95 dark:bg-slate-900/90 backdrop-blur-md rounded-[2rem] shadow-2xl p-6 md:p-8 text-left border border-white/20 relative overflow-hidden transition-all duration-500">
-              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500"></div>
+              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary via-amber-400 to-accent"></div>
 
               {activeTab === 'hotel-booking' && <HotelBookingForm onSubmit={handleHotelSubmit} />}
               {activeTab === 'tour-packages' && <TourBookingForm onSubmit={handleTourSubmit} />}
@@ -143,20 +142,20 @@ export const Home: React.FC = () => {
 
 
       {/* The Shravya Advantage */}
-      <section className="py-12 bg-white dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800">
-        <div className="container mx-auto px-4 md:px-10">
+      <section className="py-12 mesh-warm dark:bg-slate-900 border-b border-border-light dark:border-border-dark grain">
+        <div className="container mx-auto px-4 md:px-10 relative z-10">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {[
-              { icon: 'verified_user', title: 'Book Risk-Free', desc: 'Flexible cancellations & full refunds.' },
-              { icon: 'support_agent', title: '24/7 Expert Support', desc: 'Real humans, always ready to help.' },
-              { icon: 'diamond', title: 'Handpicked Quality', desc: 'Every experience is vetted by experts.' }
+              { icon: 'verified_user', title: 'Book Risk-Free', desc: 'Flexible cancellations & full refunds.', delay: '' },
+              { icon: 'support_agent', title: '24/7 Expert Support', desc: 'Real humans, always ready to help.', delay: 'reveal-delay-2' },
+              { icon: 'diamond', title: 'Handpicked Quality', desc: 'Every experience is vetted by experts.', delay: 'reveal-delay-4' }
             ].map((item, i) => (
-              <div key={i} className="flex items-center gap-4 p-4 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
-                <div className="size-12 bg-blue-50 dark:bg-blue-900/20 text-primary rounded-xl flex items-center justify-center shrink-0">
+              <div key={i} className={`reveal ${item.delay} flex items-center gap-4 p-5 rounded-2xl bg-white/60 dark:bg-white/5 backdrop-blur-sm hover:bg-white/90 dark:hover:bg-white/10 transition-colors border border-white/80 dark:border-white/10 shadow-sm`}>
+                <div className="size-12 bg-primary/10 text-primary rounded-xl flex items-center justify-center shrink-0">
                   <span className="material-symbols-outlined text-2xl">{item.icon}</span>
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-slate-900 dark:text-white leading-tight">{item.title}</h3>
+                  <h3 className="text-lg font-semibold text-slate-900 dark:text-white leading-tight">{item.title}</h3>
                   <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">{item.desc}</p>
                 </div>
               </div>
@@ -167,22 +166,23 @@ export const Home: React.FC = () => {
 
       {/* Testimonials Section (New) */}
       {cmsTestimonials.length > 0 && (
-        <section className="py-20 bg-slate-50 dark:bg-slate-950">
-          <div className="container mx-auto px-4 md:px-10">
-            <h2 className="text-3xl font-black text-center mb-12 text-slate-900 dark:text-white">Stories from Happy Travelers</h2>
+        <section className="py-20 bg-[#F4EFE6] dark:bg-[#0D1710] grain relative">
+          <div className="container mx-auto px-4 md:px-10 relative z-10">
+            <h2 className="font-display text-4xl md:text-5xl font-bold text-center mb-12 text-slate-900 dark:text-white reveal italic">Stories from Happy Travelers</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {cmsTestimonials.map((t) => (
-                <div key={t.id} className="bg-white dark:bg-slate-900 p-8 rounded-[2rem] shadow-lg border border-slate-100 dark:border-slate-800 relative">
-                  <div className="text-4xl text-blue-200 dark:text-blue-900 absolute top-6 left-6 font-serif">"</div>
-                  <p className="text-slate-600 dark:text-slate-300 relative z-10 italic mb-6 leading-relaxed">
+              {cmsTestimonials.map((t, idx) => (
+                <div key={t.id} className={`reveal reveal-delay-${Math.min(idx + 1, 6)} bg-white/80 dark:bg-white/5 backdrop-blur-sm p-8 rounded-[2rem] shadow-lg border border-white dark:border-white/10 relative`}>
+                  <div className="text-5xl text-primary/20 dark:text-primary/30 absolute top-5 left-6 font-display leading-none select-none">"
+                  </div>
+                  <p className="text-slate-600 dark:text-slate-300 relative z-10 italic mb-6 leading-relaxed font-light">
                     {t.text}
                   </p>
                   <div className="flex items-center gap-4">
-                    <div className="size-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold">
+                    <div className="size-10 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white font-bold">
                       {t.customerName[0]}
                     </div>
                     <div>
-                      <h4 className="font-bold text-slate-900 dark:text-white leading-none">{t.customerName}</h4>
+                      <h4 className="font-semibold text-slate-900 dark:text-white leading-none">{t.customerName}</h4>
                       <p className="text-xs text-slate-500 mt-1">{t.location}</p>
                     </div>
                   </div>
@@ -194,12 +194,12 @@ export const Home: React.FC = () => {
       )}
 
       {/* Collections Section */}
-      <section className="py-12 bg-slate-50 dark:bg-slate-950">
+      <section className="py-12 bg-background-light dark:bg-background-dark">
         <div className="container mx-auto px-4 md:px-10">
-          <div className="flex flex-col md:flex-row justify-between items-end mb-8 gap-4">
+          <div className="flex flex-col md:flex-row justify-between items-end mb-8 gap-4 reveal">
             <div>
-              <h2 className="text-slate-900 dark:text-white text-2xl md:text-3xl font-black tracking-tight mb-2">Curated Collections</h2>
-              <p className="text-slate-500 dark:text-slate-400 text-base">Handpicked experiences for every type of traveler.</p>
+              <h2 className="font-display text-slate-900 dark:text-white text-3xl md:text-4xl font-bold tracking-tight mb-2 italic">Curated Collections</h2>
+              <p className="text-slate-500 dark:text-slate-400 text-base font-light">Handpicked experiences for every type of traveler.</p>
             </div>
             <Link to="/packages" className="hidden md:flex items-center gap-2 text-primary font-bold hover:text-primary-dark transition-colors text-sm">
               View All <span className="material-symbols-outlined text-sm">arrow_forward</span>
@@ -228,12 +228,12 @@ export const Home: React.FC = () => {
       </section>
 
       {/* Trending Destinations */}
-      <section className="py-20 bg-white dark:bg-slate-900">
-        <div className="container mx-auto px-4 md:px-10">
-          <div className="flex justify-between items-end mb-10">
+      <section className="py-20 mesh-warm dark:bg-background-dark grain relative">
+        <div className="container mx-auto px-4 md:px-10 relative z-10">
+          <div className="flex justify-between items-end mb-10 reveal">
             <div>
-              <h2 className="text-slate-900 dark:text-white text-3xl font-black leading-tight tracking-tight">Trending Destinations</h2>
-              <p className="text-slate-500 dark:text-slate-400 mt-2 text-lg">Join thousands of travelers exploring these hotspots.</p>
+              <h2 className="font-display text-slate-900 dark:text-white text-4xl md:text-5xl font-bold leading-tight tracking-tight italic">Trending Destinations</h2>
+              <p className="text-slate-500 dark:text-slate-400 mt-2 text-lg font-light">Join thousands of travelers exploring these hotspots.</p>
             </div>
             <Link className="hidden md:flex items-center text-primary font-bold hover:underline" to="/packages">
               Explore All
@@ -245,43 +245,45 @@ export const Home: React.FC = () => {
               const remainingSeats = tour.remainingSeats;
 
               return (
-                <Link to={`/packages/${tour.id}`} key={idx} className="group bg-white dark:bg-slate-800 rounded-2xl overflow-hidden shadow-sm hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 border border-slate-100 dark:border-slate-700/50">
-                  <div className="relative h-64 overflow-hidden">
-                    <OptimizedImage
-                      src={tour.image}
-                      alt={tour.title}
-                      className="w-full h-full group-hover:scale-110 transition-transform duration-700"
-                    />
-                    <div className="absolute top-4 right-4 bg-white/90 dark:bg-slate-900/90 backdrop-blur px-3 py-1.5 rounded-full text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1 shadow-sm">
-                      <span className="material-symbols-outlined text-primary text-sm fill">schedule</span> {tour.days} Days
-                    </div>
+                <div key={idx} className={`reveal reveal-delay-${idx + 1}`}>
+                  <Link to={`/packages/${tour.id}`} className="group block bg-white dark:bg-card-dark rounded-2xl overflow-hidden shadow-sm hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 border border-border-light dark:border-border-dark">
+                    <div className="relative h-64 overflow-hidden">
+                      <OptimizedImage
+                        src={tour.image}
+                        alt={tour.title}
+                        className="w-full h-full group-hover:scale-110 transition-transform duration-700"
+                      />
+                      <div className="absolute top-4 right-4 bg-white/90 dark:bg-slate-900/90 backdrop-blur px-3 py-1.5 rounded-full text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1 shadow-sm">
+                        <span className="material-symbols-outlined text-primary text-sm fill">schedule</span> {tour.days} Days
+                      </div>
 
-                    {remainingSeats !== undefined && remainingSeats < 10 && (
-                      <div className="absolute top-4 left-4 bg-red-600/90 backdrop-blur text-white text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg shadow-lg animate-pulse flex items-center gap-1">
-                        <span className="material-symbols-outlined text-[14px]">local_fire_department</span>
-                        Only {remainingSeats} Left
-                      </div>
-                    )}
-                  </div>
-                  <div className="p-6">
-                    <div className="flex justify-between items-start mb-3">
-                      <h3 className="text-xl font-bold text-slate-900 dark:text-white leading-tight group-hover:text-primary transition-colors line-clamp-2">{tour.title}</h3>
+                      {remainingSeats !== undefined && remainingSeats < 10 && (
+                        <div className="absolute top-4 left-4 bg-red-600/90 backdrop-blur text-white text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg shadow-lg animate-pulse flex items-center gap-1">
+                          <span className="material-symbols-outlined text-[14px]">local_fire_department</span>
+                          Only {remainingSeats} Left
+                        </div>
+                      )}
                     </div>
-                    <div className="flex items-center gap-4 text-slate-500 dark:text-slate-400 text-sm font-medium mb-6">
-                      <span className="flex items-center gap-1"><span className="material-symbols-outlined text-[18px]">schedule</span> {tour.days} Days</span>
-                      <span className="flex items-center gap-1"><span className="material-symbols-outlined text-[18px]">location_on</span> {tour.location}</span>
-                    </div>
-                    <div className="flex items-center justify-between border-t border-slate-100 dark:border-slate-700 pt-4">
-                      <div className="flex flex-col">
-                        <span className="text-xs text-slate-400 uppercase tracking-wider font-bold">From</span>
-                        <span className="text-lg font-black text-slate-900 dark:text-white">₹{tour.price.toLocaleString()}</span>
+                    <div className="p-6">
+                      <div className="flex justify-between items-start mb-3">
+                        <h3 className="text-xl font-bold text-slate-900 dark:text-white leading-tight group-hover:text-primary transition-colors line-clamp-2">{tour.title}</h3>
                       </div>
-                      <div className="size-10 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-slate-400 group-hover:bg-primary group-hover:text-white transition-colors">
-                        <span className="material-symbols-outlined">arrow_forward</span>
+                      <div className="flex items-center gap-4 text-slate-500 dark:text-slate-400 text-sm font-medium mb-6">
+                        <span className="flex items-center gap-1"><span className="material-symbols-outlined text-[18px]">schedule</span> {tour.days} Days</span>
+                        <span className="flex items-center gap-1"><span className="material-symbols-outlined text-[18px]">location_on</span> {tour.location}</span>
+                      </div>
+                      <div className="flex items-center justify-between border-t border-slate-100 dark:border-slate-700 pt-4">
+                        <div className="flex flex-col">
+                          <span className="text-xs text-slate-400 uppercase tracking-wider font-bold">From</span>
+                          <span className="text-lg font-black text-slate-900 dark:text-white">₹{tour.price.toLocaleString()}</span>
+                        </div>
+                        <div className="size-10 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-slate-400 group-hover:bg-primary group-hover:text-white transition-colors">
+                          <span className="material-symbols-outlined">arrow_forward</span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </Link>
+                  </Link>
+                </div>
               );
             })}
           </div>

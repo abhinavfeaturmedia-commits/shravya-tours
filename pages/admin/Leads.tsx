@@ -242,38 +242,38 @@ export const Leads: React.FC = () => {
     };
 
     return (
-        <div className="flex h-full bg-slate-50 dark:bg-[#0B1120]">
+        <div className="flex h-full admin-page-bg">
 
             {/* MAIN CONTENT AREA */}
             <div className={`flex-1 flex flex-col min-w-0 transition-all duration-300 ${selectedLeadId ? 'hidden lg:flex' : ''}`}>
 
                 {/* Header Section */}
                 <div className="px-8 py-6 max-w-[1600px] mx-auto w-full">
-                    <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight mb-2">Lead Tracking</h1>
+                    <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight mb-1"><span className="font-display text-4xl">Lead Tracking</span></h1>
                     <p className="text-slate-500 mb-8">
                         Good Morning! You have <span className="text-primary font-bold">3 high-priority</span> follow-ups today.
                     </p>
 
                     {/* Stats Cards */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8 stagger-cards">
                         <div className="bg-white dark:bg-[#1A2633] p-5 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
                             <p className="text-xs font-bold text-slate-400 uppercase mb-1">Pending Leads</p>
                             <div className="flex items-center gap-3">
-                                <span className="text-3xl font-black text-slate-900 dark:text-white">{stats.pending}</span>
+                                <span className="text-4xl kpi-number text-slate-900 dark:text-white">{stats.pending}</span>
                                 <span className="text-xs font-bold bg-green-100 text-green-700 px-2 py-0.5 rounded-full">+2%</span>
                             </div>
                         </div>
                         <div className="bg-white dark:bg-[#1A2633] p-5 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
                             <p className="text-xs font-bold text-slate-400 uppercase mb-1">Pipeline Value</p>
                             <div className="flex items-center gap-3">
-                                <span className="text-3xl font-black text-slate-900 dark:text-white">₹{(stats.value / 1000).toFixed(0)}k</span>
+                                <span className="text-4xl kpi-number text-slate-900 dark:text-white">₹{(stats.value / 1000).toFixed(0)}k</span>
                                 <span className="text-xs font-bold bg-green-100 text-green-700 px-2 py-0.5 rounded-full">+12%</span>
                             </div>
                         </div>
                         <div className="bg-white dark:bg-[#1A2633] p-5 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
                             <p className="text-xs font-bold text-slate-400 uppercase mb-1">Tasks Due Today</p>
                             <div className="flex items-center gap-3">
-                                <span className="text-3xl font-black text-slate-900 dark:text-white">{stats.tasks}</span>
+                                <span className="text-4xl kpi-number text-slate-900 dark:text-white">{stats.tasks}</span>
                                 <span className="text-xs font-bold bg-red-100 text-red-700 px-2 py-0.5 rounded-full">-1</span>
                             </div>
                         </div>
@@ -291,7 +291,7 @@ export const Leads: React.FC = () => {
                                 className="w-full pl-12 pr-4 py-3 bg-white dark:bg-[#1A2633] border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-primary shadow-sm"
                             />
                         </div>
-                        <button onClick={openAddModal} className="bg-primary hover:bg-primary-dark text-white px-6 py-3 rounded-xl font-bold shadow-lg shadow-primary/20 flex items-center gap-2 transition-transform active:scale-95 whitespace-nowrap">
+                        <button onClick={openAddModal} className="bg-primary hover:bg-primary-dark text-white px-6 py-3 rounded-xl font-bold shadow-lg shadow-primary/20 flex items-center gap-2 transition-transform active:scale-95 whitespace-nowrap btn-glow">
                             <Plus size={20} /> Add Lead
                         </button>
                     </div>
@@ -391,7 +391,7 @@ export const Leads: React.FC = () => {
 
                         {/* Trip Details Grid */}
                         <div className="mb-8 p-4 bg-slate-50 dark:bg-slate-900/50 rounded-2xl border border-slate-100 dark:border-slate-800">
-                            <h3 className="text-xs font-bold text-slate-400 uppercase mb-4 tracking-wider flex items-center gap-2">
+                            <h3 className="text-xs font-bold text-slate-400 uppercase mb-4 tracking-wider flex items-center gap-2 section-heading-accent">
                                 <FileText size={14} /> Trip Details
                             </h3>
                             <div className="grid grid-cols-2 gap-y-4 gap-x-4">
@@ -422,7 +422,7 @@ export const Leads: React.FC = () => {
 
                         {/* Quick Actions */}
                         <div className="mb-8">
-                            <h3 className="text-xs font-bold text-slate-400 uppercase mb-4 tracking-wider">Communication</h3>
+                            <h3 className="text-xs font-bold text-slate-400 uppercase mb-4 tracking-wider section-heading-accent">Communication</h3>
                             <div className="grid grid-cols-3 gap-3 mb-3">
                                 <a href={`tel:${selectedLead.phone}`} className="flex flex-col items-center justify-center p-3 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-primary/50 hover:bg-primary/5 transition-all text-slate-600 dark:text-slate-300 hover:text-primary gap-2">
                                     <div className="h-8 w-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center"><Phone size={16} /></div>
@@ -439,7 +439,7 @@ export const Leads: React.FC = () => {
                             </div>
                             <button
                                 onClick={handleConvertToBooking}
-                                className="w-full py-3 rounded-xl bg-slate-900 text-white dark:bg-white dark:text-slate-900 font-bold text-sm hover:opacity-90 flex items-center justify-center gap-2 transition-all shadow-lg"
+                                className="w-full py-3 rounded-xl bg-slate-900 text-white dark:bg-white dark:text-slate-900 font-bold text-sm hover:opacity-90 flex items-center justify-center gap-2 transition-all shadow-lg btn-glow"
                             >
                                 <CheckCircle2 size={16} /> Convert to Booking
                             </button>

@@ -66,15 +66,15 @@ export const Marketing: React.FC = () => {
     };
 
     return (
-        <div className="flex flex-col h-full bg-slate-50 dark:bg-slate-900">
+        <div className="flex flex-col h-full admin-page-bg">
             {/* ... Existing header code ... */}
             <div className="p-6 md:p-8 bg-white dark:bg-[#1A2633] border-b border-slate-200 dark:border-slate-800 shrink-0">
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                     <div>
-                        <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">Marketing Hub</h1>
+                        <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight font-display text-4xl">Marketing Hub</h1>
                         <p className="text-slate-500 mt-1">Manage Email & WhatsApp campaigns to boost engagement.</p>
                     </div>
-                    <button onClick={() => setIsModalOpen(true)} className="bg-primary hover:bg-primary-dark text-white px-6 py-3 rounded-xl font-bold shadow-lg shadow-primary/20 flex items-center gap-2 active:scale-95 transition-all">
+                    <button onClick={() => setIsModalOpen(true)} className="bg-primary hover:bg-primary-dark text-white px-6 py-3 rounded-xl font-bold shadow-lg shadow-primary/20 flex items-center gap-2 active:scale-95 transition-all btn-glow">
                         <span className="material-symbols-outlined">add</span> Create Campaign
                     </button>
                 </div>

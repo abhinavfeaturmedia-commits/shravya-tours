@@ -413,13 +413,47 @@ const MasterModal: React.FC<{
                         </select>
                     </div>
                     <div>
-                        <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1">Content (HTML)</label>
+                        <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1">Content</label>
+                        {/* Quick-insert toolbar */}
+                        <div className="flex flex-wrap gap-1.5 mb-2">
+                            {[
+                                { label: '## Heading', insert: '\n## ' },
+                                { label: '• Bullet', insert: '\n• ' },
+                                { label: '1. Numbered', insert: '\n1. ' },
+                                { label: '— Separator', insert: '\n---\n' },
+                            ].map(({ label, insert }) => (
+                                <button
+                                    key={label}
+                                    type="button"
+                                    onClick={() => {
+                                        const ta = document.getElementById('terms-content-editor') as HTMLTextAreaElement;
+                                        if (!ta) return;
+                                        const start = ta.selectionStart;
+                                        const end = ta.selectionEnd;
+                                        const current = form.content || '';
+                                        const updated = current.slice(0, start) + insert + current.slice(end);
+                                        setForm({ ...form, content: updated });
+                                        // Restore cursor after the inserted text
+                                        requestAnimationFrame(() => {
+                                            ta.focus();
+                                            ta.setSelectionRange(start + insert.length, start + insert.length);
+                                        });
+                                    }}
+                                    className="px-2.5 py-1 text-[11px] font-bold bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-900/30 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors border border-slate-200 dark:border-slate-600"
+                                >
+                                    {label}
+                                </button>
+                            ))}
+                        </div>
                         <textarea
+                            id="terms-content-editor"
                             value={form.content || ''}
                             onChange={e => setForm({ ...form, content: e.target.value })}
-                            className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 outline-none h-40 font-mono"
-                            placeholder="<p>Enter terms content...</p>"
+                            className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 outline-none h-48 text-sm leading-relaxed focus:ring-2 focus:ring-indigo-500 resize-y"
+                            placeholder={"## Cancellation Policy\n• 100% refund if cancelled 30+ days before departure\n• 50% refund if cancelled 15–29 days before\n• No refund within 14 days\n\n## Payment Terms\n• 25% advance at time of booking\n• Balance due 7 days before travel"}
+                            spellCheck
                         />
+                        <p className="text-[11px] text-slate-400 mt-1.5">Use ## for section headings, • for bullet points, 1. for numbered lists. Plain text — no HTML needed.</p>
                     </div>
                     <div className="flex items-center gap-2">
                         <input
@@ -802,7 +836,7 @@ export const Masters: React.FC = () => {
                                 </div>
                             </div>
                             <div className="relative">
-                                <h3 className="text-3xl font-black text-slate-900 dark:text-white">{kpi.value}</h3>
+                                <h3 className="text-4xl kpi-number text-slate-900 dark:text-white">{kpi.value}</h3>
                                 <p className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide mt-1">{kpi.label}</p>
                             </div>
                         </div>
@@ -817,9 +851,9 @@ export const Masters: React.FC = () => {
                         </h3>
                         <div className="flex items-end justify-between h-48 gap-4 px-4">
                             {[
-                                { label: 'Budget (<5k)', count: budgetHotels, color: 'bg-emerald-400' },
+                                { label: 'Budget (Below 5k)', count: budgetHotels, color: 'bg-emerald-400' },
                                 { label: 'Mid (5k-10k)', count: midRangeHotels, color: 'bg-blue-400' },
-                                { label: 'Luxury (>10k)', count: expensiveHotels, color: 'bg-purple-400' }
+                                { label: 'Luxury (Above 10k)', count: expensiveHotels, color: 'bg-purple-400' }
                             ].map((item, i) => {
                                 const max = Math.max(budgetHotels, midRangeHotels, expensiveHotels, 1);
                                 const height = (item.count / max) * 100;
@@ -1241,180 +1275,182 @@ export const Masters: React.FC = () => {
     );
 
     return (
-        <div className="p-6 lg:p-10 max-w-[1800px] mx-auto space-y-8 min-h-screen">
-            {/* Header */}
-            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
-                <div>
-                    <h1 className="text-3xl font-black text-slate-900 dark:text-white">Master Data Manager</h1>
-                    <p className="text-slate-500 mt-1 font-medium">Centralized control for all tour components</p>
-                </div>
-                <button
-                    onClick={() => handleOpenModal()}
-                    className="flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white font-bold rounded-2xl shadow-xl shadow-indigo-500/20 hover:bg-indigo-700 transition-all active:scale-95"
-                >
-                    <span className="material-symbols-outlined">add</span>
-                    <span>Add New</span>
-                </button>
-            </div>
-
-            {/* Tab Navigation */}
-            <div className="flex flex-wrap gap-2 p-2 bg-white dark:bg-[#151d29] border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm">
-                {tabs.map(tab => (
+        <div className="admin-page-bg min-h-screen">
+            <div className="p-6 lg:p-10 max-w-[1800px] mx-auto space-y-8">
+                {/* Header */}
+                <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+                    <div>
+                        <h1 className="text-3xl font-black text-slate-900 dark:text-white"><span className="font-display text-4xl">Master Data Manager</span></h1>
+                        <p className="text-slate-500 mt-1 font-medium">Centralized control for all tour components</p>
+                    </div>
                     <button
-                        key={tab.id}
-                        onClick={() => setActiveTab(tab.id)}
-                        className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-sm transition-all flex-1 md:flex-none justify-center ${activeTab === tab.id
-                            ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-lg'
-                            : 'text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800'
-                            }`}
+                        onClick={() => handleOpenModal()}
+                        className="flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white font-bold rounded-2xl shadow-xl shadow-indigo-500/20 hover:bg-indigo-700 transition-all active:scale-95 btn-glow"
                     >
-                        {typeof tab.icon === 'string' ? <span className="material-symbols-outlined text-[20px]">{tab.icon}</span> : tab.icon}
-                        {tab.label}
-                        {tab.count !== undefined && (
-                            <span className={`ml-2 px-2 py-0.5 rounded-full text-[10px] ${activeTab === tab.id ? 'bg-white/20 text-white dark:bg-slate-900/10 dark:text-slate-900' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'}`}>
-                                {tab.count}
-                            </span>
-                        )}
+                        <span className="material-symbols-outlined">add</span>
+                        <span>Add New</span>
                     </button>
-                ))}
-            </div>
-
-            {/* Controls */}
-            {activeTab === 'analytics' ? (
-                <AnalyticsView />
-            ) : (
-                <>
-                    <div className="flex flex-col md:flex-row gap-4 justify-between items-center bg-white dark:bg-[#151d29] p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm animate-in slide-in-from-top-2">
-                        <div className="flex flex-1 items-center gap-3 w-full md:w-auto">
-
-                            <>
-                                <div className="relative flex-1 md:max-w-xs">
-                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-slate-400 text-[20px]">search</span>
-                                    <input
-                                        type="text"
-                                        value={searchQuery}
-                                        onChange={e => setSearchQuery(e.target.value)}
-                                        placeholder="Search..."
-                                        className="w-full pl-10 pr-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
-                                    />
-                                </div>
-
-                                <select
-                                    value={filterStatus}
-                                    onChange={e => setFilterStatus(e.target.value as any)}
-                                    className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm font-semibold outline-none focus:ring-2 focus:ring-indigo-500/20"
-                                >
-                                    <option value="All">All Status</option>
-                                    <option value="Active">Active Only</option>
-                                    <option value="Inactive">Inactive Only</option>
-                                </select>
-                            </>
-
-
-
-                            <div className="hidden md:flex items-center gap-1 border-l border-slate-200 dark:border-slate-700 pl-3">
-                                <button
-                                    onClick={() => setViewMode('grid')}
-                                    className={`p-2 rounded-lg transition-colors ${viewMode === 'grid' ? 'bg-indigo-50 text-indigo-600 dark:bg-indigo-900/20 dark:text-indigo-400' : 'text-slate-400 hover:text-slate-600'}`}
-                                >
-                                    <span className="material-symbols-outlined">grid_view</span>
-                                </button>
-                                <button
-                                    onClick={() => setViewMode('list')}
-                                    className={`p-2 rounded-lg transition-colors ${viewMode === 'list' ? 'bg-indigo-50 text-indigo-600 dark:bg-indigo-900/20 dark:text-indigo-400' : 'text-slate-400 hover:text-slate-600'}`}
-                                >
-                                    <span className="material-symbols-outlined">view_list</span>
-                                </button>
-                            </div>
-
-                        </div>
-
-                        <div className="flex items-center gap-3 w-full md:w-auto justify-end">
-
-                            <div className="flex items-center gap-2">
-                                <input
-                                    type="file"
-                                    ref={fileInputRef}
-                                    onChange={handleFileChange}
-                                    accept=".json,.csv"
-                                    className="hidden"
-                                />
-                                <button onClick={handleImportClick} className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 font-bold text-xs transition-colors border border-dashed border-slate-300 dark:border-slate-600">
-                                    <span className="material-symbols-outlined text-[16px]">upload</span> Import
-                                </button>
-                                <button onClick={handleExport} className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 font-bold text-xs transition-colors border border-slate-200 dark:border-slate-700">
-                                    <span className="material-symbols-outlined text-[16px]">download</span> Export
-                                </button>
-                            </div>
-
-
-
-                            <div className="flex items-center gap-2 text-sm font-medium text-slate-500 dark:text-slate-400 border-l border-slate-200 dark:border-slate-700 pl-3">
-                                <span>Sort:</span>
-                                <select
-                                    value={sortBy}
-                                    onChange={e => setSortBy(e.target.value)}
-                                    className="bg-transparent font-bold text-slate-700 dark:text-slate-300 outline-none cursor-pointer hover:underline"
-                                >
-                                    <option value={activeTab === 'plans' || activeTab === 'terms' ? 'title' : activeTab === 'meal-plans' ? 'code' : 'name'}>Name</option>
-                                    {(activeTab === 'hotels' || activeTab === 'activities' || activeTab === 'transports') && <option value={activeTab === 'hotels' ? 'pricePerNight' : activeTab === 'transports' ? 'baseRate' : 'cost'}>Price</option>}
-                                    <option value="status">Status</option>
-                                    {activeTab === 'locations' && <option value="type">Type</option>}
-                                    {activeTab === 'hotels' && <option value="rating">Rating</option>}
-                                    {activeTab === 'activities' && <option value="category">Category</option>}
-                                    {activeTab === 'transports' && <option value="capacity">Capacity</option>}
-                                    {activeTab === 'plans' && <option value="duration">Duration</option>}
-                                    {activeTab === 'lead-sources' && <option value="category">Category</option>}
-                                    {activeTab === 'terms' && <option value="category">Category</option>}
-                                </select>
-                                <button onClick={() => setSortDir(prev => prev === 'asc' ? 'desc' : 'asc')} className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded">
-                                    <span className="material-symbols-outlined text-[16px]">{sortDir === 'asc' ? 'arrow_upward' : 'arrow_downward'}</span>
-                                </button>
-                            </div>
-
-                        </div>
-                    </div>
-
-                    {/* Content Area */}
-                    {viewMode === 'grid' ? (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 pb-20">
-                            {processedData.length > 0 ? (
-                                processedData.map((item) => renderCard(item, activeTab))
-                            ) : (
-                                <div className="col-span-full py-20 text-center">
-                                    <div className="size-20 bg-slate-50 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4">
-                                        <span className="material-symbols-outlined text-4xl text-slate-300">search_off</span>
-                                    </div>
-                                    <h3 className="text-lg font-bold text-slate-900 dark:text-white">No items found</h3>
-                                    <p className="text-slate-500">Try adjusting your filters or search query.</p>
-                                </div>
-                            )}
-                        </div>
-                    ) : (
-                        renderListView()
-                    )}
-                </>
-            )}
-
-            {/* Bulk Action Bar */}
-            {activeTab !== 'analytics' && <BulkActionBar />}
-
-            {/* Modal */}
-            {showModal && (
-                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[200] p-4 p-8 animate-in fade-in" onClick={handleCloseModal}>
-                    <div className="bg-white dark:bg-[#1a2332] rounded-3xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto relative" onClick={e => e.stopPropagation()}>
-                        <div className="flex items-center justify-between p-6 border-b border-slate-200 dark:border-slate-700 bg-white/50 dark:bg-slate-800/50 sticky top-0 backdrop-blur-md z-10">
-                            <h2 className="text-xl font-bold text-slate-900 dark:text-white">{editingItem ? 'Edit' : 'Add New'} {tabs.find(t => t.id === activeTab)?.label.replace(' Templates', '').replace('s', '') || 'Item'}</h2>
-                            <button onClick={handleCloseModal} className="size-8 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center justify-center transition-colors">
-                                <span className="material-symbols-outlined text-[20px]">close</span>
-                            </button>
-                        </div>
-                        <div className="p-6">
-                            <MasterModal activeTab={activeTab} editingItem={editingItem} onClose={handleCloseModal} />
-                        </div>
-                    </div>
                 </div>
-            )}
+
+                {/* Tab Navigation */}
+                <div className="flex flex-wrap gap-2 p-2 bg-white dark:bg-[#151d29] border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm">
+                    {tabs.map(tab => (
+                        <button
+                            key={tab.id}
+                            onClick={() => setActiveTab(tab.id)}
+                            className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-sm transition-all flex-1 md:flex-none justify-center ${activeTab === tab.id
+                                ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-lg'
+                                : 'text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800'
+                                }`}
+                        >
+                            {typeof tab.icon === 'string' ? <span className="material-symbols-outlined text-[20px]">{tab.icon}</span> : tab.icon}
+                            {tab.label}
+                            {tab.count !== undefined && (
+                                <span className={`ml-2 px-2 py-0.5 rounded-full text-[10px] ${activeTab === tab.id ? 'bg-white/20 text-white dark:bg-slate-900/10 dark:text-slate-900' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'}`}>
+                                    {tab.count}
+                                </span>
+                            )}
+                        </button>
+                    ))}
+                </div>
+
+                {/* Controls */}
+                {activeTab === 'analytics' ? (
+                    <AnalyticsView />
+                ) : (
+                    <>
+                        <div className="flex flex-col md:flex-row gap-4 justify-between items-center bg-white dark:bg-[#151d29] p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm animate-in slide-in-from-top-2">
+                            <div className="flex flex-1 items-center gap-3 w-full md:w-auto">
+
+                                <>
+                                    <div className="relative flex-1 md:max-w-xs">
+                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-slate-400 text-[20px]">search</span>
+                                        <input
+                                            type="text"
+                                            value={searchQuery}
+                                            onChange={e => setSearchQuery(e.target.value)}
+                                            placeholder="Search..."
+                                            className="w-full pl-10 pr-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
+                                        />
+                                    </div>
+
+                                    <select
+                                        value={filterStatus}
+                                        onChange={e => setFilterStatus(e.target.value as any)}
+                                        className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm font-semibold outline-none focus:ring-2 focus:ring-indigo-500/20"
+                                    >
+                                        <option value="All">All Status</option>
+                                        <option value="Active">Active Only</option>
+                                        <option value="Inactive">Inactive Only</option>
+                                    </select>
+                                </>
+
+
+
+                                <div className="hidden md:flex items-center gap-1 border-l border-slate-200 dark:border-slate-700 pl-3">
+                                    <button
+                                        onClick={() => setViewMode('grid')}
+                                        className={`p-2 rounded-lg transition-colors ${viewMode === 'grid' ? 'bg-indigo-50 text-indigo-600 dark:bg-indigo-900/20 dark:text-indigo-400' : 'text-slate-400 hover:text-slate-600'}`}
+                                    >
+                                        <span className="material-symbols-outlined">grid_view</span>
+                                    </button>
+                                    <button
+                                        onClick={() => setViewMode('list')}
+                                        className={`p-2 rounded-lg transition-colors ${viewMode === 'list' ? 'bg-indigo-50 text-indigo-600 dark:bg-indigo-900/20 dark:text-indigo-400' : 'text-slate-400 hover:text-slate-600'}`}
+                                    >
+                                        <span className="material-symbols-outlined">view_list</span>
+                                    </button>
+                                </div>
+
+                            </div>
+
+                            <div className="flex items-center gap-3 w-full md:w-auto justify-end">
+
+                                <div className="flex items-center gap-2">
+                                    <input
+                                        type="file"
+                                        ref={fileInputRef}
+                                        onChange={handleFileChange}
+                                        accept=".json,.csv"
+                                        className="hidden"
+                                    />
+                                    <button onClick={handleImportClick} className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 font-bold text-xs transition-colors border border-dashed border-slate-300 dark:border-slate-600">
+                                        <span className="material-symbols-outlined text-[16px]">upload</span> Import
+                                    </button>
+                                    <button onClick={handleExport} className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 font-bold text-xs transition-colors border border-slate-200 dark:border-slate-700">
+                                        <span className="material-symbols-outlined text-[16px]">download</span> Export
+                                    </button>
+                                </div>
+
+
+
+                                <div className="flex items-center gap-2 text-sm font-medium text-slate-500 dark:text-slate-400 border-l border-slate-200 dark:border-slate-700 pl-3">
+                                    <span>Sort:</span>
+                                    <select
+                                        value={sortBy}
+                                        onChange={e => setSortBy(e.target.value)}
+                                        className="bg-transparent font-bold text-slate-700 dark:text-slate-300 outline-none cursor-pointer hover:underline"
+                                    >
+                                        <option value={activeTab === 'plans' || activeTab === 'terms' ? 'title' : activeTab === 'meal-plans' ? 'code' : 'name'}>Name</option>
+                                        {(activeTab === 'hotels' || activeTab === 'activities' || activeTab === 'transports') && <option value={activeTab === 'hotels' ? 'pricePerNight' : activeTab === 'transports' ? 'baseRate' : 'cost'}>Price</option>}
+                                        <option value="status">Status</option>
+                                        {activeTab === 'locations' && <option value="type">Type</option>}
+                                        {activeTab === 'hotels' && <option value="rating">Rating</option>}
+                                        {activeTab === 'activities' && <option value="category">Category</option>}
+                                        {activeTab === 'transports' && <option value="capacity">Capacity</option>}
+                                        {activeTab === 'plans' && <option value="duration">Duration</option>}
+                                        {activeTab === 'lead-sources' && <option value="category">Category</option>}
+                                        {activeTab === 'terms' && <option value="category">Category</option>}
+                                    </select>
+                                    <button onClick={() => setSortDir(prev => prev === 'asc' ? 'desc' : 'asc')} className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded">
+                                        <span className="material-symbols-outlined text-[16px]">{sortDir === 'asc' ? 'arrow_upward' : 'arrow_downward'}</span>
+                                    </button>
+                                </div>
+
+                            </div>
+                        </div>
+
+                        {/* Content Area */}
+                        {viewMode === 'grid' ? (
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 pb-20">
+                                {processedData.length > 0 ? (
+                                    processedData.map((item) => renderCard(item, activeTab))
+                                ) : (
+                                    <div className="col-span-full py-20 text-center">
+                                        <div className="size-20 bg-slate-50 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4">
+                                            <span className="material-symbols-outlined text-4xl text-slate-300">search_off</span>
+                                        </div>
+                                        <h3 className="text-lg font-bold text-slate-900 dark:text-white">No items found</h3>
+                                        <p className="text-slate-500">Try adjusting your filters or search query.</p>
+                                    </div>
+                                )}
+                            </div>
+                        ) : (
+                            renderListView()
+                        )}
+                    </>
+                )}
+
+                {/* Bulk Action Bar */}
+                {activeTab !== 'analytics' && <BulkActionBar />}
+
+                {/* Modal */}
+                {showModal && (
+                    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[200] p-4 p-8 animate-in fade-in" onClick={handleCloseModal}>
+                        <div className="bg-white dark:bg-[#1a2332] rounded-3xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto relative" onClick={e => e.stopPropagation()}>
+                            <div className="flex items-center justify-between p-6 border-b border-slate-200 dark:border-slate-700 bg-white/50 dark:bg-slate-800/50 sticky top-0 backdrop-blur-md z-10">
+                                <h2 className="text-xl font-bold text-slate-900 dark:text-white">{editingItem ? 'Edit' : 'Add New'} {tabs.find(t => t.id === activeTab)?.label.replace(' Templates', '').replace('s', '') || 'Item'}</h2>
+                                <button onClick={handleCloseModal} className="size-8 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center justify-center transition-colors">
+                                    <span className="material-symbols-outlined text-[20px]">close</span>
+                                </button>
+                            </div>
+                            <div className="p-6">
+                                <MasterModal activeTab={activeTab} editingItem={editingItem} onClose={handleCloseModal} />
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </div>
         </div>
     );
 };

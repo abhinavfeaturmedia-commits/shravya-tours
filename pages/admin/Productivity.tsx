@@ -394,17 +394,17 @@ export const Productivity: React.FC = () => {
     };
 
     return (
-        <div className="p-6 lg:p-8 space-y-6 max-w-[1600px] mx-auto">
+        <div className="p-6 lg:p-8 space-y-6 max-w-[1600px] mx-auto admin-page-bg min-h-screen">
             {/* Page Header */}
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                 <div>
-                    <h1 className="text-2xl lg:text-3xl font-black text-slate-900">Productivity Hub</h1>
+                    <h1 className="text-2xl lg:text-3xl font-black text-slate-900 dark:text-white font-display text-4xl">Productivity Hub</h1>
                     <p className="text-slate-500 mt-1">Monitor team activity, assign tasks, and track performance</p>
                 </div>
                 <div className="flex gap-3">
                     <button
                         onClick={() => { setEditingTask(null); setTaskForm({ title: '', description: '', assignedTo: 0, priority: 'Medium', dueDate: '', relatedLeadId: '', relatedBookingId: '' }); setShowTaskModal(true); }}
-                        className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-xl font-semibold text-sm shadow-lg shadow-indigo-500/25 hover:shadow-indigo-500/40 transition-all"
+                        className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-xl font-semibold text-sm shadow-lg shadow-indigo-500/25 hover:shadow-indigo-500/40 transition-all btn-glow"
                     >
                         <Plus className="w-4 h-4" /> Assign Task
                     </button>
@@ -456,32 +456,32 @@ export const Productivity: React.FC = () => {
             {activeTab === 'activity' && (
                 <div className="space-y-6">
                     {/* Quick Stats Row */}
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 stagger-cards">
                         <div className="bg-gradient-to-br from-amber-500 to-orange-600 rounded-2xl p-5 text-white">
                             <div className="flex items-center justify-between">
                                 <AlertCircle className="w-8 h-8 opacity-80" />
-                                <span className="text-3xl font-black">{quickStats.pendingTasks}</span>
+                                <span className="text-4xl kpi-number">{quickStats.pendingTasks}</span>
                             </div>
                             <p className="text-sm font-semibold mt-2 opacity-90">Pending Tasks</p>
                         </div>
                         <div className="bg-gradient-to-br from-red-500 to-rose-600 rounded-2xl p-5 text-white">
                             <div className="flex items-center justify-between">
                                 <Flame className="w-8 h-8 opacity-80" />
-                                <span className="text-3xl font-black">{quickStats.overdueTasks}</span>
+                                <span className="text-4xl kpi-number">{quickStats.overdueTasks}</span>
                             </div>
                             <p className="text-sm font-semibold mt-2 opacity-90">Overdue</p>
                         </div>
                         <div className="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl p-5 text-white">
                             <div className="flex items-center justify-between">
                                 <Target className="w-8 h-8 opacity-80" />
-                                <span className="text-3xl font-black">{quickStats.todayTargets}</span>
+                                <span className="text-4xl kpi-number">{quickStats.todayTargets}</span>
                             </div>
                             <p className="text-sm font-semibold mt-2 opacity-90">Today's Targets</p>
                         </div>
                         <div className="bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl p-5 text-white">
                             <div className="flex items-center justify-between">
                                 <Zap className="w-8 h-8 opacity-80" />
-                                <span className="text-3xl font-black">{quickStats.recentLeads}</span>
+                                <span className="text-4xl kpi-number">{quickStats.recentLeads}</span>
                             </div>
                             <p className="text-sm font-semibold mt-2 opacity-90">New Leads (24h)</p>
                         </div>
@@ -949,8 +949,8 @@ export const Productivity: React.FC = () => {
                                         </p>
                                     </div>
                                     <span className={`px-2.5 py-1 rounded-lg text-xs font-bold ${session.status === 'Active' ? 'bg-emerald-100 text-emerald-700' :
-                                            session.status === 'Paused' ? 'bg-amber-100 text-amber-700' :
-                                                'bg-slate-100 text-slate-600'
+                                        session.status === 'Paused' ? 'bg-amber-100 text-amber-700' :
+                                            'bg-slate-100 text-slate-600'
                                         }`}>
                                         {session.status}
                                     </span>

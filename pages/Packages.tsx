@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useData } from '../context/DataContext';
 import { SEO } from '../components/ui/SEO';
@@ -10,6 +10,7 @@ export const Packages: React.FC = () => {
   const initialSearch = searchParams.get('search') || '';
 
   const [searchQuery, setSearchQuery] = useState(initialSearch);
+  const [debouncedSearch, setDebouncedSearch] = useState(initialSearch);
   const [priceRange, setPriceRange] = useState(200000);
   const [duration, setDuration] = useState(15);
   const [selectedThemes, setSelectedThemes] = useState<string[]>([]);
@@ -18,7 +19,16 @@ export const Packages: React.FC = () => {
 
   useEffect(() => {
     setSearchQuery(searchParams.get('search') || '');
+    setDebouncedSearch(searchParams.get('search') || '');
   }, [searchParams]);
+
+  // Debounce search input so heavy filter runs only 250ms after user stops typing
+  const debounceTimer = useRef<ReturnType<typeof setTimeout>>();
+  const handleSearchChange = (value: string) => {
+    setSearchQuery(value);
+    clearTimeout(debounceTimer.current);
+    debounceTimer.current = setTimeout(() => setDebouncedSearch(value), 250);
+  };
 
   const toggleTheme = (theme: string) => {
     if (selectedThemes.includes(theme)) {
@@ -34,18 +44,18 @@ export const Packages: React.FC = () => {
     setSelectedThemes([]);
     setSortOption('Recommended');
     setSearchQuery('');
+    setDebouncedSearch('');
   };
 
-  // Filter Logic
-  const filteredPackages = packages.filter(pkg => {
-    // Only show active packages
+  // Filter + sort — memoized so they only recompute when inputs actually change
+  const filteredPackages = useMemo(() => packages.filter(pkg => {
     if (pkg.status && pkg.status !== 'Active') return false;
 
     const matchesPrice = pkg.price <= priceRange;
     const matchesDuration = pkg.days <= duration;
     const matchesTheme = selectedThemes.length === 0 || (pkg.theme && selectedThemes.includes(pkg.theme));
 
-    const terms = searchQuery.toLowerCase().trim().split(/\s+/).filter(Boolean);
+    const terms = debouncedSearch.toLowerCase().trim().split(/\s+/).filter(Boolean);
     const matchesSearch = terms.length === 0 || terms.every(term => {
       const searchableContent = [
         pkg.title,
@@ -60,15 +70,14 @@ export const Packages: React.FC = () => {
     });
 
     return matchesPrice && matchesDuration && matchesTheme && matchesSearch;
-  });
+  }), [packages, priceRange, duration, selectedThemes, debouncedSearch]);
 
-  // Sort Logic
-  const sortedPackages = [...filteredPackages].sort((a, b) => {
+  const sortedPackages = useMemo(() => [...filteredPackages].sort((a, b) => {
     if (sortOption === 'Price: Low to High') return a.price - b.price;
     if (sortOption === 'Price: High to Low') return b.price - a.price;
     if (sortOption === 'Duration') return a.days - b.days;
-    return 0; // Recommended order
-  });
+    return 0;
+  }), [filteredPackages, sortOption]);
 
   return (
     <>
@@ -83,11 +92,11 @@ export const Packages: React.FC = () => {
           {/* Header Section */}
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10 md:mb-16 animate-in slide-in-from-bottom-5 duration-700">
             <div className="max-w-2xl">
-              <h1 className="text-4xl md:text-6xl font-black text-slate-900 dark:text-white tracking-tight leading-[1.1] mb-4">
+              <h1 className="font-display text-5xl md:text-7xl font-bold text-slate-900 dark:text-white tracking-tight leading-[1.05] mb-4 italic">
                 Explore the <br />
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-violet-600 dark:from-blue-400 dark:to-violet-400">Unseen World.</span>
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-accent">Unseen World.</span>
               </h1>
-              <p className="text-lg text-slate-500 dark:text-slate-400 font-medium">Curated itineraries for the modern traveler. Find your next adventure below.</p>
+              <p className="text-lg text-slate-500 dark:text-slate-400 font-light">Curated itineraries for the modern traveler. Find your next adventure below.</p>
             </div>
 
             {/* Desktop Sort */}
@@ -161,7 +170,7 @@ export const Packages: React.FC = () => {
                       <input
                         type="text"
                         value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
+                        onChange={(e) => handleSearchChange(e.target.value)}
                         placeholder="Search destinations..."
                         className="w-full bg-white dark:bg-[#1A2633] border border-slate-200 dark:border-slate-800 rounded-2xl pl-12 pr-4 py-4 text-sm font-bold focus:ring-2 focus:ring-primary/50 focus:border-transparent outline-none shadow-sm transition-all"
                       />
@@ -238,69 +247,71 @@ export const Packages: React.FC = () => {
             <main className="w-full lg:w-3/4">
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 lg:gap-8">
                 {sortedPackages.length > 0 ? (
-                  sortedPackages.map((pkg) => (
-                    <Link to={`/packages/${pkg.id}`} key={pkg.id} className="group flex flex-col bg-white dark:bg-[#151d29] rounded-[2rem] overflow-hidden hover:shadow-2xl hover:shadow-slate-200/50 dark:hover:shadow-black/50 transition-all duration-500 transform hover:-translate-y-2 relative">
-                      {/* Image Container */}
-                      <div className="relative h-72 w-full overflow-hidden">
-                        {pkg.tag && (
-                          <div className={`absolute top-4 left-4 z-20 ${pkg.tagColor || 'bg-white/90 text-slate-900'} backdrop-blur-md text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg shadow-lg`}>
-                            {pkg.tag}
-                          </div>
-                        )}
+                  sortedPackages.map((pkg, pkgIdx) => (
+                    <div key={pkg.id}>
+                      <Link to={`/packages/${pkg.id}`} className={`group flex flex-col bg-white dark:bg-card-dark rounded-[2rem] overflow-hidden hover:shadow-2xl hover:shadow-slate-200/50 dark:hover:shadow-black/50 transition-all duration-300 transform hover:-translate-y-1 relative`}>
+                        {/* Image Container */}
+                        <div className="relative h-72 w-full overflow-hidden">
+                          {pkg.tag && (
+                            <div className={`absolute top-4 left-4 z-20 ${pkg.tagColor || 'bg-white/90 text-slate-900'} backdrop-blur-md text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg shadow-lg`}>
+                              {pkg.tag}
+                            </div>
+                          )}
 
-                        {/* Wishlist Button */}
-                        <button className="absolute top-4 right-4 z-20 size-10 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center text-white hover:bg-white hover:text-red-500 transition-all shadow-sm">
-                          <span className="material-symbols-outlined text-[20px]">favorite</span>
-                        </button>
+                          {/* Wishlist Button */}
+                          <button className="absolute top-4 right-4 z-20 size-10 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center text-white hover:bg-white hover:text-red-500 transition-all shadow-sm">
+                            <span className="material-symbols-outlined text-[20px]">favorite</span>
+                          </button>
 
-                        {/* Urgency Badge (Seats) */}
-                        {pkg.remainingSeats && pkg.remainingSeats < 10 && (
-                          <div className="absolute top-4 left-4 z-20 bg-red-600/90 backdrop-blur text-white text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg shadow-lg animate-pulse flex items-center gap-1">
-                            <span className="material-symbols-outlined text-[14px]">local_fire_department</span>
-                            Only {pkg.remainingSeats} Left
-                          </div>
-                        )}
+                          {/* Urgency Badge (Seats) */}
+                          {pkg.remainingSeats && pkg.remainingSeats < 10 && (
+                            <div className="absolute top-4 left-4 z-20 bg-red-600/90 backdrop-blur text-white text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg shadow-lg animate-pulse flex items-center gap-1">
+                              <span className="material-symbols-outlined text-[14px]">local_fire_department</span>
+                              Only {pkg.remainingSeats} Left
+                            </div>
+                          )}
 
-                        {/* Special Offer Badge */}
-                        {pkg.offerEndTime && (
-                          <div className={`absolute ${pkg.remainingSeats && pkg.remainingSeats < 10 ? 'top-14' : 'top-4'} left-4 z-20 bg-primary/90 backdrop-blur text-white text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg shadow-lg flex items-center gap-1`}>
-                            <span className="material-symbols-outlined text-[14px]">timer</span>
-                            Offer Ends Soon
-                          </div>
-                        )}
+                          {/* Special Offer Badge */}
+                          {pkg.offerEndTime && (
+                            <div className={`absolute ${pkg.remainingSeats && pkg.remainingSeats < 10 ? 'top-14' : 'top-4'} left-4 z-20 bg-primary/90 backdrop-blur text-white text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg shadow-lg flex items-center gap-1`}>
+                              <span className="material-symbols-outlined text-[14px]">timer</span>
+                              Offer Ends Soon
+                            </div>
+                          )}
 
-                        <OptimizedImage
-                          src={pkg.image}
-                          alt={pkg.title}
-                          className="h-full w-full group-hover:scale-110 transition-transform duration-1000 ease-out"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-80 transition-opacity"></div>
+                          <OptimizedImage
+                            src={pkg.image}
+                            alt={pkg.title}
+                            className="h-full w-full group-hover:scale-110 transition-transform duration-500 ease-out"
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-80 transition-opacity"></div>
 
-                        <div className="absolute bottom-0 left-0 right-0 p-6 text-white translate-y-2 group-hover:translate-y-0 transition-transform duration-500">
-                          <div className="flex items-center gap-2 mb-2 opacity-0 group-hover:opacity-100 transition-opacity duration-500 delay-100">
-                            <span className="flex items-center gap-1 text-xs font-bold bg-white/20 backdrop-blur-md px-2 py-1 rounded-md"><span className="material-symbols-outlined text-[14px]">schedule</span> {pkg.days} Days</span>
-                          </div>
-                          <h3 className="font-black text-2xl leading-tight shadow-black drop-shadow-md mb-1">{pkg.title}</h3>
-                          <p className="text-white/80 text-sm font-medium flex items-center gap-1"><span className="material-symbols-outlined text-[16px]">location_on</span> {pkg.location}</p>
-                        </div>
-                      </div>
-
-                      {/* Content Body */}
-                      <div className="flex flex-col p-6 pt-4 flex-1">
-                        <p className="text-sm text-slate-500 dark:text-slate-400 line-clamp-2 mb-6 leading-relaxed font-medium">{pkg.description}</p>
-
-                        <div className="mt-auto flex items-center justify-between border-t border-slate-100 dark:border-slate-800 pt-4">
-                          <div className="flex flex-col">
-                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Starting from</span>
-                            <span className="text-xl font-black text-slate-900 dark:text-white">₹{pkg.price.toLocaleString()}</span>
-                            <span className="text-[9px] text-green-600 dark:text-green-400 font-bold">all taxes included</span>
-                          </div>
-                          <div className="size-10 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-colors shadow-sm">
-                            <span className="material-symbols-outlined text-[20px]">arrow_forward</span>
+                          <div className="absolute bottom-0 left-0 right-0 p-6 text-white translate-y-2 group-hover:translate-y-0 transition-transform duration-500">
+                            <div className="flex items-center gap-2 mb-2 opacity-0 group-hover:opacity-100 transition-opacity duration-500 delay-100">
+                              <span className="flex items-center gap-1 text-xs font-bold bg-white/20 backdrop-blur-md px-2 py-1 rounded-md"><span className="material-symbols-outlined text-[14px]">schedule</span> {pkg.days} Days</span>
+                            </div>
+                            <h3 className="font-black text-2xl leading-tight shadow-black drop-shadow-md mb-1">{pkg.title}</h3>
+                            <p className="text-white/80 text-sm font-medium flex items-center gap-1"><span className="material-symbols-outlined text-[16px]">location_on</span> {pkg.location}</p>
                           </div>
                         </div>
-                      </div>
-                    </Link>
+
+                        {/* Content Body */}
+                        <div className="flex flex-col p-6 pt-4 flex-1">
+                          <p className="text-sm text-slate-500 dark:text-slate-400 line-clamp-2 mb-6 leading-relaxed font-medium">{pkg.description}</p>
+
+                          <div className="mt-auto flex items-center justify-between border-t border-slate-100 dark:border-slate-800 pt-4">
+                            <div className="flex flex-col">
+                              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Starting from</span>
+                              <span className="text-xl font-black text-slate-900 dark:text-white">₹{pkg.price.toLocaleString()}</span>
+                              <span className="text-[9px] text-green-600 dark:text-green-400 font-bold">all taxes included</span>
+                            </div>
+                            <div className="size-10 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-colors shadow-sm">
+                              <span className="material-symbols-outlined text-[20px]">arrow_forward</span>
+                            </div>
+                          </div>
+                        </div>
+                      </Link>
+                    </div>
                   ))
                 ) : (
                   <div className="col-span-full py-32 text-center">

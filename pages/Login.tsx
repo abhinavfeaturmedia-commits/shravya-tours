@@ -33,65 +33,149 @@ export const Login: React.FC = () => {
     };
 
     return (
-        <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-            <div className="max-w-md w-full bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-100">
-                <div className="bg-slate-900 p-8 text-center text-white">
-                    <div className="inline-flex items-center justify-center size-16 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-500 shadow-lg mb-4">
-                        <span className="material-symbols-outlined text-3xl">travel_explore</span>
+        <div className="min-h-screen flex">
+            {/* ── Left panel: atmospheric image + editorial copy ── */}
+            <div
+                className="hidden lg:flex lg:w-1/2 relative overflow-hidden flex-col justify-between p-12"
+                style={{
+                    backgroundImage: `url('https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1200&q=85&auto=format&fit=crop')`,
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                }}
+            >
+                {/* Dark gradient overlay */}
+                <div className="absolute inset-0 bg-gradient-to-br from-black/80 via-black/50 to-black/30" />
+
+                {/* Warm amber accent stripe at top */}
+                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary via-primary-light to-accent z-10" />
+
+                {/* Brand mark */}
+                <div className="relative z-10 flex items-center gap-3">
+                    <div className="size-10 rounded-xl bg-primary/90 flex items-center justify-center shadow-lg">
+                        <span className="material-symbols-outlined text-white text-xl">travel_explore</span>
                     </div>
-                    <h1 className="text-2xl font-bold">Shravya Tours</h1>
-                    <p className="text-slate-400 mt-1">Admin Panel Access</p>
+                    <span className="text-white font-semibold text-lg tracking-wide">Shravya Tours</span>
                 </div>
 
-                <form onSubmit={handleSubmit} className="p-8 space-y-6">
-                    <div className="space-y-4">
-                        <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">Email Address</label>
+                {/* Editorial quote + caption */}
+                <div className="relative z-10">
+                    <blockquote className="font-display text-white text-4xl xl:text-5xl font-bold italic leading-[1.15] mb-6 drop-shadow-2xl">
+                        "The world is a book, and those who do not travel read only one page."
+                    </blockquote>
+                    <p className="text-white/60 text-sm font-light tracking-widest uppercase">— Saint Augustine</p>
+
+                    <div className="mt-10 flex items-center gap-6">
+                        <div className="flex -space-x-2">
+                            {['K', 'R', 'A', 'S'].map((l, i) => (
+                                <div
+                                    key={i}
+                                    className="size-8 rounded-full border-2 border-white/30 flex items-center justify-center text-white text-xs font-bold"
+                                    style={{ background: `hsl(${20 + i * 30}, 60%, 45%)` }}
+                                >
+                                    {l}
+                                </div>
+                            ))}
+                        </div>
+                        <p className="text-white/70 text-sm font-light">
+                            Trusted by <span className="text-white font-semibold">50,000+</span> happy travelers
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            {/* ── Right panel: login form ── */}
+            <div className="w-full lg:w-1/2 flex flex-col justify-center bg-[#FBF7F0] dark:bg-background-dark px-6 sm:px-12 md:px-16 lg:px-20 xl:px-24 relative">
+
+                {/* Top amber accent bar (mobile only) */}
+                <div className="lg:hidden absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary via-primary-light to-accent" />
+
+                {/* Mobile brand mark */}
+                <div className="lg:hidden flex items-center gap-3 mb-10 pt-8">
+                    <div className="size-9 rounded-lg bg-primary flex items-center justify-center shadow-md">
+                        <span className="material-symbols-outlined text-white text-lg">travel_explore</span>
+                    </div>
+                    <span className="font-semibold text-slate-900 dark:text-white text-lg">Shravya Tours</span>
+                </div>
+
+                <div className="max-w-md w-full mx-auto reveal">
+                    {/* Heading */}
+                    <div className="mb-10">
+                        <h1 className="font-display text-5xl font-bold text-slate-900 dark:text-white italic leading-tight mb-2">
+                            Welcome Back
+                        </h1>
+                        <p className="text-slate-500 dark:text-slate-400 font-light text-base">
+                            Sign in to your admin panel to manage tours, bookings & content.
+                        </p>
+                    </div>
+
+                    <form onSubmit={handleSubmit} className="space-y-6">
+                        {/* Email */}
+                        <div className="space-y-2">
+                            <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-widest">
+                                Email Address
+                            </label>
                             <input
+                                id="login-email"
                                 type="email"
                                 required
                                 value={email}
                                 onChange={e => setEmail(e.target.value)}
-                                className="w-full h-11 px-4 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none transition-all"
-                                placeholder="admin@shravya.com"
+                                className="w-full h-12 px-4 rounded-xl bg-white dark:bg-white/5 border border-[#EDE8DF] dark:border-white/10 text-slate-900 dark:text-white placeholder:text-slate-400 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all shadow-sm font-light"
+                                placeholder="admin@shravyatours.com"
                             />
                         </div>
-                        <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">Password</label>
+
+                        {/* Password */}
+                        <div className="space-y-2">
+                            <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-widest">
+                                Password
+                            </label>
                             <input
+                                id="login-password"
                                 type="password"
                                 required
                                 value={password}
                                 onChange={e => setPassword(e.target.value)}
-                                className="w-full h-11 px-4 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none transition-all"
+                                className="w-full h-12 px-4 rounded-xl bg-white dark:bg-white/5 border border-[#EDE8DF] dark:border-white/10 text-slate-900 dark:text-white placeholder:text-slate-400 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all shadow-sm font-light"
                                 placeholder="••••••••"
                             />
                         </div>
-                    </div>
 
-                    <button
-                        type="submit"
-                        disabled={loading}
-                        className="w-full h-12 bg-slate-900 text-white rounded-xl font-bold hover:bg-slate-800 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                    >
-                        {loading ? (
-                            <span className="size-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                        ) : (
-                            <>Sign In <span className="material-symbols-outlined text-lg">arrow_forward</span></>
-                        )}
-                    </button>
+                        {/* Submit */}
+                        <button
+                            id="login-submit"
+                            type="submit"
+                            disabled={loading}
+                            className="w-full h-12 bg-primary hover:bg-primary-dark text-white rounded-xl font-semibold tracking-wide transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg shadow-primary/25 mt-2"
+                        >
+                            {loading ? (
+                                <span className="size-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                            ) : (
+                                <>Sign In <span className="material-symbols-outlined text-lg">arrow_forward</span></>
+                            )}
+                        </button>
 
-                    <p className="text-center text-xs text-slate-400">
-                        Protected area. Authorized personnel only.
-                    </p>
+                        <p className="text-center text-xs text-slate-400 dark:text-slate-500 font-light">
+                            Protected area — authorized personnel only.
+                        </p>
 
-                    <div className="mt-4 pt-4 border-t border-slate-100 flex justify-center">
-                        <a href="/" className="text-slate-500 hover:text-indigo-600 text-sm font-medium flex items-center gap-2 transition-colors no-underline">
-                            <span className="material-symbols-outlined text-lg">arrow_back</span>
-                            Back to Homepage
-                        </a>
-                    </div>
-                </form>
+                        {/* Back link */}
+                        <div className="pt-2 flex justify-center">
+                            <a
+                                href="/"
+                                className="text-slate-400 hover:text-primary text-sm font-medium flex items-center gap-2 transition-colors no-underline"
+                            >
+                                <span className="material-symbols-outlined text-lg">arrow_back</span>
+                                Back to Homepage
+                            </a>
+                        </div>
+                    </form>
+                </div>
+
+                {/* Bottom watermark */}
+                <p className="absolute bottom-6 left-0 right-0 text-center text-[10px] text-slate-300 dark:text-slate-700 tracking-widest uppercase font-light">
+                    © 2025 Shravya Tours · All rights reserved
+                </p>
             </div>
         </div>
     );

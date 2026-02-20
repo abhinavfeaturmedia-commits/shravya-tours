@@ -75,11 +75,11 @@ export const AuditLogs: React.FC = () => {
     };
 
     return (
-        <div className="flex flex-col h-full bg-slate-50 dark:bg-[#0B1120]">
+        <div className="flex flex-col h-full admin-page-bg">
             {/* Header */}
             <div className="px-8 py-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-3">
+                    <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-3 font-display text-4xl">
                         <ShieldAlert className="text-primary" size={32} />
                         System Audit Logs
                     </h1>
@@ -89,7 +89,7 @@ export const AuditLogs: React.FC = () => {
                 </div>
                 <button
                     onClick={handleExport}
-                    className="flex items-center gap-2 bg-white dark:bg-[#1A2633] text-slate-700 dark:text-slate-200 px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 font-bold text-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors shadow-sm"
+                    className="flex items-center gap-2 bg-white dark:bg-[#1A2633] text-slate-700 dark:text-slate-200 px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 font-bold text-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors shadow-sm btn-glow"
                 >
                     <Download size={18} /> Export CSV
                 </button>
