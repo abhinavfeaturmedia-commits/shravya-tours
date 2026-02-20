@@ -177,7 +177,7 @@ export const Analytics: React.FC = () => {
                      <div>
                         <div className="flex justify-between items-end mb-2">
                            <span className="text-sm font-bold text-slate-500">Pending from Customers</span>
-                           <span className="text-lg font-black text-orange-500">{fmt(metrics.pendingCollections)}</span>
+                           <span className="text-lg kpi-number text-orange-500">{fmt(metrics.pendingCollections)}</span>
                         </div>
                         <div className="h-4 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
                            <div
@@ -192,7 +192,7 @@ export const Analytics: React.FC = () => {
                      <div>
                         <div className="flex justify-between items-end mb-2">
                            <span className="text-sm font-bold text-slate-500">Pending to Vendors</span>
-                           <span className="text-lg font-black text-blue-500">{fmt(metrics.pendingPayables)}</span>
+                           <span className="text-lg kpi-number text-blue-500">{fmt(metrics.pendingPayables)}</span>
                         </div>
                         <div className="h-4 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
                            <div
@@ -218,7 +218,7 @@ export const Analytics: React.FC = () => {
                            <div key={cat} className="group">
                               <div className="flex justify-between items-center mb-1 text-sm">
                                  <span className="font-bold text-slate-700 dark:text-slate-300">{cat}</span>
-                                 <span className="font-mono font-bold text-slate-900 dark:text-white">{fmt(amount)}</span>
+                                 <span className="kpi-number text-slate-900 dark:text-white">{fmt(amount)}</span>
                               </div>
                               <div className="w-full h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
                                  <div
@@ -265,9 +265,9 @@ export const Analytics: React.FC = () => {
                               <tr key={booking.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
                                  <td className="px-6 py-4 font-bold text-slate-900 dark:text-white">{booking.customer}</td>
                                  <td className="px-6 py-4 text-slate-600 dark:text-slate-400">{booking.title}</td>
-                                 <td className="px-6 py-4 text-right font-mono font-bold text-emerald-600">{fmt(revenue)}</td>
-                                 <td className="px-6 py-4 text-right font-mono font-bold text-red-500">{fmt(cost)}</td>
-                                 <td className={`px-6 py-4 text-right font-mono font-bold ${profit >= 0 ? 'text-indigo-600' : 'text-red-600'}`}>
+                                 <td className="px-6 py-4 text-right kpi-number text-emerald-600">{fmt(revenue)}</td>
+                                 <td className="px-6 py-4 text-right kpi-number text-red-500">{fmt(cost)}</td>
+                                 <td className={`px-6 py-4 text-right kpi-number ${profit >= 0 ? 'text-indigo-600' : 'text-red-600'}`}>
                                     {fmt(profit)}
                                  </td>
                                  <td className="px-6 py-4 text-right">

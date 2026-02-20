@@ -786,7 +786,7 @@ export const Bookings: React.FC = () => {
                                                     </td>
                                                     <td className="px-6 py-4">
                                                         <div className="flex flex-col gap-1">
-                                                            <span className="text-sm font-black text-slate-900 dark:text-white">₹{booking.amount.toLocaleString()}</span>
+                                                            <span className="text-sm kpi-number text-slate-900 dark:text-white">₹{booking.amount.toLocaleString()}</span>
                                                             <span className={`text-[10px] px-1.5 py-0.5 rounded w-fit font-bold uppercase ${booking.payment === 'Paid' ? 'bg-green-100 text-green-700' : booking.payment === 'Deposit' ? 'bg-blue-100 text-blue-700' : booking.payment === 'Refunded' ? 'bg-purple-100 text-purple-700' : 'bg-slate-100 text-slate-600'}`}>
                                                                 {booking.payment}
                                                             </span>
@@ -900,7 +900,7 @@ export const Bookings: React.FC = () => {
                                                     <p className="text-xs text-slate-500 line-clamp-1 mb-3">{booking.title}</p>
                                                     <div className="flex items-center justify-between text-xs text-slate-500 pt-3 border-t border-slate-100 dark:border-slate-800">
                                                         <span className="flex items-center gap-1"><span className="material-symbols-outlined text-[14px]">calendar_today</span> {new Date(booking.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
-                                                        <span className="font-bold text-slate-900 dark:text-white">₹{(booking.amount / 1000).toFixed(1)}k</span>
+                                                        <span className="kpi-number text-slate-900 dark:text-white">₹{(booking.amount / 1000).toFixed(1)}k</span>
                                                     </div>
                                                 </div>
                                             ))}

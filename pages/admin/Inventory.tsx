@@ -349,11 +349,11 @@ export const Inventory: React.FC = () => {
                             {/* Stats */}
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 flex flex-col items-center justify-center text-center">
-                                    <span className="text-3xl font-bold text-slate-900 dark:text-white">{getSlot(selectedDate).capacity}</span>
+                                    <span className="text-3xl kpi-number text-slate-900 dark:text-white">{getSlot(selectedDate).capacity}</span>
                                     <span className="text-xs font-medium text-slate-500 uppercase tracking-wide mt-1">Total Capacity</span>
                                 </div>
                                 <div className="p-4 rounded-xl bg-blue-50 dark:bg-blue-900/10 flex flex-col items-center justify-center text-center border border-blue-100 dark:border-blue-900/20">
-                                    <span className="text-3xl font-bold text-primary">{getSlot(selectedDate).booked}</span>
+                                    <span className="text-3xl kpi-number text-primary">{getSlot(selectedDate).booked}</span>
                                     <span className="text-xs font-medium text-primary/80 uppercase tracking-wide mt-1">Confirmed</span>
                                 </div>
                             </div>

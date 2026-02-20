@@ -282,8 +282,8 @@ export const AdminDashboard: React.FC = () => {
                                 </div>
                             </div>
                             <div>
-                                <p className="text-slate-500 dark:text-slate-400 text-xs font-semibold uppercase tracking-wider mb-2">{kpi.label}</p>
-                                <h3 className="text-4xl font-black text-slate-900 dark:text-white tracking-tight">{kpi.value}</h3>
+                                <p className="text-slate-500 dark:text-slate-400 text-xs font-semibold uppercase tracking-wider mb-1">{kpi.label}</p>
+                                <h3 className="text-4xl kpi-number text-slate-900 dark:text-white mt-1">{kpi.value}</h3>
                             </div>
                         </div>
                     </div>
