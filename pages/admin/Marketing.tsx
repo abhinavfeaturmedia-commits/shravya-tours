@@ -108,15 +108,15 @@ export const Marketing: React.FC = () => {
 
                                 <div className="grid grid-cols-3 gap-4 pt-4 border-t border-slate-100 dark:border-slate-800">
                                     <div className="text-center">
-                                        <p className="text-xl font-black text-slate-900 dark:text-white">{camp.metrics.sent}</p>
+                                        <p className="text-xl kpi-number text-slate-900 dark:text-white">{camp.metrics.sent}</p>
                                         <p className="text-[10px] font-bold text-slate-400 uppercase">Sent</p>
                                     </div>
                                     <div className="text-center">
-                                        <p className="text-xl font-black text-slate-900 dark:text-white">{camp.metrics.opened}</p>
+                                        <p className="text-xl kpi-number text-slate-900 dark:text-white">{camp.metrics.opened}</p>
                                         <p className="text-[10px] font-bold text-slate-400 uppercase">Opened</p>
                                     </div>
                                     <div className="text-center">
-                                        <p className="text-xl font-black text-slate-900 dark:text-white">{camp.metrics.clicked}</p>
+                                        <p className="text-xl kpi-number text-slate-900 dark:text-white">{camp.metrics.clicked}</p>
                                         <p className="text-[10px] font-bold text-slate-400 uppercase">Clicked</p>
                                     </div>
                                 </div>
