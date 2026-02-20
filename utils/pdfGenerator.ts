@@ -1,8 +1,8 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { Proposal, Lead, ProposalOption } from '../types';
+import { Proposal, Lead, ProposalOption, MasterHotel, MasterActivity } from '../types';
 
-export const generateProposalPDF = (proposal: Proposal, lead: Lead) => {
+export const generateProposalPDF = (proposal: Proposal, lead: Lead, masterHotels: MasterHotel[] = [], masterActivities: MasterActivity[] = []) => {
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.width;
 
@@ -56,7 +56,7 @@ export const generateProposalPDF = (proposal: Proposal, lead: Lead) => {
 
     // --- Options ---
     proposal.options.forEach((option, index) => {
-        if (yPos > 250) {
+        if (yPos > 240) {
             doc.addPage();
             yPos = 20;
         }
@@ -77,23 +77,47 @@ export const generateProposalPDF = (proposal: Proposal, lead: Lead) => {
 
         yPos += 25;
 
-        // Inclusions
-        doc.setFontSize(10);
-        doc.setTextColor(100, 100, 100);
+        // --- Content Resolution ---
+        // Resolve Hotels
+        const hotelNames = option.hotels.map(hId => {
+            const h = masterHotels.find(mh => mh.id === hId);
+            return h ? `${h.name} (${h.rating} Star)` : hId;
+        });
 
-        const inclusions = [
-            ...option.inclusions,
-            `Hotels: ${option.hotels.length > 0 ? option.hotels.join(', ') : 'As per selection'}`
-        ];
+        // Resolve Activities
+        const activityNames = (option.activities || []).map(aId => {
+            const a = masterActivities.find(ma => ma.id === aId);
+            return a ? a.name : aId;
+        });
+
+        // Inclusions List
+        const inclusions = [...option.inclusions];
+
+        // Format Body for AutoTable
+        const bodyRows: string[][] = [];
+
+        if (hotelNames.length > 0) {
+            bodyRows.push(['Hotels', hotelNames.join('\n')]);
+        }
+        if (activityNames.length > 0) {
+            bodyRows.push(['Services/Activities', activityNames.join('\n')]);
+        }
+        if (inclusions.length > 0) {
+            bodyRows.push(['Inclusions', inclusions.map(i => `• ${i}`).join('\n')]);
+        }
 
         // Using autoTable for cleaner list
         autoTable(doc, {
             startY: yPos,
-            margin: { left: 20 },
-            body: inclusions.map(inc => [`• ${inc}`]),
-            theme: 'plain',
-            styles: { fontSize: 10, cellPadding: 1 },
-            columnStyles: { 0: { cellWidth: 150 } },
+            margin: { left: 15, right: 15 },
+            head: [],
+            body: bodyRows,
+            theme: 'grid',
+            styles: { fontSize: 10, cellPadding: 4, valign: 'top' },
+            columnStyles: {
+                0: { cellWidth: 40, fontStyle: 'bold', textColor: [88, 28, 135] },
+                1: { cellWidth: 'auto' }
+            },
         });
 
         // @ts-ignore
@@ -120,19 +144,20 @@ export const generateProformaInvoice = (proposal: Proposal, optionId: string, le
 
     if (!option) return;
 
-    // --- Mock Company Data ---
+    // --- Company Data ---
     const company = {
         name: "SHRAVYA TOURS",
-        address: "A508, Wisteria, Patil Nagar, Chikhali, PCMC, Pune, Maharashtra - 411062",
+        addressLine1: "A508, Wisteria, Patil Nagar,",
+        addressLine2: "Chikhali, PCMC, Pune, MH - 411062",
         phone: "+91 80109 55675",
         email: "shravyatours23@gmail.com",
-        gstin: "02ABCDE1234F1Z5", // Himachal Pradesh Code 02
+        gstin: "27BKSPK0858C1Z6", // Updated Validation
         bank: {
             name: "HDFC Bank",
-            accountName: "Shravya Tours & Travels",
-            accountNo: "50200012345678",
-            ifsc: "HDFC0001234",
-            branch: "Manali Main"
+            accountName: "SHRAVYA TOURS AND TRAVELS",
+            accountNo: "50200088927878",
+            ifsc: "HDFC0000007",
+            branch: "Pune - Chikhali"
         }
     };
 
@@ -145,45 +170,55 @@ export const generateProformaInvoice = (proposal: Proposal, optionId: string, le
     const sgst = gstAmount / 2;
 
     // --- Header ---
-    doc.setFontSize(20);
+    doc.setFillColor(255, 255, 255);
+    doc.setFontSize(22);
     doc.setFont("helvetica", "bold");
-    doc.text("PROFORMA INVOICE", pageWidth - 15, 20, { align: 'right' });
+    doc.setTextColor(0, 0, 0);
+    doc.text("PROFORMA INVOICE", pageWidth - 15, 25, { align: 'right' });
 
     doc.setFontSize(10);
     doc.setFont("helvetica", "normal");
-    doc.text(`Date: ${new Date().toLocaleDateString()}`, pageWidth - 15, 30, { align: 'right' });
-    doc.text(`Ref No: PI-${proposal.id.slice(-6).toUpperCase()}`, pageWidth - 15, 35, { align: 'right' });
+    doc.setTextColor(100, 100, 100);
+    doc.text(`Date: ${new Date().toLocaleDateString()}`, pageWidth - 15, 33, { align: 'right' });
+    doc.text(`Ref No: PI-${proposal.id.slice(-6).toUpperCase()}`, pageWidth - 15, 38, { align: 'right' });
 
-
-
-    // Company Info
-    doc.setFontSize(14);
+    // Logo Placeholder or Text
+    doc.setFontSize(18);
     doc.setFont("helvetica", "bold");
-    doc.text(company.name, 15, 20);
+    doc.setTextColor(88, 28, 135);
+    doc.text(company.name, 15, 25);
+
     doc.setFontSize(9);
     doc.setFont("helvetica", "normal");
-    doc.text(company.address, 15, 26);
-    doc.text(`Phone: ${company.phone}`, 15, 31);
-    doc.text(`Email: ${company.email}`, 15, 36);
+    doc.setTextColor(0, 0, 0);
+    doc.text(company.addressLine1, 15, 32);
+    doc.text(company.addressLine2, 15, 36);
+    doc.text(`Phone: ${company.phone}`, 15, 40);
+    doc.text(`Email: ${company.email}`, 15, 44);
+    doc.text(`GSTIN: ${company.gstin}`, 15, 48);
 
+    doc.setDrawColor(200, 200, 200);
+    doc.line(15, 55, pageWidth - 15, 55);
 
     // Bill To
-    doc.line(15, 45, pageWidth - 15, 45);
+    doc.setFontSize(11);
     doc.setFont("helvetica", "bold");
-    doc.text("Bill To:", 15, 52);
+    doc.text("Bill To:", 15, 65);
+
+    doc.setFontSize(10);
     doc.setFont("helvetica", "normal");
-    doc.text(lead.name, 15, 58);
-    if (lead.email) doc.text(lead.email, 15, 63);
-    if (lead.phone) doc.text(lead.phone, 15, 68);
-    doc.text(`Place of Supply: ${lead.location || 'State Code 00'}`, 15, 73); // Should ideally be dynamic
+    doc.text(lead.name, 15, 71);
+    if (lead.email) doc.text(lead.email, 15, 76);
+    if (lead.phone) doc.text(lead.phone, 15, 81);
+    doc.text(`Place of Supply: ${lead.location || 'State Code 00'}`, 15, 86);
 
     // --- Table ---
     autoTable(doc, {
-        startY: 80,
+        startY: 95,
         head: [['S.No', 'Description', 'HSN/SAC', 'Taxable Val', 'CGST (2.5%)', 'SGST (2.5%)', 'Total']],
         body: [[
             '1',
-            `Tour Package: ${proposal.title} - ${option.name}`,
+            `Tour Package: ${proposal.title}\nOption: ${option.name}`,
             '9985', // Tour Operator Service
             taxableValue.toFixed(2),
             cgst.toFixed(2),
@@ -194,36 +229,53 @@ export const generateProformaInvoice = (proposal: Proposal, optionId: string, le
             '', 'Total', '', taxableValue.toFixed(2), cgst.toFixed(2), sgst.toFixed(2), `INR ${totalPrice.toLocaleString('en-IN')}`
         ]],
         theme: 'grid',
-        headStyles: { fillColor: [88, 28, 135], textColor: 255 },
-        footStyles: { fillColor: [243, 244, 246], textColor: 0, fontStyle: 'bold' }
+        headStyles: { fillColor: [88, 28, 135], textColor: 255, halign: 'center' },
+        bodyStyles: { valign: 'middle', halign: 'center' },
+        footStyles: { fillColor: [243, 244, 246], textColor: 0, fontStyle: 'bold', halign: 'center' },
+        columnStyles: {
+            1: { halign: 'left', cellWidth: 60 }
+        }
     });
 
     // --- Bank Details ---
     // @ts-ignore
     let yPos = doc.lastAutoTable.finalY + 15;
 
+    doc.setFillColor(243, 244, 246);
+    doc.roundedRect(15, yPos, pageWidth / 2, 45, 3, 3, 'F');
+
     doc.setFontSize(10);
     doc.setFont("helvetica", "bold");
-    doc.text("Bank Details for Payment:", 15, yPos);
+    doc.text("Bank Details:", 20, yPos + 8);
 
     doc.setFont("helvetica", "normal");
     doc.setFontSize(9);
-    yPos += 6;
-    doc.text(`Account Name: ${company.bank.accountName}`, 15, yPos);
-    doc.text(`Bank Name: ${company.bank.name}`, 15, yPos + 5);
-    doc.text(`Account Number: ${company.bank.accountNo}`, 15, yPos + 10);
-    doc.text(`IFSC Code: ${company.bank.ifsc}`, 15, yPos + 15);
-    doc.text(`Branch: ${company.bank.branch}`, 15, yPos + 20);
+    yPos += 14;
+    doc.text(`Account Name: ${company.bank.accountName}`, 20, yPos);
+    doc.text(`Bank Name: ${company.bank.name}`, 20, yPos + 5);
+    doc.text(`Account Number: ${company.bank.accountNo}`, 20, yPos + 10);
+    doc.text(`IFSC Code: ${company.bank.ifsc}`, 20, yPos + 15);
+    doc.text(`Branch: ${company.bank.branch}`, 20, yPos + 20);
 
     // --- Terms ---
-    yPos += 35;
+    // @ts-ignore
+    yPos = doc.lastAutoTable.finalY + 15;
+    const termsX = pageWidth / 2 + 20;
+
+    doc.setFontSize(10);
     doc.setFont("helvetica", "bold");
-    doc.text("Terms & Conditions:", 15, yPos);
+    doc.text("Terms & Conditions:", termsX, yPos + 8);
     doc.setFont("helvetica", "normal");
     doc.setFontSize(8);
-    doc.text("1. This is a computer generated invoice.", 15, yPos + 6);
-    doc.text("2. Please quote the reference number in all communications.", 15, yPos + 10);
-    doc.text("3. Payment to be made 100% in advance for confirmation.", 15, yPos + 14);
+    doc.text("1. This is a computer generated invoice.", termsX, yPos + 14);
+    doc.text("2. 100% Advance payment required.", termsX, yPos + 19);
+    doc.text("3. Non-refundable as per policy.", termsX, yPos + 24);
+
+    // Footer
+    const pageHeight = doc.internal.pageSize.height;
+    doc.setFontSize(8);
+    doc.setTextColor(150, 150, 150);
+    doc.text("Thank you for choosing Shravya Tours!", pageWidth / 2, pageHeight - 15, { align: 'center' });
 
     doc.save(`Proforma_${lead.name.replace(/\s+/g, '_')}_${proposal.id}.pdf`);
 };
@@ -235,54 +287,58 @@ export const generateBookingInvoice = (booking: any, customer: any) => {
     // --- Mock Company Data ---
     const company = {
         name: "SHRAVYA TOURS",
-        address: "A508, Wisteria, Patil Nagar, Chikhali, PCMC, Pune, Maharashtra - 411062",
+        addressLine1: "A508, Wisteria, Patil Nagar,",
+        addressLine2: "Chikhali, PCMC, Pune, MH - 411062",
         phone: "+91 80109 55675",
         email: "shravyatours23@gmail.com",
-        gstin: "02ABCDE1234F1Z5", // Himachal Pradesh Code 02
+        gstin: "27BKSPK0858C1Z6",
         bank: {
             name: "HDFC Bank",
-            accountName: "Shravya Tours & Travels",
-            accountNo: "50200012345678",
-            ifsc: "HDFC0001234",
-            branch: "Manali Main"
+            accountName: "SHRAVYA TOURS AND TRAVELS",
+            accountNo: "50200088927878",
+            ifsc: "HDFC0000007",
+            branch: "Pune - Chikhali"
         }
     };
 
     // --- Header ---
     doc.setFillColor(255, 255, 255);
-    doc.setFontSize(20);
+    doc.setFontSize(22);
     doc.setFont("helvetica", "bold");
-    doc.text("INVOICE", pageWidth - 15, 20, { align: 'right' });
+    doc.text("INVOICE", pageWidth - 15, 25, { align: 'right' });
 
     doc.setFontSize(10);
     doc.setFont("helvetica", "normal");
-    doc.text(`Invoice No: ${booking.invoiceNo || 'DRAFT'}`, pageWidth - 15, 30, { align: 'right' });
-    doc.text(`Date: ${new Date(booking.date).toLocaleDateString()}`, pageWidth - 15, 35, { align: 'right' });
+    doc.text(`Invoice No: ${booking.invoiceNo || 'DRAFT'}`, pageWidth - 15, 33, { align: 'right' });
+    doc.text(`Date: ${new Date(booking.date).toLocaleDateString()}`, pageWidth - 15, 38, { align: 'right' });
 
     // Company Info
-    doc.setFontSize(14);
+    doc.setFontSize(18);
     doc.setFont("helvetica", "bold");
-    doc.text(company.name, 15, 20);
+    doc.text(company.name, 15, 25);
     doc.setFontSize(9);
     doc.setFont("helvetica", "normal");
-    doc.text(company.address, 15, 26);
-    doc.text(`Phone: ${company.phone}`, 15, 31);
-    doc.text(`Email: ${company.email}`, 15, 36);
-    doc.text(`GSTIN: ${company.gstin}`, 15, 41);
+    doc.text(company.addressLine1, 15, 32);
+    doc.text(company.addressLine2, 15, 36);
+    doc.text(`Phone: ${company.phone}`, 15, 40);
+    doc.text(`Email: ${company.email}`, 15, 44);
+    doc.text(`GSTIN: ${company.gstin}`, 15, 48);
+
+    doc.line(15, 55, pageWidth - 15, 55);
 
     // Bill To
-    doc.line(15, 45, pageWidth - 15, 45);
+    doc.setFontSize(11);
     doc.setFont("helvetica", "bold");
-    doc.text("Bill To:", 15, 52);
+    doc.text("Bill To:", 15, 65);
     doc.setFont("helvetica", "normal");
-    doc.text(customer?.name || booking.customer || 'Valued Customer', 15, 58);
-    if (customer?.email || booking.email) doc.text(customer?.email || booking.email, 15, 63);
-    if (customer?.phone || booking.phone) doc.text(customer?.phone || booking.phone, 15, 68);
-    doc.text(`Place of Supply: ${customer?.location || 'State Code 00'}`, 15, 73);
+    doc.text(customer?.name || booking.customer || 'Valued Customer', 15, 71);
+    if (customer?.email || booking.email) doc.text(customer?.email || booking.email, 15, 76);
+    if (customer?.phone || booking.phone) doc.text(customer?.phone || booking.phone, 15, 81);
+    doc.text(`Place of Supply: ${customer?.location || 'State Code 00'}`, 15, 86);
 
     // --- Table ---
     autoTable(doc, {
-        startY: 80,
+        startY: 95,
         head: [['S.No', 'Description', 'HSN/SAC', 'Taxable Val', 'GST (5%)', 'Total']],
         body: [[
             '1',

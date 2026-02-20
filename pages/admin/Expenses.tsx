@@ -82,18 +82,18 @@ export const Expenses: React.FC = () => {
     const fmt = (n: number) => `₹${n.toLocaleString('en-IN')}`;
 
     return (
-        <div className="flex flex-col h-full bg-slate-50 dark:bg-[#0B1116]">
+        <div className="flex flex-col h-full admin-page-bg">
             {/* Header */}
             <div className="bg-white dark:bg-[#1A2633] border-b border-slate-200 dark:border-slate-800 px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 sticky top-0 z-10">
                 <div>
                     <h2 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                        <Wallet className="text-red-500" /> Expense Management
+                        <Wallet className="text-red-500" /> <span className="font-display text-3xl">Expense Management</span>
                     </h2>
                     <p className="text-slate-500 dark:text-slate-400 text-sm">Track monthly operational costs (Rent, Salaries, etc.)</p>
                 </div>
                 <button
                     onClick={() => handleOpenModal()}
-                    className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl text-sm px-5 py-2.5 shadow-lg shadow-red-600/20 active:scale-95 transition-all"
+                    className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl text-sm px-5 py-2.5 shadow-lg shadow-red-600/20 active:scale-95 transition-all btn-glow"
                 >
                     <Plus size={18} /> Record Expense
                 </button>
@@ -101,7 +101,7 @@ export const Expenses: React.FC = () => {
 
             <div className="flex-1 overflow-y-auto p-6 space-y-8">
                 {/* Stats Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 stagger-cards">
                     <div className="bg-white dark:bg-[#1A2633] p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800">
                         <div className="flex justify-between items-start mb-4">
                             <div className="p-3 bg-red-50 dark:bg-red-900/20 rounded-xl text-red-600">
@@ -110,7 +110,7 @@ export const Expenses: React.FC = () => {
                             <span className="text-xs font-bold bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded text-slate-500">This Month</span>
                         </div>
                         <p className="text-sm font-medium text-slate-500">Total Expenses</p>
-                        <h3 className="text-3xl font-black text-slate-900 dark:text-white mt-1">{fmt(stats.total)}</h3>
+                        <h3 className="text-4xl kpi-number text-slate-900 dark:text-white mt-1">{fmt(stats.total)}</h3>
                     </div>
                     <div className="bg-white dark:bg-[#1A2633] p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800">
                         <div className="flex justify-between items-start mb-4">
@@ -119,7 +119,7 @@ export const Expenses: React.FC = () => {
                             </div>
                         </div>
                         <p className="text-sm font-medium text-slate-500">Paid Amount</p>
-                        <h3 className="text-3xl font-black text-slate-900 dark:text-white mt-1">{fmt(stats.paid)}</h3>
+                        <h3 className="text-4xl kpi-number text-slate-900 dark:text-white mt-1">{fmt(stats.paid)}</h3>
                     </div>
                     <div className="bg-white dark:bg-[#1A2633] p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800">
                         <div className="flex justify-between items-start mb-4">
@@ -128,7 +128,7 @@ export const Expenses: React.FC = () => {
                             </div>
                         </div>
                         <p className="text-sm font-medium text-slate-500">Pending Payables</p>
-                        <h3 className="text-3xl font-black text-slate-900 dark:text-white mt-1">{fmt(stats.pending)}</h3>
+                        <h3 className="text-4xl kpi-number text-slate-900 dark:text-white mt-1">{fmt(stats.pending)}</h3>
                     </div>
                 </div>
 

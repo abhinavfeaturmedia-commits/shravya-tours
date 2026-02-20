@@ -479,7 +479,9 @@ export interface ProposalOption {
   name: string; // e.g: "Luxury", "Standard"
   description?: string;
   price: number;
-  hotels: string[]; // List of hotel IDs or Names
+  items: string[]; // List of hotel IDs or Names (Legacy)
+  hotels: string[]; // List of hotel IDs
+  activities: string[]; // List of activity IDs
   inclusions: string[];
   exclusions: string[];
   image?: string;

@@ -223,15 +223,15 @@ export const Accounts: React.FC = () => {
     };
 
     return (
-        <div className="flex h-full flex-col bg-slate-50 dark:bg-slate-900 relative">
+        <div className="flex h-full flex-col admin-page-bg relative">
 
             {/* Header */}
             <div className="px-6 py-4 flex-shrink-0 bg-white dark:bg-[#1A2633] border-b border-slate-200 dark:border-slate-800 flex justify-between items-center shadow-sm z-20">
                 <div>
-                    <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">Accounts & Agents</h1>
+                    <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight"><span className="font-display text-3xl">Accounts & Agents</span></h1>
                     <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">Manage B2B partners and track their booking performance.</p>
                 </div>
-                <button onClick={() => setIsCreateModalOpen(true)} className="flex items-center gap-2 bg-primary hover:bg-primary-dark text-white px-5 py-2.5 rounded-xl font-bold shadow-lg shadow-primary/20 active:scale-95 transition-all">
+                <button onClick={() => setIsCreateModalOpen(true)} className="flex items-center gap-2 bg-primary hover:bg-primary-dark text-white px-5 py-2.5 rounded-xl font-bold shadow-lg shadow-primary/20 active:scale-95 transition-all btn-glow">
                     <span className="material-symbols-outlined text-[20px]">person_add</span> <span className="hidden md:inline text-sm">Add Account</span>
                 </button>
             </div>
@@ -343,7 +343,7 @@ export const Accounts: React.FC = () => {
                                             <div className="flex justify-between items-center mb-8">
                                                 <div>
                                                     <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Total Account Volume</p>
-                                                    <h3 className="text-4xl font-black text-slate-900 dark:text-white">{accountStats.total} <span className="text-lg text-slate-400 font-medium">Bookings</span></h3>
+                                                    <h3 className="text-5xl kpi-number text-slate-900 dark:text-white">{accountStats.total} <span className="text-lg text-slate-400 font-medium">Bookings</span></h3>
                                                 </div>
                                                 <div className="text-right">
                                                     <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Wallet Balance</p>
@@ -373,7 +373,7 @@ export const Accounts: React.FC = () => {
                                             </div>
 
                                             <div className="flex gap-4">
-                                                <button onClick={() => { setActiveTab('Transactions'); setTransactionType('Credit'); setIsPaymentModalOpen(true); }} className="flex-1 py-3 bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-bold rounded-xl shadow-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-2">
+                                                <button onClick={() => { setActiveTab('Transactions'); setTransactionType('Credit'); setIsPaymentModalOpen(true); }} className="flex-1 py-3 bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-bold rounded-xl shadow-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-2 btn-glow">
                                                     <span className="material-symbols-outlined text-sm">add_card</span> Add Funds
                                                 </button>
                                                 <button onClick={handleGenerateStatement} className="flex-1 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-bold rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors flex items-center justify-center gap-2">

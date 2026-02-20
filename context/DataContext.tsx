@@ -119,7 +119,7 @@ const INITIAL_CMS_BANNERS: CMSBanner[] = [
     id: 'BNR-001',
     title: 'Experience the World, Worry-Free.',
     subtitle: 'Premium tours, transparent pricing, and 24/7 expert support. Your perfect journey starts here.',
-    imageUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDe8BDAUta_Sad0sbfFPp3eGFuTDne-kjCHaSbEmPIsw2A35eYa_4cmO0qQIrrAUnyuBkmJYYx5BswvQ8xoNvi-V48GV78qtY2osp3mRT5dAgVv31-tcAdYZIYq5VwnghdHN-xLMZHlH8DhevC9MvU-RUVOzTxENfRuR9CornjT44jfRzEHiuwDi6on6RQISv-Sa7xPzXf6U61FblGpi9Ou2aXfsR5_PoyNJhX-aCt1zuv1ogRgtmIOXqYjfcAQ79z48VNTNX3nLemm',
+    imageUrl: 'https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=1920&q=85&auto=format&fit=crop',
     ctaText: 'Explore Packages',
     ctaLink: '/packages',
     isActive: true
@@ -796,6 +796,15 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => saveToStorage(`${STORAGE_KEY}_cms_testimonials`, cmsTestimonials), [cmsTestimonials]);
   useEffect(() => saveToStorage(`${STORAGE_KEY}_cms_gallery`, cmsGallery), [cmsGallery]);
   useEffect(() => saveToStorage(`${STORAGE_KEY}_cms_posts`, cmsPosts), [cmsPosts]);
+
+  // One-time migration: replace old Google-hosted hero image with new premium Unsplash URL
+  useEffect(() => {
+    const NEW_HERO_URL = 'https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=1920&q=85&auto=format&fit=crop';
+    setCmsBanners(prev => prev.map(b =>
+      b.imageUrl.includes('lh3.googleusercontent.com') ? { ...b, imageUrl: NEW_HERO_URL } : b
+    ));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // --- Audit Helper ---
   const logAction = useCallback((action: string, module: string, details: string, severity: 'Info' | 'Warning' | 'Critical' = 'Info', performedBy: string = 'System') => {

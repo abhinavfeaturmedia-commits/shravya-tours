@@ -189,7 +189,7 @@ export const Inventory: React.FC = () => {
     };
 
     return (
-        <div className="flex h-full overflow-hidden relative">
+        <div className="flex h-full overflow-hidden relative admin-page-bg">
             {/* Main Calendar Area */}
             <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
                 {/* Toolbar */}
@@ -198,7 +198,7 @@ export const Inventory: React.FC = () => {
                     {/* Top Row: Title & Actions */}
                     <div className="flex flex-wrap items-center justify-between gap-4">
                         <div>
-                            <h3 className="text-xl md:text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Inventory & Availability</h3>
+                            <h3 className="text-xl md:text-2xl font-bold tracking-tight text-slate-900 dark:text-white font-display text-3xl">Inventory & Availability</h3>
                             <p className="text-sm text-slate-500 dark:text-slate-400 hidden md:block">
                                 {inventoryType === 'Tour' ? 'Manage tour slots and dates.' :
                                     inventoryType === 'Car' ? 'Monitor fleet availability.' :
@@ -206,7 +206,7 @@ export const Inventory: React.FC = () => {
                             </p>
                         </div>
                         <div className="flex items-center gap-3">
-                            <button onClick={handleExport} className="hidden sm:flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-sm font-semibold rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
+                            <button onClick={handleExport} className="hidden sm:flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-sm font-semibold rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors btn-glow">
                                 <span className="material-symbols-outlined text-[20px]">download</span> Export
                             </button>
                         </div>

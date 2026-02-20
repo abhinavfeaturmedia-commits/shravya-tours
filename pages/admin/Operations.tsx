@@ -139,12 +139,12 @@ export const Operations: React.FC = () => {
         [vendors]);
 
     return (
-        <div className="flex flex-col h-full bg-slate-50 dark:bg-[#0B1116]">
+        <div className="flex flex-col h-full admin-page-bg">
             {/* Header */}
             <div className="bg-white dark:bg-[#1A2633] border-b border-slate-200 dark:border-slate-800 px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 sticky top-0 z-10">
                 <div>
                     <h2 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                        <Briefcase className="text-blue-600" /> Operations Center
+                        <Briefcase className="text-blue-600" /> <span className="font-display text-3xl">Operations Center</span>
                     </h2>
                     <p className="text-slate-500 dark:text-slate-400 text-sm">Monitor live tours and manage staff availability.</p>
                 </div>
@@ -176,9 +176,9 @@ export const Operations: React.FC = () => {
                                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
                                     <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
                                 </span>
-                                Live Tours ({tourStats.live.length})
+                                Live Tours (<span className="kpi-number text-xl">{tourStats.live.length}</span>)
                             </h3>
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 stagger-cards">
                                 {tourStats.live.map(tour => {
                                     // Find Assigned Driver if any
                                     const assignedTransport = tour.supplierBookings?.find(sb => sb.serviceType === 'Transport');
@@ -435,7 +435,7 @@ export const Operations: React.FC = () => {
                             <button
                                 onClick={handleAssignDriver}
                                 disabled={!driverVendorId}
-                                className="w-full py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed mt-2"
+                                className="w-full py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed mt-2 btn-glow"
                             >
                                 Confirm Assignment
                             </button>

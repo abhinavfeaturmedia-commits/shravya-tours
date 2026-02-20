@@ -510,7 +510,7 @@ export const Bookings: React.FC = () => {
     };
 
     return (
-        <div className="flex flex-col h-full bg-background-light dark:bg-background-dark">
+        <div className="flex flex-col h-full admin-page-bg relative">
 
             {/* Create/Edit Modal */}
             {isModalOpen && (
@@ -672,7 +672,7 @@ export const Bookings: React.FC = () => {
             <div className="px-4 md:px-8 py-6 border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-[#1A2633]">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div>
-                        <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">Booking Management</h1>
+                        <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight"><span className="font-display text-3xl">Booking Management</span></h1>
                         <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">Track reservations, manage payments, and assign services.</p>
                     </div>
                     <div className="flex items-center gap-3">
@@ -680,7 +680,7 @@ export const Bookings: React.FC = () => {
                             <span className="material-symbols-outlined text-[18px]">download</span> Export CSV
                         </button>
                         {hasPermission('bookings', 'manage') && (
-                            <button onClick={openCreateModal} className="flex items-center gap-2 px-5 py-2.5 bg-primary text-white rounded-xl text-sm font-bold shadow-lg shadow-primary/20 hover:bg-primary-dark transition-all active:scale-95">
+                            <button onClick={openCreateModal} className="flex items-center gap-2 px-5 py-2.5 bg-primary text-white rounded-xl text-sm font-bold shadow-lg shadow-primary/20 hover:bg-primary-dark transition-all active:scale-95 btn-glow">
                                 <span className="material-symbols-outlined text-[20px]">add</span> New Booking
                             </button>
                         )}

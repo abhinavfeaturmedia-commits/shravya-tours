@@ -23,7 +23,7 @@ export const ProposalBuilder: React.FC = () => {
     const [leadId, setLeadId] = useState('');
     const [status, setStatus] = useState<'Draft' | 'Sent' | 'Accepted' | 'Rejected'>('Draft');
     const [options, setOptions] = useState<ProposalOption[]>([
-        { id: 'opt-1', name: 'Standard', price: 0, hotels: [], inclusions: [], exclusions: [] }
+        { id: 'opt-1', name: 'Standard', price: 0, items: [], hotels: [], activities: [], inclusions: [], exclusions: [] }
     ]);
     const [activeOptionId, setActiveOptionId] = useState<string>('opt-1');
 
@@ -78,7 +78,9 @@ export const ProposalBuilder: React.FC = () => {
             id: newId,
             name: `Option ${options.length + 1}`,
             price: 0,
+            items: [],
             hotels: [],
+            activities: [],
             inclusions: [],
             exclusions: []
         }]);
@@ -180,7 +182,7 @@ export const ProposalBuilder: React.FC = () => {
                 createdAt: new Date().toISOString(),
                 validUntil: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
             };
-            generateProposalPDF(proposalData, lead);
+            generateProposalPDF(proposalData, lead, masterHotels, masterActivities);
             toast.success("PDF Downloaded!");
         } catch (e) {
             console.error(e);
@@ -197,7 +199,7 @@ export const ProposalBuilder: React.FC = () => {
                         <ArrowLeft size={20} />
                     </button>
                     <div>
-                        <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                        <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2 font-display text-3xl">
                             {id === 'new' ? 'New Proposal' : 'Edit Proposal'}
                         </h2>
                         <span className={`text-xs font-bold uppercase px-2 py-0.5 rounded ${status === 'Draft' ? 'bg-slate-100 text-slate-600' : 'bg-blue-100 text-blue-600'}`}>{status}</span>
@@ -227,7 +229,7 @@ export const ProposalBuilder: React.FC = () => {
                     )}
                     <button
                         onClick={handleSave}
-                        className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl text-sm px-6 py-2.5 shadow-lg shadow-purple-600/20 active:scale-95 transition-all"
+                        className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl text-sm px-6 py-2.5 shadow-lg shadow-purple-600/20 active:scale-95 transition-all btn-glow"
                     >
                         <Save size={18} /> Save Proposal
                     </button>
@@ -342,6 +344,43 @@ export const ProposalBuilder: React.FC = () => {
                                         ))}
                                     </div>
                                     {masterHotels.length === 0 && <p className="text-sm text-slate-400 italic">No hotels found in Master Data.</p>}
+                                </div>
+
+                                {/* Service (Activity) Selection */}
+                                <div>
+                                    <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-3 flex items-center gap-2">
+                                        <Calendar size={16} className="text-purple-600" /> Select Services Included
+                                    </h3>
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                        {masterActivities.map(activity => (
+                                            <div
+                                                key={activity.id}
+                                                onClick={() => {
+                                                    const current = activeOption.activities || [];
+                                                    const updated = current.includes(activity.id)
+                                                        ? current.filter(a => a !== activity.id)
+                                                        : [...current, activity.id];
+                                                    updateActiveOption('activities', updated);
+                                                }}
+                                                className={`p-3 rounded-xl border cursor-pointer transition-all flex items-start gap-3
+                                                    ${(activeOption.activities || []).includes(activity.id)
+                                                        ? 'bg-purple-50 border-purple-200 ring-2 ring-purple-500/20'
+                                                        : 'bg-slate-50 border-slate-100 hover:border-slate-300'}
+                                                `}
+                                            >
+                                                <div className={`w-5 h-5 rounded-md flex items-center justify-center border mt-0.5
+                                                    ${(activeOption.activities || []).includes(activity.id) ? 'bg-purple-600 border-purple-600 text-white' : 'bg-white border-slate-300'}
+                                                `}>
+                                                    {(activeOption.activities || []).includes(activity.id) && <Check size={12} />}
+                                                </div>
+                                                <div>
+                                                    <div className="font-bold text-sm text-slate-900">{activity.name}</div>
+                                                    <div className="text-xs text-slate-500">₹{activity.cost?.toLocaleString() || 0}</div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    {masterActivities.length === 0 && <p className="text-sm text-slate-400 italic">No services/activities found in Master Data.</p>}
                                 </div>
 
                                 {/* Inclusions (Simple Text Area for now) */}

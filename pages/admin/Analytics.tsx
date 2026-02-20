@@ -80,7 +80,7 @@ export const Analytics: React.FC = () => {
    const fmt = (n: number) => `₹${n.toLocaleString('en-IN')}`;
 
    return (
-      <div className="flex flex-col h-full bg-slate-50 dark:bg-[#0B1116]">
+      <div className="flex flex-col h-full admin-page-bg">
          {/* Header */}
          <div className="bg-white dark:bg-[#1A2633] border-b border-slate-200 dark:border-slate-800 px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 sticky top-0 z-10">
             <div>
@@ -100,7 +100,7 @@ export const Analytics: React.FC = () => {
                   <option value="30days">Last 30 Days</option>
                   <option value="thisYear">This Year</option>
                </select>
-               <button className="flex items-center gap-2 bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-bold rounded-lg text-sm px-4 py-2.5 shadow-lg active:scale-95 transition-all">
+               <button className="flex items-center gap-2 bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-bold rounded-lg text-sm px-4 py-2.5 shadow-lg active:scale-95 transition-all btn-glow">
                   <Download size={18} /> Export Report
                </button>
             </div>
@@ -109,14 +109,14 @@ export const Analytics: React.FC = () => {
          <div className="flex-1 overflow-y-auto p-6 space-y-8">
 
             {/* 1. Profit & Loss Overview */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 stagger-cards">
                {/* Revenue Card */}
                <div className="bg-white dark:bg-[#1A2633] p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 relative overflow-hidden group">
                   <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
                      <TrendingUp size={64} className="text-emerald-500" />
                   </div>
                   <p className="text-slate-500 dark:text-slate-400 text-sm font-bold uppercase tracking-wider">Total Revenue</p>
-                  <h3 className="text-3xl font-black text-slate-900 dark:text-white mt-2">{fmt(metrics.totalRevenue)}</h3>
+                  <h3 className="text-4xl kpi-number text-slate-900 dark:text-white mt-2">{fmt(metrics.totalRevenue)}</h3>
                   <p className="text-emerald-500 text-xs font-bold mt-2 flex items-center gap-1">
                      <span className="bg-emerald-100 dark:bg-emerald-900/30 px-1.5 py-0.5 rounded">Sales</span>
                      from {filteredBookings.length} bookings
@@ -129,7 +129,7 @@ export const Analytics: React.FC = () => {
                      <TrendingDown size={64} className="text-red-500" />
                   </div>
                   <p className="text-slate-500 dark:text-slate-400 text-sm font-bold uppercase tracking-wider">Total Expenses</p>
-                  <h3 className="text-3xl font-black text-slate-900 dark:text-white mt-2">{fmt(metrics.totalCost)}</h3>
+                  <h3 className="text-4xl kpi-number text-slate-900 dark:text-white mt-2">{fmt(metrics.totalCost)}</h3>
                   <p className="text-red-400 text-xs font-bold mt-2 flex items-center gap-1">
                      <span className="bg-red-100 dark:bg-red-900/30 px-1.5 py-0.5 rounded">COGS</span>
                      Paid to Vendors
@@ -137,12 +137,12 @@ export const Analytics: React.FC = () => {
                </div>
 
                {/* Net Profit Card */}
-               <div className="bg-indigo-600 dark:bg-indigo-600 p-6 rounded-2xl shadow-lg shadow-indigo-500/20 relative overflow-hidden text-white">
+               <div className="card-brand-gradient p-6 rounded-2xl shadow-lg shadow-primary/25 relative overflow-hidden text-white">
                   <div className="absolute top-0 right-0 p-4 opacity-20">
                      <DollarSign size={64} />
                   </div>
-                  <p className="text-indigo-200 text-sm font-bold uppercase tracking-wider">Net Profit</p>
-                  <h3 className="text-3xl font-black mt-2">{fmt(metrics.netProfit)}</h3>
+                  <p className="text-orange-100 text-sm font-bold uppercase tracking-wider">Net Profit</p>
+                  <h3 className="text-4xl kpi-number mt-2">{fmt(metrics.netProfit)}</h3>
                   <div className="flex items-center gap-3 mt-3">
                      <span className="bg-white/20 px-2 py-1 rounded text-xs font-bold backdrop-blur-sm">
                         {metrics.profitMargin.toFixed(1)}% Margin
@@ -156,7 +156,7 @@ export const Analytics: React.FC = () => {
                      <CreditCard size={64} className="text-blue-500" />
                   </div>
                   <p className="text-slate-500 dark:text-slate-400 text-sm font-bold uppercase tracking-wider">Net Cash Flow</p>
-                  <h3 className={`text-3xl font-black mt-2 ${metrics.cashFlow >= 0 ? 'text-green-600' : 'text-red-500'}`}>
+                  <h3 className={`text-4xl kpi-number mt-2 ${metrics.cashFlow >= 0 ? 'text-green-600' : 'text-red-500'}`}>
                      {metrics.cashFlow >= 0 ? '+' : ''}{fmt(metrics.cashFlow)}
                   </h3>
                   <p className="text-slate-400 text-xs font-bold mt-2">
@@ -168,8 +168,8 @@ export const Analytics: React.FC = () => {
             {/* 2. Outstanding Balance Report */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                <div className="bg-white dark:bg-[#1A2633] p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800">
-                  <h4 className="text-lg font-bold text-slate-900 dark:text-white mb-6 flex items-center gap-2">
-                     <Calendar size={20} className="text-orange-500" /> Receivables & Payables
+                  <h4 className="text-lg font-bold text-slate-900 dark:text-white mb-6 flex items-center gap-2 section-heading-accent">
+                     <Calendar size={20} className="text-primary" /> Receivables & Payables
                   </h4>
 
                   <div className="space-y-6">
@@ -181,7 +181,7 @@ export const Analytics: React.FC = () => {
                         </div>
                         <div className="h-4 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
                            <div
-                              className="h-full bg-orange-400 rounded-full"
+                              className="h-full bg-orange-400 rounded-full progress-bar-animated"
                               style={{ width: `${Math.min((metrics.pendingCollections / metrics.totalRevenue) * 100, 100)}%` }}
                            />
                         </div>
@@ -196,7 +196,7 @@ export const Analytics: React.FC = () => {
                         </div>
                         <div className="h-4 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
                            <div
-                              className="h-full bg-blue-400 rounded-full"
+                              className="h-full bg-blue-400 rounded-full progress-bar-animated"
                               style={{ width: `${Math.min((metrics.pendingPayables / metrics.totalCost) * 100, 100)}%` }}
                            />
                         </div>
@@ -207,8 +207,8 @@ export const Analytics: React.FC = () => {
 
                {/* Expense Breakdown (MIS) */}
                <div className="bg-white dark:bg-[#1A2633] p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800">
-                  <h4 className="text-lg font-bold text-slate-900 dark:text-white mb-6 flex items-center gap-2">
-                     <PieChart size={20} className="text-purple-500" /> Expense Breakdown (MIS)
+                  <h4 className="text-lg font-bold text-slate-900 dark:text-white mb-6 flex items-center gap-2 section-heading-accent">
+                     <PieChart size={20} className="text-primary" /> Expense Breakdown (MIS)
                   </h4>
 
                   <div className="space-y-4">
@@ -238,8 +238,8 @@ export const Analytics: React.FC = () => {
             {/* 3. Trip Profitability Table */}
             <div className="bg-white dark:bg-[#1A2633] rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 overflow-hidden">
                <div className="p-6 border-b border-slate-200 dark:border-slate-800">
-                  <h4 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                     <Filter size={20} className="text-slate-500" /> Trip Profitability
+                  <h4 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2 section-heading-accent">
+                     <Filter size={20} className="text-primary" /> Trip Profitability
                   </h4>
                </div>
                <div className="overflow-x-auto">

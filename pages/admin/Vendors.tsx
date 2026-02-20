@@ -62,12 +62,16 @@ export const Vendors: React.FC = () => {
         name: '', unit: 'Per Night', baseCost: 0, markupType: 'Percentage', markupValue: 15
     });
 
+    // Inline edit state for existing services
+    const [editingServiceId, setEditingServiceId] = useState<string | null>(null);
+    const [editServiceForm, setEditServiceForm] = useState<Partial<VendorService>>({});
+
     // Bulk Adjustment State
     const [bulkAdjustPercent, setBulkAdjustPercent] = useState<number>(0);
 
     const [paymentForm, setPaymentForm] = useState({ amount: '', reference: '' });
     const [noteText, setNoteText] = useState('');
-    const [docForm, setDocForm] = useState({ type: 'Contract', expiry: '', name: '' });
+    const [docForm, setDocForm] = useState({ type: 'Contract', expiry: '', name: '', url: '' });
 
     const selectedVendor = vendors.find(v => v.id === selectedVendorId);
 
@@ -285,6 +289,29 @@ export const Vendors: React.FC = () => {
         }
     };
 
+    const handleStartEditService = (service: VendorService) => {
+        setEditingServiceId(service.id);
+        setEditServiceForm({ ...service });
+    };
+
+    const handleSaveService = () => {
+        if (!selectedVendor || !editingServiceId) return;
+        const sellingPrice = calculatePrice(
+            Number(editServiceForm.baseCost) || 0,
+            (editServiceForm.markupType as any) || 'Percentage',
+            Number(editServiceForm.markupValue) || 0
+        );
+        const updatedServices = selectedVendor.services.map(s =>
+            s.id === editingServiceId
+                ? { ...s, ...editServiceForm, baseCost: Number(editServiceForm.baseCost), markupValue: Number(editServiceForm.markupValue), sellingPrice }
+                : s
+        );
+        updateVendor(selectedVendor.id, { services: updatedServices as VendorService[] });
+        setEditingServiceId(null);
+        setEditServiceForm({});
+        showToast('Service updated.');
+    };
+
     const handleBulkPriceUpdate = () => {
         if (!selectedVendor || bulkAdjustPercent === 0) return;
 
@@ -317,18 +344,37 @@ export const Vendors: React.FC = () => {
     const handleAddDocument = (e: React.FormEvent) => {
         e.preventDefault();
         if (!selectedVendor) return;
+        if (!docForm.url) {
+            showToast('Please select a file to upload.', 'error');
+            return;
+        }
         addVendorDocument(selectedVendor.id, {
             id: `DOC-${Date.now()}`,
             name: docForm.name || `${docForm.type} - ${new Date().getFullYear()}`,
             type: docForm.type as any,
             status: 'Valid',
             uploadDate: new Date().toISOString().split('T')[0],
-            url: '#',
+            url: docForm.url,
             expiryDate: docForm.expiry || undefined
         });
         setIsDocModalOpen(false);
-        setDocForm({ type: 'Contract', expiry: '', name: '' });
-        showToast('Document uploaded.');
+        setDocForm({ type: 'Contract', expiry: '', name: '', url: '' });
+        showToast('Document uploaded successfully.');
+    };
+
+    const handleDocFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        // Auto-fill name from filename if empty
+        if (!docForm.name) {
+            setDocForm(prev => ({ ...prev, name: file.name.replace(/\.[^.]+$/, '') }));
+        }
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+            const dataUrl = ev.target?.result as string;
+            setDocForm(prev => ({ ...prev, url: dataUrl }));
+        };
+        reader.readAsDataURL(file);
     };
 
     const handleAddNote = (e: React.FormEvent) => {
@@ -440,20 +486,20 @@ export const Vendors: React.FC = () => {
             </div>
 
             {/* Main Content Area */}
-            <div className="flex flex-col w-full">
+            <div className="flex flex-col w-full admin-page-bg">
 
                 {/* Compact Sticky Header */}
                 <div className="px-6 py-5 md:px-8 bg-white dark:bg-[#1A2633] border-b border-slate-200 dark:border-slate-800 shrink-0 shadow-sm transition-all duration-200">
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                         <div>
-                            <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">Vendor Management</h1>
+                            <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight"><span className="font-display text-3xl">Vendor Management</span></h1>
                             <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">Audit performance, manage pricing models, and handle payouts.</p>
                         </div>
                         <div className="flex gap-3">
                             <button onClick={() => handleBulkAction('export')} className="hidden md:flex items-center gap-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 px-4 py-2.5 rounded-xl font-bold hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors text-sm">
                                 <span className="material-symbols-outlined text-[18px]">download</span> Export List
                             </button>
-                            <button onClick={handleOpenCreate} className="flex items-center gap-2 bg-slate-900 dark:bg-white text-white dark:text-slate-900 px-5 py-2.5 rounded-xl font-bold shadow-lg hover:opacity-90 transition-all active:scale-95 text-sm">
+                            <button onClick={handleOpenCreate} className="flex items-center gap-2 bg-slate-900 dark:bg-white text-white dark:text-slate-900 px-5 py-2.5 rounded-xl font-bold shadow-lg hover:opacity-90 transition-all active:scale-95 text-sm btn-glow">
                                 <span className="material-symbols-outlined text-[18px]">add_business</span> New Vendor
                             </button>
                         </div>
@@ -464,7 +510,7 @@ export const Vendors: React.FC = () => {
                 <div className="p-6 md:p-8 space-y-8 bg-slate-50 dark:bg-slate-900">
 
                     {/* Financial KPIs (Now Scrollable) */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 stagger-cards">
                         {/* Net Commission */}
                         <div className="relative overflow-hidden bg-gradient-to-br from-indigo-600 to-violet-600 rounded-2xl p-5 text-white shadow-lg">
                             <div className="relative z-10">
@@ -472,7 +518,7 @@ export const Vendors: React.FC = () => {
                                     <span className="material-symbols-outlined text-sm">payments</span>
                                     <span className="text-xs font-bold uppercase tracking-wider">Net Commission</span>
                                 </div>
-                                <p className="text-3xl font-black">₹{(stats.totalCommission / 100000).toFixed(2)}L</p>
+                                <p className="text-4xl kpi-number">₹{(stats.totalCommission / 100000).toFixed(2)}L</p>
                                 <div className="mt-2 flex items-center gap-1 text-xs font-medium bg-white/20 w-fit px-2 py-0.5 rounded-full border border-white/10">
                                     <span className="material-symbols-outlined text-[14px]">trending_up</span> +12.5% Profit
                                 </div>
@@ -487,7 +533,7 @@ export const Vendors: React.FC = () => {
                                     <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Avg. Profit Margin</span>
                                     <div className="p-1.5 bg-green-100 dark:bg-green-900/30 text-green-600 rounded-lg"><span className="material-symbols-outlined text-lg">pie_chart</span></div>
                                 </div>
-                                <p className="text-2xl font-black text-slate-900 dark:text-white">{stats.avgMargin.toFixed(1)}%</p>
+                                <p className="text-3xl kpi-number text-slate-900 dark:text-white">{stats.avgMargin.toFixed(1)}%</p>
                             </div>
                             <div className="w-full bg-slate-100 dark:bg-slate-700 h-1.5 rounded-full mt-2 overflow-hidden">
                                 <div className="bg-green-500 h-full rounded-full transition-all duration-1000" style={{ width: `${stats.avgMargin}%` }}></div>
@@ -500,7 +546,7 @@ export const Vendors: React.FC = () => {
                                 <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Pending Payouts</span>
                                 <div className="p-1.5 bg-orange-100 dark:bg-orange-900/30 text-orange-600 rounded-lg"><span className="material-symbols-outlined text-lg">pending_actions</span></div>
                             </div>
-                            <p className="text-2xl font-black text-slate-900 dark:text-white">₹{(stats.totalPayables / 1000).toFixed(1)}k</p>
+                            <p className="text-3xl kpi-number text-slate-900 dark:text-white">₹{(stats.totalPayables / 1000).toFixed(1)}k</p>
                             <p className="text-xs text-orange-600 font-bold mt-1 tracking-tight">Requires settlement</p>
                         </div>
 
@@ -830,8 +876,59 @@ export const Vendors: React.FC = () => {
                                             </div>
 
                                             {selectedVendor.services.length > 0 ? selectedVendor.services.map(service => {
+                                                const isEditing = editingServiceId === service.id;
                                                 const unitProfit = service.sellingPrice - service.baseCost;
                                                 const isInactive = service.status === 'Inactive';
+
+                                                if (isEditing) return (
+                                                    <div key={service.id} className="bg-primary/5 border-2 border-primary/30 rounded-2xl p-5 space-y-3 animate-in fade-in duration-200">
+                                                        <div className="flex items-center justify-between mb-1">
+                                                            <span className="text-[10px] font-black uppercase tracking-widest text-primary">Editing Service</span>
+                                                            <div className="flex gap-2">
+                                                                <button onClick={handleSaveService} className="px-3 py-1.5 bg-primary text-white text-xs font-bold rounded-lg hover:bg-primary/90 transition-colors">Save</button>
+                                                                <button onClick={() => setEditingServiceId(null)} className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-bold rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">Cancel</button>
+                                                            </div>
+                                                        </div>
+                                                        <div className="grid grid-cols-2 gap-3">
+                                                            <input
+                                                                placeholder="Service Name"
+                                                                className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 text-sm font-bold focus:ring-1 focus:ring-primary outline-none"
+                                                                value={editServiceForm.name || ''}
+                                                                onChange={e => setEditServiceForm({ ...editServiceForm, name: e.target.value })}
+                                                            />
+                                                            <select
+                                                                className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 text-sm focus:ring-1 focus:ring-primary outline-none"
+                                                                value={editServiceForm.unit || 'Per Night'}
+                                                                onChange={e => setEditServiceForm({ ...editServiceForm, unit: e.target.value })}
+                                                            >
+                                                                <option>Per Night</option><option>Per Trip</option><option>Per Guest</option><option>Per KM</option>
+                                                            </select>
+                                                        </div>
+                                                        <div className="grid grid-cols-3 gap-3">
+                                                            <div>
+                                                                <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Base Cost ₹</label>
+                                                                <input type="number" className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 text-sm font-black focus:ring-1 focus:ring-primary outline-none" value={editServiceForm.baseCost ?? ''} onChange={e => setEditServiceForm({ ...editServiceForm, baseCost: parseFloat(e.target.value) || 0 })} />
+                                                            </div>
+                                                            <div>
+                                                                <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Markup Type</label>
+                                                                <select className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 text-sm focus:ring-1 focus:ring-primary outline-none" value={editServiceForm.markupType || 'Percentage'} onChange={e => setEditServiceForm({ ...editServiceForm, markupType: e.target.value as any })}>
+                                                                    <option value="Percentage">% Markup</option><option value="Fixed">₹ Markup</option>
+                                                                </select>
+                                                            </div>
+                                                            <div>
+                                                                <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Markup Value</label>
+                                                                <input type="number" className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 text-sm font-black focus:ring-1 focus:ring-primary outline-none" value={editServiceForm.markupValue ?? ''} onChange={e => setEditServiceForm({ ...editServiceForm, markupValue: parseFloat(e.target.value) || 0 })} />
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex items-center justify-end gap-1 text-xs text-slate-500 pt-1">
+                                                            <span>Selling Price Preview:</span>
+                                                            <span className="font-black text-slate-900 dark:text-white">
+                                                                ₹{calculatePrice(Number(editServiceForm.baseCost) || 0, (editServiceForm.markupType as any) || 'Percentage', Number(editServiceForm.markupValue) || 0).toLocaleString()}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                );
+
                                                 return (
                                                     <div key={service.id} className={`group flex items-center justify-between p-5 rounded-2xl border transition-all ${isInactive ? 'bg-slate-50 dark:bg-slate-900 border-dashed border-slate-200 dark:border-slate-800 opacity-60' : 'bg-white dark:bg-[#1A2633] border-slate-200 dark:border-slate-800 hover:shadow-md'}`}>
                                                         <div className="flex items-center gap-4">
@@ -862,6 +959,13 @@ export const Vendors: React.FC = () => {
                                                                     title={isInactive ? 'Activate Service' : 'Deactivate Service'}
                                                                 >
                                                                     <span className="material-symbols-outlined text-[20px]">{isInactive ? 'toggle_off' : 'toggle_on'}</span>
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => handleStartEditService(service)}
+                                                                    className="p-2 text-slate-300 hover:text-primary opacity-0 group-hover:opacity-100 transition-all"
+                                                                    title="Edit Service"
+                                                                >
+                                                                    <span className="material-symbols-outlined text-[20px]">edit</span>
                                                                 </button>
                                                                 <button onClick={() => handleDeleteService(service.id)} className="p-2 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"><span className="material-symbols-outlined text-[20px]">delete</span></button>
                                                             </div>
@@ -1043,7 +1147,7 @@ export const Vendors: React.FC = () => {
                                                             <p className="text-[10px] text-slate-500 font-bold uppercase mt-1">Exp: {doc.expiryDate || 'N/A'}</p>
                                                         </div>
                                                         <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                            <button className="flex-1 py-2 bg-slate-50 dark:bg-slate-800 text-[10px] font-black uppercase rounded-lg hover:bg-primary hover:text-white transition-colors">View</button>
+                                                            <a href={doc.url !== '#' ? doc.url : undefined} target="_blank" rel="noopener noreferrer" download={doc.url.startsWith('data:') ? doc.name : undefined} className={`flex-1 py-2 text-center text-[10px] font-black uppercase rounded-lg transition-colors ${doc.url && doc.url !== '#' ? 'bg-slate-50 dark:bg-slate-800 hover:bg-primary hover:text-white cursor-pointer' : 'bg-slate-50 dark:bg-slate-800 text-slate-300 cursor-not-allowed'}`}>View</a>
                                                             <button onClick={() => {
                                                                 if (confirm('Are you sure you want to delete this document? This action cannot be undone.')) {
                                                                     deleteVendorDocument(selectedVendor.id, doc.id);
@@ -1220,8 +1324,36 @@ export const Vendors: React.FC = () => {
                 <div className="fixed inset-0 z-[210] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
                     <div className="bg-white dark:bg-[#1A2633] w-full max-w-sm rounded-2xl shadow-2xl animate-in zoom-in-95">
                         <div className="p-6">
-                            <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4">Upload Document</h3>
+                            <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1">Upload Document</h3>
+                            <p className="text-xs text-slate-400 mb-4">Attaching to <span className="font-bold text-slate-600 dark:text-slate-300">{selectedVendor.name}</span></p>
                             <form onSubmit={handleAddDocument} className="space-y-4">
+                                {/* File Picker */}
+                                <div>
+                                    <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">Select File *</label>
+                                    <label className={`flex flex-col items-center justify-center w-full h-28 border-2 border-dashed rounded-xl cursor-pointer transition-colors ${docForm.url
+                                        ? 'border-green-400 bg-green-50 dark:bg-green-900/20'
+                                        : 'border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-800 hover:border-primary hover:bg-primary/5'
+                                        }`}>
+                                        <input
+                                            type="file"
+                                            className="hidden"
+                                            accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.xlsx,.xls"
+                                            onChange={handleDocFileChange}
+                                        />
+                                        {docForm.url ? (
+                                            <>
+                                                <span className="material-symbols-outlined text-3xl text-green-500 mb-1">check_circle</span>
+                                                <span className="text-xs font-bold text-green-600 dark:text-green-400">File attached — click to change</span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <span className="material-symbols-outlined text-3xl text-slate-400 mb-1">upload_file</span>
+                                                <span className="text-xs text-slate-500">Click to browse</span>
+                                                <span className="text-[10px] text-slate-400 mt-0.5">PDF, DOC, JPG, PNG, XLS</span>
+                                            </>
+                                        )}
+                                    </label>
+                                </div>
                                 <div>
                                     <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">Document Type</label>
                                     <select className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 text-sm outline-none" value={docForm.type} onChange={e => setDocForm({ ...docForm, type: e.target.value })}>
@@ -1232,17 +1364,19 @@ export const Vendors: React.FC = () => {
                                         <option>Other</option>
                                     </select>
                                 </div>
-                                <div>
-                                    <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">Document Name</label>
-                                    <input className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 text-sm outline-none" placeholder="e.g. Service Agreement 2025" value={docForm.name} onChange={e => setDocForm({ ...docForm, name: e.target.value })} />
-                                </div>
-                                <div>
-                                    <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">Expiry Date</label>
-                                    <input type="date" className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 text-sm outline-none" value={docForm.expiry} onChange={e => setDocForm({ ...docForm, expiry: e.target.value })} />
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">Document Name</label>
+                                        <input className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 text-sm outline-none" placeholder="Auto-filled from file" value={docForm.name} onChange={e => setDocForm({ ...docForm, name: e.target.value })} />
+                                    </div>
+                                    <div>
+                                        <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">Expiry Date</label>
+                                        <input type="date" className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 text-sm outline-none" value={docForm.expiry} onChange={e => setDocForm({ ...docForm, expiry: e.target.value })} />
+                                    </div>
                                 </div>
                                 <div className="pt-2 flex justify-end gap-2">
-                                    <button type="button" onClick={() => setIsDocModalOpen(false)} className="px-4 py-2 text-slate-500 font-bold hover:bg-slate-100 rounded-lg">Cancel</button>
-                                    <button type="submit" className="px-4 py-2 bg-primary text-white font-bold rounded-lg hover:bg-primary-dark">Upload</button>
+                                    <button type="button" onClick={() => { setIsDocModalOpen(false); setDocForm({ type: 'Contract', expiry: '', name: '', url: '' }); }} className="px-4 py-2 text-slate-500 font-bold hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg">Cancel</button>
+                                    <button type="submit" disabled={!docForm.url} className="px-5 py-2 bg-primary text-white font-bold rounded-lg hover:bg-primary-dark disabled:opacity-40 disabled:cursor-not-allowed transition-all">Upload</button>
                                 </div>
                             </form>
                         </div>

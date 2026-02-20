@@ -81,7 +81,7 @@ export const AdminPackages: React.FC = () => {
     );
 
     return (
-        <div className="flex flex-col h-full bg-slate-50 dark:bg-slate-900">
+        <div className="flex flex-col h-full admin-page-bg">
 
             {/* Edit Modal */}
             {isEditModalOpen && (
@@ -196,7 +196,7 @@ export const AdminPackages: React.FC = () => {
             <div className="p-6 md:p-8 flex flex-col gap-6 border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-[#1A2633] shadow-sm">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div>
-                        <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">Package Manager</h1>
+                        <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight"><span className="font-display text-4xl">Package Manager</span></h1>
                         <p className="text-slate-500 mt-1">Create, edit, and manage your travel products.</p>
                     </div>
                     <button

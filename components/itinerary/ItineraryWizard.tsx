@@ -23,7 +23,7 @@ const WizardContent: React.FC = () => {
     }, [step]);
 
     return (
-        <div className="h-[calc(100vh-64px)] overflow-hidden flex flex-col bg-slate-50 dark:bg-slate-950 font-sans">
+        <div className="h-[calc(100vh-64px)] overflow-hidden flex flex-col admin-page-bg font-sans">
             {/* Header & Steps */}
             <header className="bg-white dark:bg-[#0F172A] border-b border-slate-200 dark:border-slate-800 px-4 py-3 shadow-sm z-20 shrink-0">
                 <div className="max-w-6xl mx-auto">
