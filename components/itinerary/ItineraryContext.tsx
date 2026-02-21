@@ -87,6 +87,9 @@ interface ItineraryContextType {
     taxAmount: number;
     grandTotal: number;
 
+    // Derived
+    editPackageId?: string;
+
     // Actions
     setStep: (step: number) => void;
     updateTripDetails: (details: Partial<TripDetails>) => void;
@@ -98,6 +101,7 @@ interface ItineraryContextType {
     setCurrency: (currency: CurrencyCode) => void;
     updateTaxConfig: (config: Partial<TaxConfig>) => void;
     setPackageMarkup: (percent: number, flat: number) => void;
+    loadPackage: (pkg: any) => void; // any = Package type
 
     // Helpers
     getItemsForDay: (day: number) => ItineraryItem[];
@@ -130,6 +134,7 @@ export const ItineraryProvider: React.FC<{ children: ReactNode }> = ({ children 
     const [taxConfig, setTaxConfig] = useState<TaxConfig>(DEFAULT_TAX_CONFIG);
     const [packageMarkupPercent, setPackageMarkupPercent] = useState<number>(0);
     const [packageMarkupFlat, setPackageMarkupFlat] = useState<number>(0);
+    const [editPackageId, setEditPackageId] = useState<string | undefined>(undefined);
 
     const [tripDetails, setTripDetails] = useState<TripDetails>({
         title: '',
@@ -291,6 +296,58 @@ export const ItineraryProvider: React.FC<{ children: ReactNode }> = ({ children 
         setTaxConfig(prev => ({ ...prev, ...config }));
     }, []);
 
+    const loadPackage = useCallback((pkg: any) => {
+        setEditPackageId(pkg.id);
+        if (pkg.builderData) {
+            // Restore exact state if available
+            setTripDetails(pkg.builderData.tripDetails);
+            setItems(pkg.builderData.items);
+            setCurrency(pkg.builderData.currency);
+            setTaxConfig(pkg.builderData.taxConfig);
+            setPackageMarkupPercent(pkg.builderData.packageMarkupPercent);
+            setPackageMarkupFlat(pkg.builderData.packageMarkupFlat);
+        } else {
+            // Best effort migration
+            const guestsMatch = pkg.groupSize.match(/(\d+)/);
+            const guests = guestsMatch ? parseInt(guestsMatch[1]) : 2;
+
+            setTripDetails({
+                title: pkg.title,
+                startDate: new Date().toISOString().split('T')[0],
+                duration: pkg.days,
+                destination: pkg.location,
+                coverImage: pkg.image || 'https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?q=80&w=2070&auto=format&fit=crop',
+                adults: guests,
+                children: 0,
+                included: pkg.included || ['Premium accommodation', 'Daily breakfast & dinner', 'Private transfers', 'Entry tickets', 'Expert guide'],
+                notIncluded: pkg.notIncluded || ['Airfare (International)', 'Personal expenses', 'Camera fees', 'Optional activities', 'Insurance']
+            });
+
+            // Map basic itinerary items
+            const newItems: ItineraryItem[] = [];
+            pkg.itinerary?.forEach((dayObj: any) => {
+                newItems.push({
+                    id: `mig-${Date.now()}-${dayObj.day}`,
+                    type: 'activity',
+                    day: dayObj.day,
+                    title: dayObj.title,
+                    description: dayObj.desc,
+                    netCost: 0,
+                    baseMarkupPercent: 0,
+                    extraMarkupFlat: 0,
+                    sellPrice: 0, // Needs re-calculation
+                    quantity: guests,
+                    order: 0
+                });
+            });
+            setItems(newItems);
+
+            // Set a flat markup to roughly match the desired price
+            // This is a naive heuristic since we don't know the net costs of legacy packages
+            setPackageMarkupFlat(pkg.price);
+        }
+    }, []);
+
     const value = useMemo(() => ({
         step,
         setStep,
@@ -304,6 +361,7 @@ export const ItineraryProvider: React.FC<{ children: ReactNode }> = ({ children 
         packageMarkupAmount,
         taxAmount,
         grandTotal,
+        editPackageId,
         updateTripDetails,
         addItem,
         updateItem,
@@ -317,12 +375,13 @@ export const ItineraryProvider: React.FC<{ children: ReactNode }> = ({ children 
         setCurrency,
         updateTaxConfig,
         setPackageMarkup,
+        loadPackage,
         formatCurrency,
         convertCurrency
     }), [step, tripDetails, items, currency, taxConfig, packageMarkupPercent, packageMarkupFlat,
-        subtotal, packageMarkupAmount, taxAmount, grandTotal,
+        subtotal, packageMarkupAmount, taxAmount, grandTotal, editPackageId,
         updateTripDetails, addItem, updateItem, removeItem, replaceAllItems, reorderItems,
-        getItemsForDay, updateTaxConfig, setPackageMarkup, formatCurrency, convertCurrency]);
+        getItemsForDay, updateTaxConfig, setPackageMarkup, loadPackage, formatCurrency, convertCurrency]);
 
     return (
         <ItineraryContext.Provider value={value}>

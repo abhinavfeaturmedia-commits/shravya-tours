@@ -43,6 +43,7 @@ export interface Package {
   offerEndTime?: string; // ISO String for countdown
   included?: string[];
   notIncluded?: string[];
+  builderData?: any; // To store raw Itinerary Builder state for editing
 }
 
 export interface Booking {

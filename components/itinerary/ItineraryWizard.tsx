@@ -1,5 +1,7 @@
 import React, { useEffect, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useItinerary } from './ItineraryContext';
+import { useData } from '../../context/DataContext';
 import { StepTripDetails } from './steps/StepTripDetails';
 import { StepDayPlanner } from './steps/StepDayPlanner';
 import { StepPricing } from './steps/StepPricing';
@@ -114,6 +116,24 @@ const StepIndicator: React.FC<{
 };
 
 export const ItineraryWizard: React.FC = () => {
+    const [searchParams, setSearchParams] = useSearchParams();
+    const { packages } = useData();
+    const { loadPackage } = useItinerary();
+    const [isLoaded, setIsLoaded] = React.useState(false);
+
+    useEffect(() => {
+        const editId = searchParams.get('edit');
+        if (editId && !isLoaded) {
+            const pkgToEdit = packages.find(p => p.id === editId);
+            if (pkgToEdit) {
+                loadPackage(pkgToEdit);
+                // Remove the query param so refreshing doesn't overwrite any new edits
+                // Optional: setSearchParams({});  
+            }
+            setIsLoaded(true);
+        }
+    }, [searchParams, packages, loadPackage, isLoaded, setSearchParams]);
+
     return (
         <WizardContent />
     );

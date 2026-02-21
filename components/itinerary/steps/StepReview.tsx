@@ -7,8 +7,8 @@ import { Check, DollarSign, Save, ArrowLeft, MapPin, Calendar, Users, FileText, 
 import { toast } from 'sonner';
 
 export const StepReview: React.FC = () => {
-    const { tripDetails, items, subtotal, grandTotal, setStep, packageMarkupPercent, packageMarkupFlat, packageMarkupAmount, setPackageMarkup, formatCurrency } = useItinerary();
-    const { addPackage } = useData();
+    const { tripDetails, items, subtotal, grandTotal, setStep, packageMarkupPercent, packageMarkupFlat, packageMarkupAmount, setPackageMarkup, formatCurrency, editPackageId, currency, taxConfig } = useItinerary();
+    const { addPackage, updatePackage } = useData();
     const navigate = useNavigate();
 
     // Guest count helper
@@ -46,8 +46,7 @@ export const StepReview: React.FC = () => {
             return;
         }
 
-        const newPackage: Package = {
-            id: `pkg-${Date.now()}`,
+        const packageData: Partial<Package> = {
             title: tripDetails.title,
             days: tripDetails.duration,
             groupSize: String(guestCount),
@@ -62,11 +61,29 @@ export const StepReview: React.FC = () => {
             gallery: [tripDetails.coverImage],
             status: 'Active',
             included: tripDetails.included || [],
-            notIncluded: tripDetails.notIncluded || []
+            notIncluded: tripDetails.notIncluded || [],
+            builderData: {
+                tripDetails,
+                items,
+                currency,
+                taxConfig,
+                packageMarkupPercent,
+                packageMarkupFlat
+            }
         };
 
-        addPackage(newPackage);
-        // Maybe show a success toast here
+        if (editPackageId) {
+            updatePackage(editPackageId, packageData);
+            toast.success("Package updated successfully!");
+        } else {
+            const newPackage: Package = {
+                id: `pkg-${Date.now()}`,
+                ...packageData
+            } as Package;
+            addPackage(newPackage);
+            toast.success("Package created successfully!");
+        }
+
         navigate('/admin/packages');
     };
 

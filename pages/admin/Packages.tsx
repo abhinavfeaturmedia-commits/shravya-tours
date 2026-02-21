@@ -183,9 +183,22 @@ export const AdminPackages: React.FC = () => {
                                 </div>
                             </div>
 
-                            <div className="pt-4 flex justify-end gap-3 sticky bottom-0 bg-white dark:bg-[#1A2633] border-t border-slate-100 dark:border-slate-800 mt-4">
-                                <button type="button" onClick={() => setIsEditModalOpen(false)} className="px-4 py-2 text-slate-500 font-bold hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors">Cancel</button>
-                                <button type="submit" className="px-6 py-2 bg-primary text-white font-bold rounded-lg hover:bg-primary-dark shadow-lg shadow-primary/20 transition-colors">Save Changes</button>
+                            <div className="pt-4 flex justify-between gap-3 sticky bottom-0 bg-white dark:bg-[#1A2633] border-t border-slate-100 dark:border-slate-800 mt-4">
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setIsEditModalOpen(false);
+                                        navigate(`/admin/itinerary-builder?edit=${editingPackageId}`);
+                                    }}
+                                    className="px-4 py-2 bg-indigo-50 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 font-bold rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-900/60 transition-colors flex items-center gap-2"
+                                >
+                                    <span className="material-symbols-outlined text-[18px]">edit_road</span>
+                                    Edit in Itinerary Builder
+                                </button>
+                                <div className="flex gap-3">
+                                    <button type="button" onClick={() => setIsEditModalOpen(false)} className="px-4 py-2 text-slate-500 font-bold hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors">Cancel</button>
+                                    <button type="submit" className="px-6 py-2 bg-primary text-white font-bold rounded-lg hover:bg-primary-dark shadow-lg shadow-primary/20 transition-colors">Save Quick Edits</button>
+                                </div>
                             </div>
                         </form>
                     </div>
