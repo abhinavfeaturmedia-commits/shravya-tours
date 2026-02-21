@@ -50,6 +50,8 @@ interface TripDetails {
     coverImage: string;
     adults: number;
     children: number;
+    included: string[];
+    notIncluded: string[];
 }
 
 // Currency exchange rates (base: INR)
@@ -136,7 +138,9 @@ export const ItineraryProvider: React.FC<{ children: ReactNode }> = ({ children 
         destination: '',
         coverImage: 'https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?q=80&w=2070&auto=format&fit=crop',
         adults: 2,
-        children: 0
+        children: 0,
+        included: ['Premium accommodation', 'Daily breakfast & dinner', 'Private transfers', 'Entry tickets', 'Expert guide'],
+        notIncluded: ['Airfare (International)', 'Personal expenses', 'Camera fees', 'Optional activities', 'Insurance']
     });
 
     // Currency helpers

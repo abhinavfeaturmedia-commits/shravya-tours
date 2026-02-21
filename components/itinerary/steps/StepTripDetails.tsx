@@ -2,7 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { useItinerary } from '../ItineraryContext';
 import { useData } from '../../../context/DataContext';
 import { gsap } from 'gsap';
-import { MapPin, Calendar, Users, Clock, Image as ImageIcon, ArrowRight, Globe } from 'lucide-react';
+import { MapPin, Calendar, Users, Clock, Image as ImageIcon, ArrowRight, Globe, Plus, X } from 'lucide-react';
 import { ImageUpload } from '../../ui/ImageUpload';
 
 export const StepTripDetails: React.FC = () => {
@@ -115,6 +115,24 @@ export const StepTripDetails: React.FC = () => {
                                 label="Cover Image"
                                 value={tripDetails.coverImage}
                                 onChange={(val) => updateTripDetails({ coverImage: val })}
+                            />
+                        </div>
+
+                        {/* Inclusions & Exclusions */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5 animate-item">
+                            <ListEditor
+                                title="Included"
+                                items={tripDetails.included || []}
+                                onChange={(items) => updateTripDetails({ included: items })}
+                                placeholder="Add inclusion..."
+                                badgeColor="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
+                            />
+                            <ListEditor
+                                title="Not Included"
+                                items={tripDetails.notIncluded || []}
+                                onChange={(items) => updateTripDetails({ notIncluded: items })}
+                                placeholder="Add exclusion..."
+                                badgeColor="bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
                             />
                         </div>
 
@@ -262,6 +280,68 @@ const GuestSelector: React.FC<{
                         </div>
                     </div>
                 </div>
+            )}
+        </div>
+    );
+};
+
+const ListEditor: React.FC<{
+    title: string;
+    items: string[];
+    onChange: (items: string[]) => void;
+    placeholder?: string;
+    badgeColor?: string;
+}> = ({ title, items, onChange, placeholder, badgeColor }) => {
+    const [inputValue, setInputValue] = React.useState('');
+
+    const handleAdd = () => {
+        if (inputValue.trim()) {
+            onChange([...items, inputValue.trim()]);
+            setInputValue('');
+        }
+    };
+
+    const handleRemove = (index: number) => {
+        onChange(items.filter((_, i) => i !== index));
+    };
+
+    return (
+        <div className="space-y-2">
+            <label className="text-[10px] md:text-xs font-bold uppercase text-slate-400 tracking-wider flex items-center gap-1.5">
+                {title}
+            </label>
+            <div className="flex bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-indigo-500 transition-all">
+                <input
+                    type="text"
+                    value={inputValue}
+                    onChange={(e) => setInputValue(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAdd(); } }}
+                    placeholder={placeholder}
+                    className="flex-1 bg-transparent px-3 py-2 text-sm outline-none"
+                />
+                <button
+                    type="button"
+                    onClick={handleAdd}
+                    className="px-3 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors"
+                >
+                    <Plus size={16} />
+                </button>
+            </div>
+            {items.length > 0 && (
+                <ul className="space-y-1.5 mt-2">
+                    {items.map((item, index) => (
+                        <li key={index} className={`flex items-start justify-between gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium border border-transparent ${badgeColor}`}>
+                            <span className="flex-1 leading-snug break-words">{item}</span>
+                            <button
+                                type="button"
+                                onClick={() => handleRemove(index)}
+                                className="opacity-60 hover:opacity-100 transition-opacity shrink-0"
+                            >
+                                <X size={14} />
+                            </button>
+                        </li>
+                    ))}
+                </ul>
             )}
         </div>
     );

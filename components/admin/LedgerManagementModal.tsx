@@ -24,7 +24,7 @@ export const LedgerManagementModal: React.FC<LedgerManagementModalProps> = ({ is
     // Form State
     const [isFormVisible, setIsFormVisible] = useState(false);
     const [formData, setFormData] = useState<Partial<BookingTransaction>>({
-        amount: 0,
+        amount: '' as any,
         date: new Date().toISOString().split('T')[0],
         type: 'Payment',
         method: 'Bank Transfer',
@@ -49,7 +49,7 @@ export const LedgerManagementModal: React.FC<LedgerManagementModalProps> = ({ is
         toast.success(`${newTx.type} recorded successfully`);
         setIsFormVisible(false);
         setFormData({
-            amount: 0,
+            amount: '' as any,
             date: new Date().toISOString().split('T')[0],
             type: 'Payment',
             method: 'Bank Transfer',
@@ -129,7 +129,7 @@ export const LedgerManagementModal: React.FC<LedgerManagementModalProps> = ({ is
                                 </div>
                                 <div className="space-y-1">
                                     <label className="text-xs font-bold text-slate-500">Amount (₹)</label>
-                                    <input type="number" required value={formData.amount} onChange={e => setFormData({ ...formData, amount: Number(e.target.value) })} className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-primary" />
+                                    <input type="number" required value={formData.amount} onChange={e => setFormData({ ...formData, amount: e.target.value as any })} className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-primary" />
                                 </div>
                                 <div className="space-y-1">
                                     <label className="text-xs font-bold text-slate-500">Mode</label>

@@ -41,6 +41,8 @@ export interface Package {
   status?: 'Active' | 'Inactive';
   remainingSeats?: number;
   offerEndTime?: string; // ISO String for countdown
+  included?: string[];
+  notIncluded?: string[];
 }
 
 export interface Booking {

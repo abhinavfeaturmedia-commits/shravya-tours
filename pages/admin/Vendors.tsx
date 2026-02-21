@@ -678,9 +678,21 @@ export const Vendors: React.FC = () => {
                                                     <td className="px-6 py-4 font-medium text-slate-900 dark:text-white" onClick={() => setSelectedVendorId(vendor.id)}>₹{(vendor.balanceDue / 1000).toFixed(1)}k</td>
                                                     <td className="px-6 py-4 text-right">
                                                         <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                            <a href={`tel:${vendor.contactPhone}`} onClick={(e) => e.stopPropagation()} className="p-1.5 text-slate-400 hover:text-blue-500 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-sm" title="Call">
-                                                                <span className="material-symbols-outlined text-[18px]">call</span>
-                                                            </a>
+                                                            {vendor.contactPhone && (
+                                                                <>
+                                                                    <a href={`tel:${vendor.contactPhone}`} onClick={(e) => e.stopPropagation()} className="p-1.5 text-slate-400 hover:text-blue-500 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-sm" title="Call">
+                                                                        <span className="material-symbols-outlined text-[18px]">call</span>
+                                                                    </a>
+                                                                    <a href={`https://wa.me/${vendor.contactPhone.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="p-1.5 text-slate-400 hover:text-emerald-500 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-sm" title="WhatsApp">
+                                                                        <span className="material-symbols-outlined text-[18px]">forum</span>
+                                                                    </a>
+                                                                </>
+                                                            )}
+                                                            {vendor.contactEmail && (
+                                                                <a href={`mailto:${vendor.contactEmail}`} onClick={(e) => e.stopPropagation()} className="p-1.5 text-slate-400 hover:text-rose-500 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-sm" title="Email">
+                                                                    <span className="material-symbols-outlined text-[18px]">mail</span>
+                                                                </a>
+                                                            )}
                                                             <button onClick={(e) => { e.stopPropagation(); setSelectedVendorId(vendor.id); setActiveTab('Financials'); setIsPaymentModalOpen(true); }} className="p-1.5 text-slate-400 hover:text-green-500 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-sm" title="Pay">
                                                                 <span className="material-symbols-outlined text-[18px]">payments</span>
                                                             </button>
@@ -719,16 +731,15 @@ export const Vendors: React.FC = () => {
                             {/* Hero Drawer Header */}
                             <div className="relative h-48 flex-shrink-0 bg-slate-900 overflow-hidden">
                                 {/* Background Blur */}
-                                <div className="absolute inset-0 opacity-60">
-                                    <img src={selectedVendor.logo} className="w-full h-full object-cover blur-3xl scale-150" alt="" />
+                                <div className={`absolute inset-0 opacity-20 blur-xl ${getCategoryMeta(selectedVendor.category, selectedVendor.subCategory).color}`}>
                                 </div>
                                 <div className="absolute inset-0 bg-gradient-to-t from-[#1A2633] via-[#1A2633]/50 to-transparent"></div>
 
                                 {/* Header Content */}
                                 <div className="absolute bottom-0 left-0 right-0 p-6 z-10 flex items-end justify-between">
                                     <div className="flex items-center gap-4">
-                                        <div className="size-20 rounded-2xl bg-white p-1 shadow-2xl rotate-3">
-                                            <img src={selectedVendor.logo} className="w-full h-full object-cover rounded-xl" alt="" />
+                                        <div className={`size-20 rounded-2xl flex items-center justify-center shadow-2xl rotate-3 border-4 border-[#1A2633] ${getCategoryMeta(selectedVendor.category, selectedVendor.subCategory).color}`}>
+                                            <span className="material-symbols-outlined text-4xl">{getCategoryMeta(selectedVendor.category, selectedVendor.subCategory).icon}</span>
                                         </div>
                                         <div className="mb-1">
                                             <h2 className="text-3xl font-black text-white tracking-tight shadow-black drop-shadow-md">{selectedVendor.name}</h2>

@@ -60,7 +60,9 @@ export const StepReview: React.FC = () => {
             highlights: items.slice(0, 4).map(i => ({ icon: 'star', label: i.title })),
             itinerary: generatePackageItinerary(),
             gallery: [tripDetails.coverImage],
-            status: 'Active'
+            status: 'Active',
+            included: tripDetails.included || [],
+            notIncluded: tripDetails.notIncluded || []
         };
 
         addPackage(newPackage);

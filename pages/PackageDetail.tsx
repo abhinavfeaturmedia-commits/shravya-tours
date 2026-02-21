@@ -454,7 +454,7 @@ export const PackageDetail: React.FC = () => {
                     Included
                   </h3>
                   <ul className="space-y-4">
-                    {['Premium accommodation', 'Daily breakfast & dinner', 'Private transfers', 'Entry tickets', 'Expert guide'].map((inc, i) => (
+                    {(tour.included || ['Premium accommodation', 'Daily breakfast & dinner', 'Private transfers', 'Entry tickets', 'Expert guide']).map((inc, i) => (
                       <li key={i} className="flex items-start gap-3 text-slate-700 dark:text-slate-300 text-sm font-semibold">
                         <div className="size-1.5 rounded-full bg-green-500 mt-2 shrink-0"></div> {inc}
                       </li>
@@ -467,7 +467,7 @@ export const PackageDetail: React.FC = () => {
                     Not Included
                   </h3>
                   <ul className="space-y-4">
-                    {['Airfare (International)', 'Personal expenses', 'Camera fees', 'Optional activities', 'Insurance'].map((exc, i) => (
+                    {(tour.notIncluded || ['Airfare (International)', 'Personal expenses', 'Camera fees', 'Optional activities', 'Insurance']).map((exc, i) => (
                       <li key={i} className="flex items-start gap-3 text-slate-700 dark:text-slate-300 text-sm font-semibold">
                         <div className="size-1.5 rounded-full bg-red-400 mt-2 shrink-0"></div> {exc}
                       </li>
