@@ -315,6 +315,7 @@ CREATE TABLE IF NOT EXISTS public.account_transactions (
     date DATE NOT NULL DEFAULT CURRENT_DATE,
     amount DECIMAL(12, 2) NOT NULL,
     type VARCHAR(50) NOT NULL CHECK (type IN ('Credit', 'Debit')),
+    status VARCHAR(20) DEFAULT 'Pending' CHECK (status IN ('Pending', 'Confirmed', 'Rejected')),
     description TEXT,
     reference VARCHAR(255), 
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
@@ -359,7 +360,7 @@ CREATE TABLE IF NOT EXISTS public.leads (
   source TEXT DEFAULT 'Website',
   preferences JSONB,
   avatar_color TEXT,
-  assigned_to TEXT,
+  assigned_to INTEGER REFERENCES public.staff_members(id) ON DELETE SET NULL,
   whatsapp TEXT,
   is_whatsapp_same BOOLEAN,
   service_type TEXT,
@@ -390,7 +391,7 @@ CREATE TABLE public.follow_ups (
     reminder_enabled BOOLEAN DEFAULT false,
     status TEXT DEFAULT 'Pending',
     priority TEXT DEFAULT 'Medium',
-    assigned_to INTEGER,
+    assigned_to INTEGER REFERENCES public.staff_members(id) ON DELETE SET NULL,
     notes TEXT,
     completed_at TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
@@ -446,6 +447,22 @@ CREATE TABLE public.assignment_rules (
     conditions JSONB DEFAULT '{}'::jsonb,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- Tasks
+CREATE TABLE public.tasks (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    title TEXT NOT NULL,
+    description TEXT,
+    assigned_to INTEGER REFERENCES public.staff_members(id) ON DELETE SET NULL,
+    assigned_by INTEGER REFERENCES public.staff_members(id) ON DELETE SET NULL,
+    status TEXT DEFAULT 'Pending',
+    priority TEXT DEFAULT 'Medium',
+    due_date TIMESTAMP WITH TIME ZONE NOT NULL,
+    related_lead_id UUID REFERENCES public.leads(id) ON DELETE SET NULL,
+    related_booking_id UUID REFERENCES public.bookings(id) ON DELETE SET NULL,
+    completed_at TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
 -- User Activities (Deprecated for Audit Logs, but kept for legacy UI data loads if any)
@@ -555,6 +572,35 @@ BEGIN
     WHERE date = p_date;
 
     RETURN jsonb_build_object('success', true, 'message', 'Inventory locked successfully');
+END;
+$$ LANGUAGE plpgsql VOLATILE;
+
+CREATE OR REPLACE FUNCTION public.unlock_inventory_slot(
+    p_date DATE,
+    p_pax_count INTEGER
+)
+RETURNS JSONB AS $$
+DECLARE
+    v_slot RECORD;
+BEGIN
+    SELECT * INTO v_slot 
+    FROM public.daily_inventory 
+    WHERE date = p_date 
+    FOR UPDATE;
+
+    IF NOT FOUND THEN
+        RETURN jsonb_build_object('success', false, 'error', 'Inventory slot for date does not exist');
+    END IF;
+
+    IF (v_slot.booked - p_pax_count) < 0 THEN
+        RETURN jsonb_build_object('success', false, 'error', 'Cannot decrease below 0');
+    END IF;
+
+    UPDATE public.daily_inventory
+    SET booked = booked - p_pax_count
+    WHERE date = p_date;
+
+    RETURN jsonb_build_object('success', true, 'message', 'Inventory unlocked successfully');
 END;
 $$ LANGUAGE plpgsql VOLATILE;
 

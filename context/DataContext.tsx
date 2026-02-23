@@ -293,6 +293,7 @@ interface DataContextType {
   updateAccount: (id: string, acc: Partial<Account>) => void;
   deleteAccount: (id: string) => void;
   addAccountTransaction: (accountId: string, tx: AccountTransaction) => void;
+  updateAccountTxStatus: (accountId: string, txId: string, status: 'Pending' | 'Confirmed' | 'Rejected') => void;
 
   // Campaign Functions
   addCampaign: (campaign: Campaign) => void;
@@ -613,7 +614,17 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       // 3. Create Booking
       const bookingToCreate = { ...booking, invoiceNo: newInvoiceNo };
-      await api.createBooking(bookingToCreate);
+      try {
+        await api.createBooking(bookingToCreate);
+      } catch (err) {
+        // Rollback inventory lock
+        try {
+          await api.unlockInventorySlot(booking.date, 1);
+        } catch (unlockErr) {
+          console.error("Failed to unlock inventory after booking failure", unlockErr);
+        }
+        throw err;
+      }
 
       // 4. Update UI State
       setBookings(b => [bookingToCreate, ...b]);
@@ -635,14 +646,22 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
-  const updateBooking = useCallback((id: string, booking: Partial<Booking>) => {
+  const updateBooking = useCallback(async (id: string, booking: Partial<Booking>) => {
+    const previousState = bookings;
     setBookings(prev => {
       const oldBooking = prev.find(b => b.id === id);
       if (!oldBooking) return prev;
       return prev.map(x => x.id === id ? { ...x, ...booking } : x);
     });
-    // Inventory logic removed (dynamic)
-  }, []);
+    try {
+      await api.updateBooking(id, booking);
+      logAction('Update', 'Bookings', `Updated Booking: ${id}`);
+      toast.success("Booking updated successfully");
+    } catch (e: any) {
+      setBookings(previousState);
+      toast.error(e.message || "Failed to update booking");
+    }
+  }, [bookings, logAction]);
 
   const updateBookingStatus = useCallback(async (id: string, status: BookingStatus) => {
     const previousState = bookings;
@@ -680,7 +699,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       let accTxId = `TX-${Date.now()}`; // Just a UI placeholder, actual ID is generated in db
 
       // 2. Ledger - Main Office Account
-      const targetAccount = accounts[0];
+      const targetAccount = accounts.find(a => a.name === 'Main Office') || accounts[0];
       if (targetAccount) {
         const accTx: AccountTransaction = {
           id: accTxId,
@@ -848,19 +867,21 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Customer
   const addCustomer = useCallback(async (c: Customer) => {
     // Deduplication Check
-    if (customers.some(cust => cust.email.toLowerCase() === c.email.toLowerCase())) {
+    if (c.email && customers.some(cust => cust.email?.toLowerCase() === c.email.toLowerCase())) {
       toast.error("Customer with this email already exists!");
       return;
     }
     setCustomers(p => [c, ...p]);
     try {
-      // await api.createCustomer(c) todo 
+      const created = await api.createCustomer(c);
+      setCustomers(p => p.map(x => x.id === c.id ? { ...x, ...created } : x));
+      logAction('Create', 'Customers', `Created Customer: ${c.name}`);
       toast.success("Customer added");
     } catch (e: any) {
       setCustomers(p => p.filter(x => x.id !== c.id));
       toast.error(e.message || "Failed to add customer");
     }
-  }, [customers]);
+  }, [customers, logAction]);
   const updateCustomer = useCallback((id: string, c: Partial<Customer>) => setCustomers(p => p.map(x => x.id === id ? { ...x, ...c } : x)), []);
   const deleteCustomer = useCallback((id: string) => setCustomers(p => p.filter(x => x.id !== id)), []);
   const importCustomers = useCallback((newCustomers: Customer[]) => setCustomers(p => [...newCustomers, ...p]), []);
@@ -930,7 +951,87 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const addVendorDocument = useCallback(() => { }, []);
   const deleteVendorDocument = useCallback(() => { }, []);
   const addVendorNote = useCallback(() => { }, []);
-  const addAccountTransaction = useCallback(() => { }, []);
+
+  const addAccountTransaction = useCallback(async (accountId: string, tx: AccountTransaction) => {
+    // 1. Optimistic UI update
+    setAccounts(prev => prev.map(a => {
+      if (a.id === accountId) {
+        return {
+          ...a,
+          transactions: [tx, ...(a.transactions || [])]
+          // Balance is NOT updated yet since status defaults to 'Pending'
+        };
+      }
+      return a;
+    }));
+
+    try {
+      await api.createAccountTransaction(accountId, tx);
+      logAction('Create', 'Finance', `Recorded transaction ${tx.id} for Account ${accountId}`);
+      toast.success("Transaction recorded as Pending");
+    } catch (e: any) {
+      // Revert if failed
+      setAccounts(prev => prev.map(a => {
+        if (a.id === accountId) {
+          return { ...a, transactions: (a.transactions || []).filter(t => t.id !== tx.id) };
+        }
+        return a;
+      }));
+      toast.error(e.message || "Failed to record transaction");
+    }
+  }, []);
+
+  const updateAccountTxStatus = useCallback(async (accountId: string, txId: string, status: 'Pending' | 'Confirmed' | 'Rejected') => {
+    const acc = accounts.find(a => a.id === accountId);
+    if (!acc) return;
+    const tx = acc.transactions?.find(t => t.id === txId);
+    if (!tx || tx.status === status) return; // No change
+
+    // Balance effect calculation (only if transitioning to/from Confirmed)
+    let balanceChange = 0;
+    if (status === 'Confirmed' && tx.status !== 'Confirmed') {
+      balanceChange = tx.type === 'Credit' ? tx.amount : -tx.amount;
+    } else if (status !== 'Confirmed' && tx.status === 'Confirmed') {
+      // Reversing a confirmed transaction
+      balanceChange = tx.type === 'Credit' ? -tx.amount : tx.amount;
+    }
+
+    const newBalance = acc.currentBalance + balanceChange;
+
+    // Optimistic Update
+    setAccounts(prev => prev.map(a => {
+      if (a.id === accountId) {
+        return {
+          ...a,
+          currentBalance: newBalance,
+          transactions: (a.transactions || []).map(t => t.id === txId ? { ...t, status } : t)
+        };
+      }
+      return a;
+    }));
+
+    try {
+      await api.updateAccountTransactionStatus(txId, status);
+      if (balanceChange !== 0) {
+        await api.updateAccount(accountId, { currentBalance: newBalance });
+      }
+      logAction('Update', 'Finance', `Updated transaction ${txId} status to ${status}`);
+      toast.success(`Transaction marked as ${status}`);
+    } catch (e: any) {
+      // Revert optimistic update (doing full refresh might be safer, but manual revert works)
+      setAccounts(prev => prev.map(a => {
+        if (a.id === accountId) {
+          return {
+            ...a,
+            currentBalance: acc.currentBalance,
+            transactions: (a.transactions || []).map(t => t.id === txId ? { ...t, status: tx.status } : t)
+          };
+        }
+        return a;
+      }));
+      toast.error(e.message || "Failed to update transaction status");
+    }
+  }, [accounts]);
 
   // Master Data Handlers
   const addMasterLocation = useCallback(async (item: MasterLocation) => {

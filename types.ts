@@ -320,6 +320,7 @@ export interface AccountTransaction {
   date: string;
   type: 'Credit' | 'Debit';
   amount: number;
+  status?: 'Pending' | 'Confirmed' | 'Rejected';
   description: string;
   reference?: string;
 }

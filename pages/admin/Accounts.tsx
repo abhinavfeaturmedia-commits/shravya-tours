@@ -8,7 +8,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
 export const Accounts: React.FC = () => {
-    const { accounts, addAccount, updateAccount, deleteAccount, addAccountTransaction, bookings } = useData();
+    const { accounts, addAccount, updateAccount, deleteAccount, addAccountTransaction, updateAccountTxStatus, bookings } = useData();
     const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState<'Overview' | 'Transactions' | 'Settings'>('Overview');
     const [search, setSearch] = useState('');
@@ -447,8 +447,10 @@ export const Accounts: React.FC = () => {
                                                     <tr>
                                                         <th className="px-6 py-4">Date</th>
                                                         <th className="px-6 py-4">Description</th>
+                                                        <th className="px-6 py-4">Status</th>
                                                         <th className="px-6 py-4">Reference</th>
                                                         <th className="px-6 py-4 text-right">Amount</th>
+                                                        <th className="px-6 py-4 text-center">Actions</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -460,15 +462,32 @@ export const Accounts: React.FC = () => {
                                                                     <span className={`inline-block w-2 h-2 rounded-full mr-2 ${tx.type === 'Credit' ? 'bg-green-500' : 'bg-red-500'}`}></span>
                                                                     <span className="text-sm font-bold text-slate-900 dark:text-white">{tx.description}</span>
                                                                 </td>
+                                                                <td className="px-6 py-4">
+                                                                    <span className={`text-[10px] uppercase font-bold px-2 py-1 rounded-full ${tx.status === 'Confirmed' ? 'bg-green-100 text-green-700' : tx.status === 'Rejected' ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700'}`}>
+                                                                        {tx.status || 'Pending'}
+                                                                    </span>
+                                                                </td>
                                                                 <td className="px-6 py-4 text-xs font-mono text-slate-500">{tx.reference || '-'}</td>
                                                                 <td className={`px-6 py-4 text-right font-black text-sm ${tx.type === 'Credit' ? 'text-green-600' : 'text-red-500'}`}>
                                                                     {tx.type === 'Credit' ? '+' : '-'} ₹{tx.amount.toLocaleString()}
+                                                                </td>
+                                                                <td className="px-6 py-4 text-center">
+                                                                    {(tx.status === 'Pending' || !tx.status) && (
+                                                                        <div className="flex items-center justify-center gap-2">
+                                                                            <button onClick={() => updateAccountTxStatus(selectedAccount.id, tx.id, 'Confirmed')} className="p-1 text-green-600 hover:bg-green-50 rounded" title="Confirm">
+                                                                                <span className="material-symbols-outlined text-[18px]">check_circle</span>
+                                                                            </button>
+                                                                            <button onClick={() => updateAccountTxStatus(selectedAccount.id, tx.id, 'Rejected')} className="p-1 text-red-600 hover:bg-red-50 rounded" title="Reject">
+                                                                                <span className="material-symbols-outlined text-[18px]">cancel</span>
+                                                                            </button>
+                                                                        </div>
+                                                                    )}
                                                                 </td>
                                                             </tr>
                                                         ))
                                                     ) : (
                                                         <tr>
-                                                            <td colSpan={4} className="px-6 py-12 text-center text-slate-400 text-sm">No transactions found.</td>
+                                                            <td colSpan={6} className="px-6 py-12 text-center text-slate-400 text-sm">No transactions found.</td>
                                                         </tr>
                                                     )}
                                                 </tbody>

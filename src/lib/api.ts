@@ -122,6 +122,17 @@ export const api = {
         }
     },
 
+    unlockInventorySlot: async (dateStr: string, paxCount: number): Promise<void> => {
+        const { data, error } = await supabase.rpc('unlock_inventory_slot', { p_date: dateStr, p_pax_count: paxCount });
+        if (error) {
+            console.error('API Error (unlockInventorySlot RPC):', error);
+            throw new Error(error.message || 'Failed to unlock inventory');
+        }
+        if (data && !data.success) {
+            throw new Error(data.error || 'Inventory unlocking failed');
+        }
+    },
+
     createBookingTransaction: async (bookingId: string, tx: any) => {
         const { error } = await supabase.from('booking_transactions').insert({
             booking_id: bookingId,
@@ -144,12 +155,21 @@ export const api = {
             date: tx.date,
             amount: tx.amount,
             type: tx.type,
+            status: tx.status || 'Pending',
             description: tx.description,
             reference: tx.reference
         });
         if (error) {
             console.error('API Error (createAccountTransaction):', error);
             throw new Error(error.message || 'Failed to save account transaction');
+        }
+    },
+
+    updateAccountTransactionStatus: async (txId: string, status: string) => {
+        const { error } = await supabase.from('account_transactions').update({ status }).eq('id', txId);
+        if (error) {
+            console.error('API Error (updateAccountTransactionStatus):', error);
+            throw new Error(error.message || 'Failed to update transaction status');
         }
     },
 
@@ -453,7 +473,7 @@ export const api = {
 
     // --- ACCOUNTS ---
     getAccounts: async () => {
-        const { data, error } = await supabase.from('accounts').select('*').order('created_at', { ascending: false });
+        const { data, error } = await supabase.from('accounts').select('*, account_transactions(*)').order('created_at', { ascending: false });
         if (error) {
             console.error('API Error (getAccounts):', error);
             throw new Error(error.message || 'Failed to fetch accounts');
@@ -467,8 +487,27 @@ export const api = {
             phone: a.phone,
             currentBalance: a.current_balance,
             status: a.status,
-            transactions: []
+            transactions: (a.account_transactions || [])
+                .sort((x: any, y: any) => new Date(y.created_at).getTime() - new Date(x.created_at).getTime())
+                .map((t: any) => ({
+                    id: t.id,
+                    date: t.date,
+                    amount: Number(t.amount),
+                    type: t.type,
+                    status: t.status || 'Pending',
+                    description: t.description,
+                    reference: t.reference
+                }))
         }));
+    },
+
+    updateAccount: async (id: string, updates: any) => {
+        const dbUpdates: any = {};
+        if (updates.status !== undefined) dbUpdates.status = updates.status;
+        if (updates.currentBalance !== undefined) dbUpdates.current_balance = updates.currentBalance;
+
+        const { error } = await supabase.from('accounts').update(dbUpdates).eq('id', id);
+        if (error) throw new Error(error.message || 'Failed to update account');
     },
 
     createAccount: async (acc: any) => {
@@ -636,6 +675,50 @@ export const api = {
             bookingsCount: c.bookings_count,
             joinedDate: c.created_at
         }));
+    },
+
+    createCustomer: async (customer: Partial<Customer>) => {
+        const { data, error } = await supabase.from('customers').insert({
+            name: customer.name,
+            email: customer.email,
+            phone: customer.phone,
+            location: customer.location,
+            type: customer.type || 'New',
+            status: customer.status || 'Active',
+            total_spent: customer.totalSpent || 0,
+            bookings_count: customer.bookingsCount || 0
+        }).select().single();
+        if (error) {
+            console.error('API Error (createCustomer):', error);
+            throw new Error(error.message || 'Failed to create customer');
+        }
+        return data;
+    },
+
+    updateCustomer: async (id: string, updates: Partial<Customer>) => {
+        const dbUpdates: any = {};
+        if (updates.name !== undefined) dbUpdates.name = updates.name;
+        if (updates.email !== undefined) dbUpdates.email = updates.email;
+        if (updates.phone !== undefined) dbUpdates.phone = updates.phone;
+        if (updates.location !== undefined) dbUpdates.location = updates.location;
+        if (updates.type !== undefined) dbUpdates.type = updates.type;
+        if (updates.status !== undefined) dbUpdates.status = updates.status;
+        if (updates.totalSpent !== undefined) dbUpdates.total_spent = updates.totalSpent;
+        if (updates.bookingsCount !== undefined) dbUpdates.bookings_count = updates.bookingsCount;
+
+        const { error } = await supabase.from('customers').update(dbUpdates).eq('id', id);
+        if (error) {
+            console.error(`API Error (updateCustomer ${id}):`, error);
+            throw new Error(error.message || 'Failed to update customer');
+        }
+    },
+
+    deleteCustomer: async (id: string) => {
+        const { error } = await supabase.from('customers').delete().eq('id', id);
+        if (error) {
+            console.error(`API Error (deleteCustomer ${id}):`, error);
+            throw new Error(error.message || 'Failed to delete customer');
+        }
     },
 
     // --- CAMPAIGNS ---
