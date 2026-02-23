@@ -42,6 +42,7 @@ export const Leads: React.FC = () => {
     const [search, setSearch] = useState('');
     const [modalMode, setModalMode] = useState<'add' | 'edit'>('add');
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [activeTab, setActiveTab] = useState<'All' | 'New' | 'Warm' | 'Hot' | 'Offer Sent' | 'Converted' | 'Cold'>('All');
     // const [isImportModalOpen, setIsImportModalOpen] = useState(false);
 
     // Forms
@@ -72,8 +73,9 @@ export const Leads: React.FC = () => {
     };
 
     const filteredLeads = leads.filter(l =>
-        l.name.toLowerCase().includes(search.toLowerCase()) ||
-        l.destination.toLowerCase().includes(search.toLowerCase())
+        (l.name.toLowerCase().includes(search.toLowerCase()) ||
+            l.destination.toLowerCase().includes(search.toLowerCase())) &&
+        (activeTab === 'All' || l.status === activeTab)
     );
 
     const handleSaveLog = () => {
@@ -279,6 +281,19 @@ export const Leads: React.FC = () => {
                                 <span className="text-xs font-bold bg-red-100 text-red-700 px-2 py-0.5 rounded-full">-1</span>
                             </div>
                         </div>
+                    </div>
+
+                    {/* Filter Tabs */}
+                    <div className="flex flex-wrap p-1 bg-white dark:bg-[#1A2633] border border-slate-200 dark:border-slate-800 rounded-xl w-full mb-6">
+                        {(['All', 'New', 'Warm', 'Hot', 'Offer Sent', 'Converted', 'Cold'] as const).map(tab => (
+                            <button
+                                key={tab}
+                                onClick={() => setActiveTab(tab)}
+                                className={`px-4 sm:px-6 py-2 rounded-lg text-sm font-bold transition-all flex-1 sm:flex-none text-center ${activeTab === tab ? 'bg-slate-100 dark:bg-slate-800 shadow-sm text-slate-900 dark:text-white border-b-2 border-primary' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}
+                            >
+                                {tab === 'All' ? 'All Leads' : tab}
+                            </button>
+                        ))}
                     </div>
 
                     {/* Search & Actions */}
