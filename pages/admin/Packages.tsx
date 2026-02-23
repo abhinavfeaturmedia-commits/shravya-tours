@@ -1,8 +1,75 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { useData } from '../../context/DataContext';
 import { useNavigate } from 'react-router-dom';
 import { Package } from '../../types';
 import { ImageUpload } from '../../components/ui/ImageUpload';
+
+// Extracted Component with React.memo to prevent unnecessary re-renders of the entire list when Edit Modal opens
+const PackageCard = React.memo(({
+    pkg,
+    onEdit,
+    onToggleStatus,
+    onDelete,
+    onPreview
+}: {
+    pkg: Package,
+    onEdit: (pkg: Package) => void,
+    onToggleStatus: (pkg: Package) => void,
+    onDelete: (id: string) => void,
+    onPreview: (id: string) => void
+}) => {
+    return (
+        <div className="group bg-white dark:bg-[#1A2633] border border-slate-200 dark:border-slate-800 rounded-2xl p-4 flex flex-col md:flex-row items-start md:items-center gap-6 hover:shadow-lg transition-all hover:border-primary/30">
+            {/* Image */}
+            <div className="size-24 md:size-20 rounded-xl bg-slate-200 overflow-hidden shrink-0">
+                <img src={pkg.image} alt={pkg.title} className="w-full h-full object-cover" />
+            </div>
+
+            {/* Info */}
+            <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1">
+                    <h3 className="font-bold text-slate-900 dark:text-white text-lg truncate">{pkg.title}</h3>
+                    {pkg.status === 'Inactive' && <span className="bg-slate-100 text-slate-500 text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider">Hidden</span>}
+                </div>
+                <div className="flex flex-wrap items-center gap-4 text-sm text-slate-500 dark:text-slate-400">
+                    <span className="flex items-center gap-1"><span className="material-symbols-outlined text-[16px]">location_on</span> {pkg.location}</span>
+                    <span className="flex items-center gap-1"><span className="material-symbols-outlined text-[16px]">schedule</span> {pkg.days} Days</span>
+                    <span className="flex items-center gap-1"><span className="material-symbols-outlined text-[16px]">group</span> {pkg.groupSize}</span>
+                </div>
+            </div>
+
+            {/* Metrics */}
+            <div className="w-full md:w-auto flex items-center justify-between md:justify-end gap-8 md:pr-4 md:border-r border-slate-100 dark:border-slate-700">
+                <div className="text-center md:text-right">
+                    <p className="text-xs font-bold text-slate-400 uppercase">Price</p>
+                    <p className="font-black text-slate-900 dark:text-white">₹{(pkg.price / 1000).toFixed(0)}k</p>
+                </div>
+            </div>
+
+            {/* Actions */}
+            <div className="w-full md:w-auto flex items-center justify-end gap-3">
+                <button
+                    onClick={() => onPreview(pkg.id)}
+                    className="px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-lg text-xs font-bold uppercase tracking-wider hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+                >
+                    Preview
+                </button>
+                <button
+                    onClick={() => onToggleStatus(pkg)}
+                    className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors ${pkg.status === 'Active' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 hover:bg-green-200' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 hover:bg-slate-200'}`}
+                >
+                    {pkg.status === 'Active' ? 'Active' : 'Hidden'}
+                </button>
+                <button onClick={() => onEdit(pkg)} className="p-2.5 text-slate-400 hover:text-primary hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors" title="Edit">
+                    <span className="material-symbols-outlined">edit</span>
+                </button>
+                <button onClick={() => onDelete(pkg.id)} className="p-2.5 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors" title="Delete">
+                    <span className="material-symbols-outlined">delete</span>
+                </button>
+            </div>
+        </div>
+    );
+});
 
 export const AdminPackages: React.FC = () => {
     const { packages, updatePackage, deletePackage, cmsGallery } = useData();
@@ -29,12 +96,18 @@ export const AdminPackages: React.FC = () => {
         status: 'Active' as 'Active' | 'Inactive'
     });
 
-    // Derived Stats
-    const totalPackages = packages.length;
-    const activePackages = packages.filter(p => p.status === 'Active').length;
-    const inactivePackages = totalPackages - activePackages;
+    // Derived Stats (Memoized to prevent recalculation on every render)
+    const { totalPackages, activePackages, inactivePackages } = useMemo(() => {
+        const total = packages.length;
+        const active = packages.filter(p => p.status === 'Active').length;
+        return {
+            totalPackages: total,
+            activePackages: active,
+            inactivePackages: total - active
+        };
+    }, [packages]);
 
-    const handleEditClick = (pkg: Package) => {
+    const handleEditClick = useCallback((pkg: Package) => {
         setEditingPackageId(pkg.id);
         setEditForm({
             title: pkg.title,
@@ -51,7 +124,7 @@ export const AdminPackages: React.FC = () => {
             status: pkg.status || 'Active'
         });
         setIsEditModalOpen(true);
-    };
+    }, []);
 
     const handleSaveEdit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -64,21 +137,27 @@ export const AdminPackages: React.FC = () => {
         }
     };
 
-    const handleToggleStatus = (pkg: Package) => {
+    const handleToggleStatus = useCallback((pkg: Package) => {
         const newStatus = pkg.status === 'Active' ? 'Inactive' : 'Active';
         updatePackage(pkg.id, { status: newStatus });
-    };
+    }, [updatePackage]);
 
-    const handleDelete = (id: string) => {
+    const handleDelete = useCallback((id: string) => {
         if (confirm('Are you sure you want to delete this package? Associated bookings will remain but linkage might break.')) {
             deletePackage(id);
         }
-    };
+    }, [deletePackage]);
 
-    const filteredPackages = packages.filter(p =>
-        p.title.toLowerCase().includes(search.toLowerCase()) ||
-        p.location.toLowerCase().includes(search.toLowerCase())
-    );
+    const handlePreview = useCallback((id: string) => {
+        navigate(`/packages/${id}`);
+    }, [navigate]);
+
+    const filteredPackages = useMemo(() => {
+        return packages.filter(p =>
+            p.title.toLowerCase().includes(search.toLowerCase()) ||
+            p.location.toLowerCase().includes(search.toLowerCase())
+        );
+    }, [packages, search]);
 
     return (
         <div className="flex flex-col h-full admin-page-bg">
@@ -265,59 +344,14 @@ export const AdminPackages: React.FC = () => {
                 <div className="space-y-4">
                     {filteredPackages.length > 0 ? (
                         filteredPackages.map((pkg) => (
-                            <div key={pkg.id} className="group bg-white dark:bg-[#1A2633] border border-slate-200 dark:border-slate-800 rounded-2xl p-4 flex flex-col md:flex-row items-start md:items-center gap-6 hover:shadow-lg transition-all hover:border-primary/30">
-                                {/* Image */}
-                                <div className="size-24 md:size-20 rounded-xl bg-slate-200 overflow-hidden shrink-0">
-                                    <img src={pkg.image} alt={pkg.title} className="w-full h-full object-cover" />
-                                </div>
-
-                                {/* Info */}
-                                <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2 mb-1">
-                                        <h3 className="font-bold text-slate-900 dark:text-white text-lg truncate">{pkg.title}</h3>
-                                        {pkg.status === 'Inactive' && <span className="bg-slate-100 text-slate-500 text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider">Hidden</span>}
-                                    </div>
-                                    <div className="flex flex-wrap items-center gap-4 text-sm text-slate-500 dark:text-slate-400">
-                                        <span className="flex items-center gap-1"><span className="material-symbols-outlined text-[16px]">location_on</span> {pkg.location}</span>
-                                        <span className="flex items-center gap-1"><span className="material-symbols-outlined text-[16px]">schedule</span> {pkg.days} Days</span>
-                                        <span className="flex items-center gap-1"><span className="material-symbols-outlined text-[16px]">group</span> {pkg.groupSize}</span>
-                                    </div>
-                                </div>
-
-                                {/* Metrics */}
-                                <div className="w-full md:w-auto flex items-center justify-between md:justify-end gap-8 md:pr-4 md:border-r border-slate-100 dark:border-slate-700">
-                                    <div className="text-center md:text-right">
-                                        <p className="text-xs font-bold text-slate-400 uppercase">Price</p>
-                                        <p className="font-black text-slate-900 dark:text-white">₹{(pkg.price / 1000).toFixed(0)}k</p>
-                                    </div>
-                                    <div className="text-center md:text-right">
-                                        <p className="text-xs font-bold text-slate-400 uppercase">Price</p>
-                                        <p className="font-black text-slate-900 dark:text-white">₹{(pkg.price / 1000).toFixed(0)}k</p>
-                                    </div>
-                                </div>
-
-                                {/* Actions */}
-                                <div className="w-full md:w-auto flex items-center justify-end gap-3">
-                                    <button
-                                        onClick={() => navigate(`/packages/${pkg.id}`)}
-                                        className="px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-lg text-xs font-bold uppercase tracking-wider hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
-                                    >
-                                        Preview
-                                    </button>
-                                    <button
-                                        onClick={() => handleToggleStatus(pkg)}
-                                        className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors ${pkg.status === 'Active' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 hover:bg-green-200' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 hover:bg-slate-200'}`}
-                                    >
-                                        {pkg.status === 'Active' ? 'Active' : 'Hidden'}
-                                    </button>
-                                    <button onClick={() => handleEditClick(pkg)} className="p-2.5 text-slate-400 hover:text-primary hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors" title="Edit">
-                                        <span className="material-symbols-outlined">edit</span>
-                                    </button>
-                                    <button onClick={() => handleDelete(pkg.id)} className="p-2.5 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors" title="Delete">
-                                        <span className="material-symbols-outlined">delete</span>
-                                    </button>
-                                </div>
-                            </div>
+                            <PackageCard
+                                key={pkg.id}
+                                pkg={pkg}
+                                onEdit={handleEditClick}
+                                onToggleStatus={handleToggleStatus}
+                                onDelete={handleDelete}
+                                onPreview={handlePreview}
+                            />
                         ))
                     ) : (
                         <div className="text-center py-20 text-slate-400">

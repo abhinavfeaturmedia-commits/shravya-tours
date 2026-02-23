@@ -1,4 +1,6 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
+import { api } from '../../src/lib/api';
+import { toast } from 'sonner';
 
 interface ImageUploadProps {
     value?: string;
@@ -9,8 +11,9 @@ interface ImageUploadProps {
 
 export const ImageUpload: React.FC<ImageUploadProps> = ({ value, onChange, label = "Upload Image", className = "" }) => {
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const [isUploading, setIsUploading] = useState(false);
 
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
             if (file.size > 5 * 1024 * 1024) { // 5MB limit
@@ -18,13 +21,20 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({ value, onChange, label
                 return;
             }
 
-            const reader = new FileReader();
-            reader.onload = (event) => {
-                if (event.target?.result) {
-                    onChange(event.target.result as string);
-                }
-            };
-            reader.readAsDataURL(file);
+            try {
+                setIsUploading(true);
+                const toastId = toast.loading('Uploading image...');
+
+                // Ensure there's a 'documents' bucket in Supabase!
+                const publicUrl = await api.uploadFile(file, 'documents');
+                onChange(publicUrl);
+
+                toast.success('Image uploaded successfully', { id: toastId });
+            } catch (error: any) {
+                toast.error(error.message || 'Failed to upload image');
+            } finally {
+                setIsUploading(false);
+            }
         }
     };
 
@@ -73,13 +83,16 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({ value, onChange, label
                         <button
                             type="button"
                             onClick={() => fileInputRef.current?.click()}
-                            className="px-4 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-bold uppercase tracking-wider rounded-lg transition-colors flex items-center gap-2 w-fit"
+                            disabled={isUploading}
+                            className={`px-4 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-bold uppercase tracking-wider rounded-lg transition-colors flex items-center gap-2 w-fit ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}
                         >
-                            <span className="material-symbols-outlined text-lg">upload</span>
-                            {value ? 'Change Image' : 'Select Image'}
+                            <span className={`material-symbols-outlined text-lg ${isUploading ? 'animate-spin' : ''}`}>
+                                {isUploading ? 'sync' : 'upload'}
+                            </span>
+                            {isUploading ? 'Uploading...' : (value ? 'Change Image' : 'Select Image')}
                         </button>
                         <p className="text-[10px] text-slate-400">
-                            Supported formats: JPG, PNG, WEBP. Max size: 5MB.
+                            Supported formats: JPG, PNG, WEBP. Max size: 5MB. Will be uploaded securely to Supabase Storage.
                         </p>
                     </div>
                 </div>

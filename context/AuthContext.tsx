@@ -218,6 +218,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return () => subscription.unsubscribe();
     }, [initializeAuth, currentUser, loadUserProfile]);
 
+    const logAuthAction = useCallback(async (action: string, module: string, details: string, performedBy?: string) => {
+        try {
+            const user = performedBy || currentUser?.name || 'System';
+            await api.createAuditLog({ action, module, details, severity: 'Info', performedBy: user, timestamp: new Date().toISOString() });
+        } catch (e) {
+            console.error('Failed to log auth action', e);
+        }
+    }, [currentUser]);
+
     const login = useCallback(async (email: string, password: string): Promise<boolean> => {
         // Dev/Demo Bypass
         if (email === 'admin@shravyatours.com' && password === 'admin') {
@@ -228,6 +237,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 return prev;
             });
             setCurrentUser(MOCK_ADMIN_USER);
+            logAuthAction('Login', 'Authentication', `User ${email} logged in (Demo Mode)`, MOCK_ADMIN_USER.name).catch(console.error);
             return true;
         }
 
@@ -240,52 +250,55 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
             if (data.session?.user?.email) {
                 await loadUserProfile(data.session.user.email);
+                logAuthAction('Login', 'Authentication', `User ${data.session.user.email} logged in`, data.session.user.email).catch(console.error);
             }
             return true;
         } catch (e) {
             console.error("Login exception:", e);
             return false;
         }
-    }, [loadUserProfile]);
+    }, [loadUserProfile, logAuthAction]);
 
     const logout = useCallback(async () => {
+        const userEmail = currentUser?.email || 'Unknown User';
         localStorage.removeItem(STORAGE_KEY_MOCK);
         await supabase.auth.signOut();
         setCurrentUser(null);
-    }, []);
+        logAuthAction('Logout', 'Authentication', `User ${userEmail} logged out`, userEmail).catch(console.error);
+    }, [currentUser, logAuthAction]);
 
     const addStaff = useCallback(async (member: StaffMember, password?: string) => {
         try {
-            // We use api.createStaff usually, but context might call this for UI optimism?
-            // Let's assume the component calls API and simpler updates list.
-            // Actually, components should call Context.addStaff -> Context calls API -> Context updates state.
             const created = await api.createStaff(member, password);
             setStaff(prev => [created, ...prev]);
+            logAuthAction('Create', 'Staff', `Added new staff member: ${member.name}`).catch(console.error);
         } catch (e) {
             console.error(e);
             throw e;
         }
-    }, []);
+    }, [logAuthAction]);
 
     const updateStaff = useCallback(async (id: number, member: Partial<StaffMember>) => {
         try {
             await api.updateStaff(id, member);
             setStaff(prev => prev.map(s => s.id === id ? { ...s, ...member } : s));
+            logAuthAction('Update', 'Staff', `Updated staff member: ${member.name || `ID ${id}`}`).catch(console.error);
         } catch (e) {
             console.error(e);
             throw e;
         }
-    }, []);
+    }, [logAuthAction]);
 
     const deleteStaff = useCallback(async (id: number) => {
         try {
             await api.deleteStaff(id);
             setStaff(prev => prev.filter(s => s.id !== id));
+            logAuthAction('Delete', 'Staff', `Deleted staff member ID: ${id}`).catch(console.error);
         } catch (e) {
             console.error(e);
             throw e;
         }
-    }, []);
+    }, [logAuthAction]);
 
     // Masquerade Logic (Client-side mainly)
     const [realUser, setRealUser] = useState<StaffMember | null>(null);

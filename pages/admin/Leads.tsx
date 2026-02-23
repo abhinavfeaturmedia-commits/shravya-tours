@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useData } from '../../context/DataContext';
+import { useLeads } from '../../src/hooks/useLeads';
 import { useAuth } from '../../context/AuthContext';
 import { Lead, BookingStatus, FollowUpType, Customer } from '../../types'; // Removed unused imports
 import { toast } from 'sonner'; // Use sonner for consistency if available, or keep existing toast
@@ -31,7 +32,8 @@ const StatusBadge = ({ status }: { status: string }) => {
 };
 
 export const Leads: React.FC = () => {
-    const { leads, addLead, addLeadLog, updateLead, deleteLead, addFollowUp, addBooking, followUps, customers, addCustomer } = useData();
+    const { addLeadLog, addFollowUp, addBooking, followUps, customers, addCustomer } = useData();
+    const { leads, addLead, updateLead, deleteLead, isLoading } = useLeads();
     const { currentUser } = useAuth();
     const navigate = useNavigate();
 

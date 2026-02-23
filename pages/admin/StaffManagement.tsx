@@ -98,7 +98,20 @@ export const StaffManagement: React.FC = () => {
         }));
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const toggleAllPermissions = (type: 'view' | 'manage', checked: boolean) => {
+        setFormData(prev => {
+            const newPermissions: any = { ...prev.permissions };
+            Object.keys(newPermissions).forEach(key => {
+                newPermissions[key] = {
+                    ...newPermissions[key],
+                    [type]: checked
+                };
+            });
+            return { ...prev, permissions: newPermissions };
+        });
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
         // Check for duplicate email (exclude self if editing)
@@ -159,19 +172,23 @@ export const StaffManagement: React.FC = () => {
             color: colorMap[formData.role] || 'slate'
         };
 
-        if (isEditing && editingId) {
-            updateStaff(editingId, staffData);
-            toast.success('Staff member updated successfully');
-        } else {
-            const newMember: StaffMember = {
-                id: Date.now(),
-                ...staffData,
-                lastActive: 'Never',
-            };
-            addStaff(newMember, password);
-            toast.success('New staff member added');
+        try {
+            if (isEditing && editingId) {
+                await updateStaff(editingId, staffData);
+                toast.success('Staff member updated successfully');
+            } else {
+                const newMember: StaffMember = {
+                    id: Date.now(),
+                    ...staffData,
+                    lastActive: 'Never',
+                };
+                await addStaff(newMember, password);
+                toast.success('New staff member added');
+            }
+            setIsModalOpen(false);
+        } catch (error: any) {
+            toast.error(error.message || 'Failed to save staff member');
         }
-        setIsModalOpen(false);
     };
 
     const handleDelete = (id: number) => {
@@ -343,8 +360,36 @@ export const StaffManagement: React.FC = () => {
                                             <thead className="bg-slate-50 dark:bg-slate-800 text-left">
                                                 <tr>
                                                     <th className="px-4 py-3 font-bold text-slate-500">Module</th>
-                                                    <th className="px-4 py-3 font-bold text-slate-500 text-center w-24">View</th>
-                                                    <th className="px-4 py-3 font-bold text-slate-500 text-center w-24">Manage</th>
+                                                    <th className="px-4 py-3 font-bold text-slate-500 text-center w-24">
+                                                        <div className="flex flex-col items-center gap-1">
+                                                            <span>View</span>
+                                                            <div className="flex items-center gap-1">
+                                                                <input
+                                                                    type="checkbox"
+                                                                    className="size-3 rounded border-gray-300"
+                                                                    checked={Object.values(formData.permissions).every((p: any) => p.view)}
+                                                                    onChange={e => toggleAllPermissions('view', e.target.checked)}
+                                                                    title="Select/Unselect All View Permissions"
+                                                                />
+                                                                <span className="text-[9px] uppercase tracking-wider">All</span>
+                                                            </div>
+                                                        </div>
+                                                    </th>
+                                                    <th className="px-4 py-3 font-bold text-slate-500 text-center w-24">
+                                                        <div className="flex flex-col items-center gap-1">
+                                                            <span>Manage</span>
+                                                            <div className="flex items-center gap-1">
+                                                                <input
+                                                                    type="checkbox"
+                                                                    className="size-3 rounded border-gray-300"
+                                                                    checked={Object.values(formData.permissions).every((p: any) => p.manage)}
+                                                                    onChange={e => toggleAllPermissions('manage', e.target.checked)}
+                                                                    title="Select/Unselect All Manage Permissions"
+                                                                />
+                                                                <span className="text-[9px] uppercase tracking-wider">All</span>
+                                                            </div>
+                                                        </div>
+                                                    </th>
                                                 </tr>
                                             </thead>
                                             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">

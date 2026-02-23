@@ -28,8 +28,17 @@ type MasterTab = 'analytics' | 'locations' | 'hotels' | 'activities' | 'transpor
 type ViewMode = 'grid' | 'list';
 type SortDirection = 'asc' | 'desc';
 
-// Helper to generate unique IDs
-const generateId = (prefix: string) => `${prefix}-${Date.now().toString(36).toUpperCase()}`;
+// Safe UUID v4 generator
+const generateId = (prefix: string) => {
+    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+        return crypto.randomUUID();
+    }
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+        const r = Math.random() * 16 | 0;
+        const v = c === 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+    });
+};
 
 // --- Master Modal Component (Extracted) ---
 const MasterModal: React.FC<{

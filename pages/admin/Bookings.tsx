@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useData } from '../../context/DataContext';
+import { useBookings } from '../../src/hooks/useBookings';
 import { BookingStatus, Booking, BookingType } from '../../types';
 import { SupplierManagementModal } from '../../components/admin/SupplierManagementModal';
 import { LedgerManagementModal } from '../../components/admin/LedgerManagementModal';
@@ -8,9 +9,12 @@ import { useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { toast } from 'sonner';
 import { Pagination, usePagination } from '../../components/ui/Pagination';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 export const Bookings: React.FC = () => {
-    const { bookings, packages, addBooking, updateBooking, deleteBooking, customers } = useData();
+    const { packages, customers } = useData();
+    const { bookings, addBooking, updateBooking, deleteBooking, isLoading } = useBookings();
     const { currentUser, hasPermission } = useAuth();
     const location = useLocation();
     const [viewMode, setViewMode] = useState<'list' | 'board'>('list');
@@ -263,209 +267,143 @@ export const Bookings: React.FC = () => {
     };
 
     const handleGenerateInvoice = (booking: Booking) => {
-        const invoiceWindow = window.open('', '_blank');
-        if (invoiceWindow) {
-            const isPaid = booking.payment === 'Paid';
-            const amountPaid = isPaid ? booking.amount : (booking.payment === 'Deposit' ? booking.amount * 0.3 : 0);
-            const balanceDue = booking.amount - amountPaid;
-            const invoiceDate = new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
-            const dueDate = new Date(booking.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+        const isPaid = booking.payment === 'Paid';
+        const amountPaid = isPaid ? booking.amount : (booking.payment === 'Deposit' ? booking.amount * 0.3 : 0);
+        const balanceDue = booking.amount - amountPaid;
+        const invoiceDate = new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+        const dueDate = new Date(booking.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
 
-            invoiceWindow.document.write(`
-            <html>
-            <head>
-                <title>Invoice ${booking.id}</title>
-                <style>
-                    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-                    body { font-family: 'Inter', sans-serif; background: #e5e7eb; padding: 40px 0; margin: 0; -webkit-print-color-adjust: exact; }
-                    .invoice-container { max-width: 794px; min-height: 1123px; margin: 0 auto; background: white; padding: 50px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); box-sizing: border-box; }
-                    
-                    /* Header */
-                    .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 2px solid #374151; }
-                    .logo-section { display: flex; align-items: center; gap: 15px; }
-                    .logo-icon { width: 100px; height: 100px; display: flex; align-items: center; justify-content: center; }
-                    .company-name { font-size: 22px; font-weight: 800; color: #374151; margin: 0; text-transform: uppercase; line-height: 1; }
-                    .company-tagline { font-size: 11px; color: #6B7280; font-weight: 500; margin-top: 4px; }
-                    
-                    .invoice-details { text-align: right; }
-                    .invoice-title { font-size: 36px; font-weight: 900; color: #111827; margin: 0 0 10px 0; letter-spacing: 0.5px; text-transform: uppercase; }
-                    .detail-row { font-size: 12px; color: #111827; font-weight: 600; margin-bottom: 3px; }
-                    .detail-row span { display: inline-block; min-width: 80px; text-align: right; color: #6B7280; font-weight: 500; margin-right: 10px; }
+        const doc = new jsPDF();
 
-                    /* Addresses */
-                    .addresses { display: flex; justify-content: space-between; margin-bottom: 30px; padding-top: 10px; }
-                    .addr-col { width: 45%; }
-                    .addr-title { font-size: 11px; font-weight: 800; color: #111827; text-transform: uppercase; margin-bottom: 8px; }
-                    .addr-name { font-size: 13px; font-weight: 700; color: #111827; margin: 0 0 4px 0; }
-                    .addr-text { font-size: 12px; color: #374151; line-height: 1.5; margin: 0; }
-                    .contact-info { margin-top: 8px; font-size: 12px; color: #374151; font-weight: 500; }
-                    .contact-item { display: flex; align-items: center; gap: 5px; margin-bottom: 2px; }
+        // Header
+        doc.setFontSize(22);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(55, 65, 81);
+        doc.text('SHRAVYA TOURS', 14, 25);
 
-                    /* Service Summary */
-                    .section-header { font-size: 11px; font-weight: 800; color: #374151; text-transform: uppercase; margin-bottom: 10px; }
-                    table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
-                    th { text-align: left; background: #E5E7EB; padding: 10px; font-size: 11px; font-weight: 700; color: #111827; border: 1px solid #D1D5DB; }
-                    td { padding: 10px; border: 1px solid #E5E7EB; font-size: 12px; color: #1F2937; vertical-align: top; }
-                    .text-right { text-align: right; }
-                    .col-grey { background: #F9FAFB; }
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(107, 114, 128);
+        doc.text('Your Dream Destination', 14, 31);
 
-                    /* Bottom Layout */
-                    .bottom-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-bottom: 40px; }
-                    
-                    /* Payment Details */
-                    .payment-block { font-size: 11px; color: #374151; line-height: 1.6; margin-bottom: 15px; }
-                    .payment-label { font-weight: 700; color: #111827; margin-bottom: 2px; font-size: 12px; }
-                    .qr-section { display: flex; align-items: center; gap: 15px; margin-top: 15px; }
-                    .qr-box { width: 70px; height: 70px; border: 1px solid #D1D5DB; display: flex; align-items: center; justify-content: center; }
-                    
-                    /* Financial Breakdown */
-                    .breakdown-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-                    .breakdown-table td { border: none; padding: 6px 10px; }
-                    .breakdown-table .row-total { background: #E5E7EB; font-weight: 700; }
-                    .breakdown-table .row-final { background: #4B5563; color: white; font-weight: 700; font-size: 13px; }
-                    .breakdown-table .row-final td { border: 1px solid #4B5563; }
-                    
-                    .amount-paid-text { color: #166534; font-weight: 700; text-align: right; margin-top: 8px; font-size: 13px; }
-                    .amount-words { font-size: 11px; color: #4B5563; margin-top: 5px; font-style: italic; }
+        doc.setFontSize(24);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(17, 24, 39);
+        doc.text('INVOICE', 196, 25, { align: 'right' });
 
-                    /* Terms */
-                    .terms { border-top: 1px solid #E5E7EB; padding-top: 20px; font-size: 11px; color: #374151; }
-                    .terms h4 { margin: 0 0 10px 0; font-size: 11px; font-weight: 800; text-transform: uppercase; }
-                    .terms ol { margin: 0; padding-left: 15px; line-height: 1.5; }
-                    
-                    /* Footer */
-                    .footer { margin-top: 40px; text-align: center; font-size: 10px; color: #6B7280; border-top: 1px solid #E5E7EB; padding-top: 15px; }
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'bold');
+        doc.text(`Invoice No:`, 140, 33);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`${booking.invoiceNo || booking.id.replace('#', '')}`, 165, 33);
 
-                    @media print {
-                        body { background: white; padding: 0; }
-                        .invoice-container { box-shadow: none; padding: 40px; margin: 0; width: 100%; max-width: none; }
-                    }
-                </style>
-            </head>
-            <body>
-                <div class="invoice-container">
-                    <!-- Invoice content matching the previous update -->
-                    <div class="header">
-                        <div class="logo-section">
-                            <div class="logo-icon">
-                                <img src="/logo.png" alt="Shravya Tours" style="width: 100%; height: 100%; object-fit: contain;" />
-                            </div>
-                            <div>
-                                <h1 class="company-name">Shravya Tours</h1>
-                                <p class="company-tagline">Your Dream Destination</p>
-                            </div>
-                        </div>
-                        <div class="invoice-details">
-                            <h2 class="invoice-title">INVOICE</h2>
-                            <div class="detail-row"><span>Invoice No:</span> ${booking.invoiceNo || booking.id.replace('#', '')}</div>
-                            <div class="detail-row"><span>Invoice Date:</span> ${invoiceDate}</div>
-                            <div class="detail-row"><span>Due Date:</span> ${dueDate}</div>
-                        </div>
-                    </div>
+        doc.setFont('helvetica', 'bold');
+        doc.text(`Invoice Date:`, 140, 39);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`${invoiceDate}`, 165, 39);
 
-                    <div class="addresses">
-                        <div class="addr-col">
-                            <div class="addr-title">BILLED FROM</div>
-                            <h3 class="addr-name">Shravya Tours</h3>
-                            <p class="addr-text">A508, Wisteria, Patil Nagar, Chikhali<br>PCMC, Pune, Maharashtra - 411062</p>
-                            <div class="contact-info">
-                                <div class="contact-item">✉ shravyatours23@gmail.com</div>
-                                <div class="contact-item">📞 +91 80109 55675</div>
-                            </div>
-                        </div>
-                        <div class="addr-col">
-                            <div class="addr-title">BILLED TO</div>
-                            <h3 class="addr-name">${booking.customer}</h3>
-                            <p class="addr-text">${booking.email}<br>${booking.phone || ''}</p>
-                        </div>
-                    </div>
+        doc.setFont('helvetica', 'bold');
+        doc.text(`Due Date:`, 140, 45);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`${dueDate}`, 165, 45);
 
-                    <div>
-                        <div class="section-header">SERVICE SUMMARY</div>
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th width="40%">Item Description</th>
-                                    <th>Duration</th>
-                                    <th>Service Dates</th>
-                                    <th class="text-right">Rate</th>
-                                    <th class="text-right">Amount</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td class="col-grey">
-                                        <strong>${booking.title}</strong><br>
-                                        <span style="color: #6B7280; font-size: 10px;">${booking.type} Package</span>
-                                    </td>
-                                    <td>${Math.floor(Math.random() * 4) + 2} Days</td>
-                                    <td>${dueDate}</td>
-                                    <td class="text-right">₹${booking.amount.toLocaleString()}.00</td>
-                                    <td class="text-right col-grey"><strong>₹${booking.amount.toLocaleString()}.00</strong></td>
-                                </tr>
-                                <tr>
-                                    <td colspan="4" class="text-right" style="border:none; padding-top:5px; font-weight:700; font-size:11px;">Subtotal</td>
-                                    <td class="text-right" style="border:none; padding-top:5px; font-weight:700; font-size:11px;">₹${booking.amount.toLocaleString()}.00</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
+        // Separator line
+        doc.setDrawColor(229, 231, 235);
+        doc.line(14, 50, 196, 50);
 
-                    <div class="bottom-grid">
-                        <div>
-                            <div class="section-header">PAYMENT DETAILS</div>
-                            <div class="payment-block">
-                                <div class="payment-label">Bank Transfer</div>
-                                Bank: Federal Bank<br>Account Name: Shravya Tours and Travels<br>Account Type: Current<br>Account No: 14960200014487<br>IFSC: FDRL0001496
-                            </div>
-                            <div class="payment-block">
-                                <div class="payment-label">UPI Payment</div>
-                                UPI ID: shravyatours23@okicici
-                            </div>
-                            <div class="qr-section">
-                                <div class="qr-box">
-                                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=60x60&data=upi://pay?pa=shravyatours23@okicici&pn=ShravyaTours" alt="QR" width="60" height="60"/>
-                                </div>
-                                <div style="font-size: 10px; color: #4B5563; line-height: 1.2;">Scan to pay<br>via UPI</div>
-                            </div>
-                        </div>
-                        <div>
-                            <div class="section-header">FINANCIAL BREAKDOWN</div>
-                            <table class="breakdown-table">
-                                <tr><td>Base Package Total</td><td class="text-right">₹${booking.amount.toLocaleString()}.00</td></tr>
-                                <tr><td>(+) Toll/Parking charges</td><td class="text-right">₹0.00</td></tr>
-                                <tr class="row-total"><td>Gross Total</td><td class="text-right">₹${booking.amount.toLocaleString()}.00</td></tr>
-                                <tr><td>(-) Diesel Paid by Customer</td><td class="text-right">(₹0.00)</td></tr>
-                                <tr><td>(-) Advance Received</td><td class="text-right">(₹${amountPaid.toLocaleString()}.00)</td></tr>
-                                <tr class="row-final"><td>TOTAL DUE (INR)</td><td class="text-right">₹${balanceDue.toLocaleString()}.00</td></tr>
-                            </table>
-                            <div class="amount-words">Total in words: (System generated approximate)</div>
-                            <div class="amount-paid-text">Amount Paid: ₹${amountPaid.toLocaleString()}.00</div>
-                        </div>
-                    </div>
+        // Addresses
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(17, 24, 39);
+        doc.text('BILLED FROM', 14, 60);
+        doc.text('BILLED TO', 110, 60);
 
-                    <div class="terms">
-                        <h4>TERMS & CONDITIONS</h4>
-                        <ol>
-                            <li>Please pay within 3 days from the date of invoice. Overdue interest @ 14% will be charged on delayed payments.</li>
-                            <li>Additional 5% charges applicable for Credit card payments.</li>
-                            <li>Additional ₹1200/- charges if trip ends after 11:45 PM.</li>
-                        </ol>
-                    </div>
+        doc.setFontSize(12);
+        doc.text('Shravya Tours', 14, 66);
+        doc.text(`${booking.customer}`, 110, 66);
 
-                    <div class="footer">
-                        This is a system-generated invoice. Thank you for choosing Shravya Tours!<br>
-                        For enquiries: shravyatours23@gmail.com | +91 80109 55675
-                    </div>
-                </div>
-                <script>
-                    window.onload = function() { window.print(); }
-                </script>
-            </body>
-            </html>
-          `);
-            invoiceWindow.document.close();
-        }
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(55, 65, 81);
+        doc.text('A508, Wisteria, Patil Nagar', 14, 72);
+        doc.text('Pune, Maharashtra - 411062', 14, 77);
+        doc.text('shravyatours23@gmail.com', 14, 85);
+        doc.text('+91 80109 55675', 14, 90);
+
+        doc.text(`${booking.email}`, 110, 72);
+        doc.text(`${booking.phone || ''}`, 110, 77);
+
+        // Service Summary Table
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(55, 65, 81);
+        doc.text('SERVICE SUMMARY', 14, 105);
+
+        autoTable(doc, {
+            startY: 110,
+            head: [['Item Description', 'Duration', 'Service Dates', 'Rate', 'Amount']],
+            body: [
+                [`${booking.title}\n(${booking.type} Package)`, '2 Days', dueDate, `Rs. ${booking.amount.toLocaleString()}.00`, `Rs. ${booking.amount.toLocaleString()}.00`]
+            ],
+            theme: 'grid',
+            headStyles: { fillColor: [229, 231, 235], textColor: [17, 24, 39] },
+            columnStyles: {
+                3: { halign: 'right' },
+                4: { halign: 'right', fontStyle: 'bold' }
+            }
+        });
+
+        const finalY = (doc as any).lastAutoTable.finalY || 135;
+
+        // Financial Breakdown
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(55, 65, 81);
+        doc.text('FINANCIAL BREAKDOWN', 100, finalY + 15);
+
+        autoTable(doc, {
+            startY: finalY + 20,
+            margin: { left: 100 },
+            body: [
+                ['Gross Total', `Rs. ${booking.amount.toLocaleString()}.00`],
+                ['(-) Advance Received', `(Rs. ${amountPaid.toLocaleString()}.00)`],
+                ['TOTAL DUE (INR)', `Rs. ${balanceDue.toLocaleString()}.00`]
+            ],
+            theme: 'plain',
+            styles: { fontSize: 10 },
+            columnStyles: {
+                1: { halign: 'right', fontStyle: 'bold' }
+            },
+            didParseCell: function (data) {
+                if (data.row.index === 2) {
+                    data.cell.styles.textColor = [255, 255, 255];
+                    data.cell.styles.fillColor = [75, 85, 99];
+                }
+            }
+        });
+
+        // Payment Details
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(55, 65, 81);
+        doc.text('PAYMENT DETAILS', 14, finalY + 15);
+
+        doc.setFontSize(9);
+        doc.text('Bank Transfer', 14, finalY + 22);
+        doc.setFont('helvetica', 'normal');
+        doc.text('Bank: Federal Bank\nAccount Name: Shravya Tours and Travels\nAccount Type: Current\nAccount No: 14960200014487\nIFSC: FDRL0001496', 14, finalY + 28);
+
+        doc.setFont('helvetica', 'bold');
+        doc.text('UPI Payment', 14, finalY + 54);
+        doc.setFont('helvetica', 'normal');
+        doc.text('UPI ID: shravyatours23@okicici', 14, finalY + 60);
+
+        // Footer terms
+        doc.setFontSize(8);
+        doc.setTextColor(107, 114, 128);
+        doc.text('This is a system-generated invoice. Thank you for choosing Shravya Tours!', 105, 280, { align: 'center' });
+
+        doc.save(`Invoice_${booking.invoiceNo || booking.id.replace('#', '')}.pdf`);
     };
 
     // --- Filters ---

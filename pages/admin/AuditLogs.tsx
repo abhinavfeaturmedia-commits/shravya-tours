@@ -45,9 +45,9 @@ export const AuditLogs: React.FC = () => {
     const filteredLogs = useMemo(() => {
         return auditLogs.filter(log => {
             const matchesSearch =
-                log.details.toLowerCase().includes(search.toLowerCase()) ||
+                log.details?.toLowerCase().includes(search.toLowerCase()) ||
                 log.performedBy?.toLowerCase().includes(search.toLowerCase()) ||
-                log.id.toLowerCase().includes(search.toLowerCase());
+                log.id?.toLowerCase().includes(search.toLowerCase());
 
             const matchesModule = filterModule === 'All' || log.module === filterModule;
             const matchesAction = filterAction === 'All' || log.action === filterAction;
