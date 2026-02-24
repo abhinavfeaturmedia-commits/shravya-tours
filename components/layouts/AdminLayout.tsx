@@ -58,6 +58,7 @@ export const AdminLayout: React.FC = () => {
 
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [isFabOpen, setIsFabOpen] = useState(false);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [commandSearch, setCommandSearch] = useState('');
   const [notifiedIds, setNotifiedIds] = useState<Set<string>>(new Set());
   const location = useLocation();
@@ -122,7 +123,7 @@ export const AdminLayout: React.FC = () => {
   };
 
   const handleNotifications = () => {
-    alert("You have 3 unread notifications.");
+    setIsNotificationsOpen((prev) => !prev);
   };
 
   // Keyboard shortcuts
@@ -138,6 +139,7 @@ export const AdminLayout: React.FC = () => {
       if (e.key === 'Escape') {
         setIsCommandPaletteOpen(false);
         setIsFabOpen(false);
+        setIsNotificationsOpen(false);
       }
     };
 
@@ -360,10 +362,95 @@ export const AdminLayout: React.FC = () => {
             </div>
 
             {/* Notification Bell */}
-            <button onClick={handleNotifications} className="relative p-2.5 rounded-full text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors border border-transparent hover:border-slate-200 dark:hover:border-slate-700">
-              <span className="material-symbols-outlined text-[22px]">notifications</span>
-              <span className="absolute top-2.5 right-2.5 size-2.5 bg-red-500 rounded-full border-2 border-white dark:border-[#151d29]"></span>
-            </button>
+            <div className="relative">
+              <button onClick={handleNotifications} className="relative p-2.5 rounded-full text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors border border-transparent hover:border-slate-200 dark:hover:border-slate-700">
+                <span className="material-symbols-outlined text-[22px]">notifications</span>
+                {followUps.filter(f => f.status === 'Pending' && f.reminderEnabled && f.scheduledAt && new Date(f.scheduledAt) <= new Date()).length > 0 && (
+                  <span className="absolute top-2.5 right-2.5 size-2.5 bg-red-500 rounded-full border-2 border-white dark:border-[#151d29] animate-pulse"></span>
+                )}
+              </button>
+
+              {/* Notifications Dropdown */}
+              {isNotificationsOpen && (
+                <>
+                  <div className="fixed inset-0 z-[140]" onClick={() => setIsNotificationsOpen(false)} />
+                  <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 overflow-hidden z-[150] animate-in slide-in-from-top-2">
+                    <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-800/50">
+                      <h3 className="font-bold text-slate-900 dark:text-white">Notifications</h3>
+                      <span className="text-xs font-semibold px-2 py-1 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-lg">
+                        {followUps.filter(f => f.status === 'Pending' && f.reminderEnabled && f.scheduledAt && new Date(f.scheduledAt) <= new Date()).length} New
+                      </span>
+                    </div>
+                    <div className="max-h-[70vh] overflow-y-auto overscroll-contain">
+                      {(() => {
+                        const pendingFollowUps = followUps.filter(f => f.status === 'Pending' && f.reminderEnabled && f.scheduledAt && new Date(f.scheduledAt) <= new Date())
+                          .sort((a, b) => {
+                            const priorityVal: Record<string, number> = { 'High': 3, 'Medium': 2, 'Low': 1 };
+                            const pDiff = (priorityVal[b.priority || 'Medium'] as number) - (priorityVal[a.priority || 'Medium'] as number);
+                            if (pDiff !== 0) return pDiff;
+                            return new Date(a.scheduledAt!).getTime() - new Date(b.scheduledAt!).getTime();
+                          });
+
+                        if (pendingFollowUps.length === 0) {
+                          return (
+                            <div className="p-8 text-center flex flex-col items-center justify-center">
+                              <span className="material-symbols-outlined text-4xl text-slate-200 dark:text-slate-700 mb-3">notifications_paused</span>
+                              <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">All caught up!</p>
+                              <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">No pending notifications</p>
+                            </div>
+                          );
+                        }
+
+                        return pendingFollowUps.map((f, idx) => (
+                          <div
+                            key={f.id}
+                            className={`p-4 border-b border-slate-50 dark:border-slate-800/50 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer ${idx === 0 ? 'bg-indigo-50/30 dark:bg-indigo-900/10' : ''}`}
+                            onClick={() => {
+                              navigate('/admin/leads');
+                              setIsNotificationsOpen(false);
+                            }}
+                          >
+                            <div className="flex gap-3">
+                              <div className="size-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white shrink-0 shadow-sm">
+                                <span className="material-symbols-outlined text-[18px]">event_available</span>
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-bold text-slate-900 dark:text-white truncate">
+                                  Follow-up Due: {f.leadName || 'Unknown Lead'}
+                                </p>
+                                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 line-clamp-2 leading-relaxed">
+                                  {f.description || f.notes || 'No description provided.'}
+                                </p>
+                                <div className="flex items-center gap-2 mt-2">
+                                  <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider ${f.priority === 'High' ? 'bg-red-100 text-red-600' : f.priority === 'Low' ? 'bg-green-100 text-green-600' : 'bg-amber-100 text-amber-600'}`}>
+                                    {f.priority || 'Medium'}
+                                  </span>
+                                  <p className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 flex items-center gap-1 uppercase tracking-wider">
+                                    <span className="material-symbols-outlined text-[12px]">schedule</span>
+                                    {new Date(f.scheduledAt!).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ));
+                      })()}
+                    </div>
+                    <div className="p-2 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
+                      <button
+                        onClick={() => {
+                          navigate('/admin/leads');
+                          setIsNotificationsOpen(false);
+                        }}
+                        className="w-full py-2.5 text-xs font-bold text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-all"
+                      >
+                        View All in Leads
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
 
             {/* User Profile */}
             <div className="flex items-center gap-3 pl-6 border-l border-slate-200 dark:border-slate-700 h-8">

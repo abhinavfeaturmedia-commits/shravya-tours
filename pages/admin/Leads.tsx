@@ -53,6 +53,7 @@ export const Leads: React.FC = () => {
         status: 'New', travelers: '2 Adults', source: 'Manual Entry'
     });
     const [followUpType, setFollowUpType] = useState<FollowUpType>('Call');
+    const [followUpPriority, setFollowUpPriority] = useState<'High' | 'Medium' | 'Low'>('Medium');
 
     const selectedLead = leads.find(l => l.id === selectedLeadId);
 
@@ -100,7 +101,7 @@ export const Leads: React.FC = () => {
                 description: `Reminder: ${noteContent}`,
                 reminderEnabled: true,
                 createdAt: new Date().toISOString(),
-                priority: 'Medium'
+                priority: followUpPriority
             });
             toast.success('Log saved & Follow-up scheduled');
         } else {
@@ -110,6 +111,7 @@ export const Leads: React.FC = () => {
         setNoteContent('');
         setIsReminderSet(false);
         setReminderDate('');
+        setFollowUpPriority('Medium');
     };
 
     const handleFormSubmit = (e: React.FormEvent) => {
@@ -366,7 +368,7 @@ export const Leads: React.FC = () => {
             </div>
 
             {/* RIGHT DETAIL PANEL (Fixed Sidebar) */}
-            {selectedLead && (
+            {selectedLead ? (
                 <div className="w-full lg:w-[450px] bg-white dark:bg-[#1A2633] border-l border-slate-200 dark:border-slate-800 flex flex-col h-full fixed lg:static inset-0 z-50 overflow-y-auto animate-in slide-in-from-right-10 duration-200 shadow-2xl lg:shadow-none">
 
                     {/* Panel Header */}
@@ -497,12 +499,23 @@ export const Leads: React.FC = () => {
                                         )}
                                     </div>
                                     {isReminderSet && (
-                                        <input
-                                            type="datetime-local"
-                                            value={reminderDate}
-                                            onChange={(e) => setReminderDate(e.target.value)}
-                                            className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-xs font-bold text-slate-700 dark:text-slate-300 outline-none w-full"
-                                        />
+                                        <div className="flex gap-2 w-full">
+                                            <input
+                                                type="datetime-local"
+                                                value={reminderDate}
+                                                onChange={(e) => setReminderDate(e.target.value)}
+                                                className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-xs font-bold text-slate-700 dark:text-slate-300 outline-none flex-1"
+                                            />
+                                            <select
+                                                value={followUpPriority}
+                                                onChange={(e) => setFollowUpPriority(e.target.value as any)}
+                                                className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-xs font-bold text-slate-700 dark:text-slate-300 outline-none w-28"
+                                            >
+                                                <option value="High">High Priority</option>
+                                                <option value="Medium">Med Priority</option>
+                                                <option value="Low">Low Priority</option>
+                                            </select>
+                                        </div>
                                     )}
                                     <div className="flex justify-end">
                                         <button
@@ -533,6 +546,77 @@ export const Leads: React.FC = () => {
                                 )}
                             </div>
                         </div>
+                    </div>
+                </div>
+            ) : (
+                <div className="w-full lg:w-[380px] bg-slate-50 dark:bg-[#0B1116] border-l border-slate-200 dark:border-slate-800 hidden lg:flex flex-col h-full">
+                    <div className="p-6 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-[#1A2633] sticky top-0 z-10">
+                        <h2 className="text-xl font-black text-slate-900 dark:text-white flex items-center gap-2">
+                            <CalendarDays size={20} className="text-primary" /> Today's Agenda
+                        </h2>
+                        <p className="text-xs text-slate-500 mt-1">Pending follow-ups & tasks</p>
+                    </div>
+                    <div className="p-4 flex-1 overflow-y-auto space-y-4">
+                        {(() => {
+                            const now = new Date();
+                            const pendingTasks = followUps.filter(f => f.status === 'Pending' && f.scheduledAt && new Date(f.scheduledAt).getTime() <= now.setHours(23, 59, 59, 999))
+                                .sort((a, b) => {
+                                    // Sort by Priority (High > Medium > Low) then Date
+                                    const priorityVal: Record<string, number> = { 'High': 3, 'Medium': 2, 'Low': 1 };
+                                    const pDiff = (priorityVal[b.priority || 'Medium'] as number) - (priorityVal[a.priority || 'Medium'] as number);
+                                    if (pDiff !== 0) return pDiff;
+                                    return new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime();
+                                });
+
+                            if (pendingTasks.length === 0) {
+                                return (
+                                    <div className="text-center p-8 mt-10">
+                                        <div className="size-12 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center mx-auto mb-3">
+                                            <Sparkles className="text-slate-400" size={20} />
+                                        </div>
+                                        <p className="text-sm font-bold text-slate-600 dark:text-slate-400">All caught up!</p>
+                                        <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">No pending tasks for today.</p>
+                                    </div>
+                                )
+                            }
+
+                            return pendingTasks.map(task => {
+                                const scheduledDate = new Date(task.scheduledAt);
+                                // Overdue if scheduled day is in past, or today but time has passed
+                                const isOverdue = scheduledDate.getTime() < new Date().getTime();
+                                const isToday = scheduledDate.toDateString() === new Date().toDateString();
+
+                                const priorityColors: Record<string, string> = {
+                                    'High': 'text-red-600 bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800/50',
+                                    'Medium': 'text-amber-600 bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800/50',
+                                    'Low': 'text-green-600 bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800/50'
+                                };
+                                const pStyle = priorityColors[task.priority || 'Medium'];
+
+                                return (
+                                    <div key={task.id} className={`p-4 rounded-xl border bg-white dark:bg-[#1A2633] shadow-sm relative overflow-hidden transition-all hover:shadow-md ${isOverdue ? 'border-red-300 dark:border-red-800' : 'border-slate-200 dark:border-slate-700'}`}>
+                                        {isOverdue && <div className="absolute top-0 left-0 w-1 h-full bg-red-500"></div>}
+                                        <div className="flex justify-between items-start mb-2 pl-1">
+                                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wide ${pStyle}`}>
+                                                {task.priority || 'Medium'}
+                                            </span>
+                                        </div>
+                                        <h4 className="font-bold text-sm text-slate-900 dark:text-white pl-1 leading-tight mb-1 truncate cursor-pointer hover:text-primary transition-colors flex items-center gap-1"
+                                            onClick={() => setSelectedLeadId(task.leadId)}>
+                                            {task.leadName} <ArrowRight size={14} className="text-slate-400" />
+                                        </h4>
+                                        <p className="text-xs text-slate-500 line-clamp-2 pl-1 mb-3 leading-relaxed">{task.description}</p>
+                                        <div className="flex items-center justify-between pl-1">
+                                            <div className={`flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider ${isOverdue ? 'text-red-600 dark:text-red-400' : 'text-slate-500 dark:text-slate-400'}`}>
+                                                <Clock size={12} />
+                                                <span>{isToday ? 'TODAY' : scheduledDate.toLocaleDateString([], { month: 'short', day: 'numeric' })} at {scheduledDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                                {isOverdue && <span className="ml-1 bg-red-100 text-red-700 px-1.5 py-0.5 rounded">OVERDUE</span>}
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            });
+                        })()}
                     </div>
                 </div>
             )}

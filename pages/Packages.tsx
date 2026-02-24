@@ -3,9 +3,19 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { useData } from '../context/DataContext';
 import { SEO } from '../components/ui/SEO';
 import { OptimizedImage } from '../components/ui/OptimizedImage';
+import { MasterLocation } from '../types';
+
+// Helper to resolve location ID to name
+const getLocationName = (locationValue: string, masterLocations: MasterLocation[]): string => {
+  if (locationValue && locationValue.includes('-') && locationValue.length > 20) {
+    const found = masterLocations.find(l => l.id === locationValue);
+    return found ? found.name : locationValue;
+  }
+  return locationValue || '';
+};
 
 export const Packages: React.FC = () => {
-  const { packages } = useData();
+  const { packages, masterLocations } = useData();
   const [searchParams] = useSearchParams();
   const initialSearch = searchParams.get('search') || '';
 
@@ -291,7 +301,7 @@ export const Packages: React.FC = () => {
                               <span className="flex items-center gap-1 text-xs font-bold bg-white/20 backdrop-blur-md px-2 py-1 rounded-md"><span className="material-symbols-outlined text-[14px]">schedule</span> {pkg.days} Days</span>
                             </div>
                             <h3 className="font-black text-2xl leading-tight shadow-black drop-shadow-md mb-1">{pkg.title}</h3>
-                            <p className="text-white/80 text-sm font-medium flex items-center gap-1"><span className="material-symbols-outlined text-[16px]">location_on</span> {pkg.location}</p>
+                            <p className="text-white/80 text-sm font-medium flex items-center gap-1"><span className="material-symbols-outlined text-[16px]">location_on</span> {getLocationName(pkg.location, masterLocations)}</p>
                           </div>
                         </div>
 

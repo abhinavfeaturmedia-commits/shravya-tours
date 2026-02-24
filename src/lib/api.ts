@@ -1,5 +1,40 @@
 import { supabase } from './supabase';
+import imageCompression from 'browser-image-compression';
 import { Package, Booking, Lead, BookingStatus, StaffMember, Customer, MasterRoomType, MasterMealPlan, MasterActivity, MasterTransport, MasterPlan, MasterLeadSource, MasterTermsTemplate, CMSBanner, CMSTestimonial, CMSGalleryImage, CMSPost, FollowUp, Proposal, DailyTarget, TimeSession, AssignmentRule, UserActivity, Campaign, MasterHotel, Task, AuditLog } from '../../types';
+
+// --- IMAGE COMPRESSION UTILITY ---
+const MAX_FILE_SIZE_KB = 800;
+const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_KB * 1024;
+const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+
+async function compressImageFile(file: File): Promise<File> {
+    // Skip non-image files
+    if (!IMAGE_TYPES.includes(file.type)) return file;
+
+    // Skip if already under target size
+    if (file.size <= MAX_FILE_SIZE_BYTES) {
+        console.log(`[Compress] Skipped: ${file.name} is already ${(file.size / 1024).toFixed(0)}KB`);
+        return file;
+    }
+
+    console.log(`[Compress] Compressing ${file.name}: ${(file.size / 1024).toFixed(0)}KB → target <${MAX_FILE_SIZE_KB}KB`);
+
+    const options = {
+        maxSizeMB: MAX_FILE_SIZE_KB / 1024, // 0.8 MB
+        maxWidthOrHeight: 1920,
+        useWebWorker: true,
+        fileType: file.type === 'image/png' ? 'image/webp' as const : undefined, // Convert PNG to WebP for better compression
+    };
+
+    try {
+        const compressed = await imageCompression(file, options);
+        console.log(`[Compress] Done: ${(file.size / 1024).toFixed(0)}KB → ${(compressed.size / 1024).toFixed(0)}KB (${((1 - compressed.size / file.size) * 100).toFixed(0)}% smaller)`);
+        return compressed;
+    } catch (err) {
+        console.warn('[Compress] Compression failed, uploading original:', err);
+        return file; // Fallback to original if compression fails
+    }
+}
 
 const mapPackage = (row: any): Package => ({
     id: row.id,
@@ -1131,7 +1166,7 @@ export const api = {
     },
     createFollowUp: async (item: Partial<FollowUp>) => {
         const dbItem = { ...item, lead_id: item.leadId, scheduled_at: item.scheduledAt, reminder_enabled: item.reminderEnabled, assigned_to: item.assignedTo, completed_at: item.completedAt };
-        delete (dbItem as any).leadId; delete (dbItem as any).leadName; delete (dbItem as any).scheduledAt; delete (dbItem as any).reminderEnabled; delete (dbItem as any).assignedTo; delete (dbItem as any).completedAt; delete (dbItem as any).createdAt;
+        delete (dbItem as any).id; delete (dbItem as any).leadId; delete (dbItem as any).leadName; delete (dbItem as any).scheduledAt; delete (dbItem as any).reminderEnabled; delete (dbItem as any).assignedTo; delete (dbItem as any).completedAt; delete (dbItem as any).createdAt;
         const { error } = await supabase.from('follow_ups').insert([dbItem]);
         if (error) throw new Error(error.message);
     },
@@ -1142,7 +1177,7 @@ export const api = {
         if (dbItem.reminderEnabled === undefined) delete dbItem.reminder_enabled;
         if (dbItem.assignedTo === undefined) delete dbItem.assigned_to;
         if (dbItem.completedAt === undefined) delete dbItem.completed_at;
-        delete (dbItem as any).leadId; delete (dbItem as any).leadName; delete (dbItem as any).scheduledAt; delete (dbItem as any).reminderEnabled; delete (dbItem as any).assignedTo; delete (dbItem as any).completedAt; delete (dbItem as any).createdAt;
+        delete (dbItem as any).id; delete (dbItem as any).leadId; delete (dbItem as any).leadName; delete (dbItem as any).scheduledAt; delete (dbItem as any).reminderEnabled; delete (dbItem as any).assignedTo; delete (dbItem as any).completedAt; delete (dbItem as any).createdAt;
         const { error } = await supabase.from('follow_ups').update(dbItem).eq('id', id);
         if (error) throw new Error(error.message);
     },
@@ -1277,13 +1312,20 @@ export const api = {
 
     // --- STORAGE ---
     uploadFile: async (file: File, bucketPath: string = 'documents'): Promise<string> => {
-        const fileExt = file.name.split('.').pop();
+        // Auto-compress images before upload
+        const processedFile = await compressImageFile(file);
+
+        // Determine correct extension (may change if PNG was converted to WebP)
+        let fileExt = processedFile.name.split('.').pop();
+        if (processedFile.type === 'image/webp' && fileExt !== 'webp') {
+            fileExt = 'webp';
+        }
         const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
         const filePath = `${fileName}`;
 
         const { error: uploadError } = await supabase.storage
             .from(bucketPath)
-            .upload(filePath, file);
+            .upload(filePath, processedFile);
 
         if (uploadError) {
             console.error('API Error (uploadFile):', uploadError);

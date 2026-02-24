@@ -1,8 +1,18 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { useData } from '../../context/DataContext';
 import { useNavigate } from 'react-router-dom';
-import { Package } from '../../types';
+import { Package, MasterLocation } from '../../types';
 import { ImageUpload } from '../../components/ui/ImageUpload';
+
+// Helper to resolve location ID to name
+const getLocationName = (locationValue: string, masterLocations: MasterLocation[]): string => {
+    // Check if it looks like a UUID
+    if (locationValue && locationValue.includes('-') && locationValue.length > 20) {
+        const found = masterLocations.find(l => l.id === locationValue);
+        return found ? found.name : locationValue;
+    }
+    return locationValue || '';
+};
 
 // Extracted Component with React.memo to prevent unnecessary re-renders of the entire list when Edit Modal opens
 const PackageCard = React.memo(({
@@ -10,13 +20,15 @@ const PackageCard = React.memo(({
     onEdit,
     onToggleStatus,
     onDelete,
-    onPreview
+    onPreview,
+    masterLocations
 }: {
     pkg: Package,
     onEdit: (pkg: Package) => void,
     onToggleStatus: (pkg: Package) => void,
     onDelete: (id: string) => void,
-    onPreview: (id: string) => void
+    onPreview: (id: string) => void,
+    masterLocations: MasterLocation[]
 }) => {
     return (
         <div className="group bg-white dark:bg-[#1A2633] border border-slate-200 dark:border-slate-800 rounded-2xl p-4 flex flex-col md:flex-row items-start md:items-center gap-6 hover:shadow-lg transition-all hover:border-primary/30">
@@ -32,7 +44,7 @@ const PackageCard = React.memo(({
                     {pkg.status === 'Inactive' && <span className="bg-slate-100 text-slate-500 text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider">Hidden</span>}
                 </div>
                 <div className="flex flex-wrap items-center gap-4 text-sm text-slate-500 dark:text-slate-400">
-                    <span className="flex items-center gap-1"><span className="material-symbols-outlined text-[16px]">location_on</span> {pkg.location}</span>
+                    <span className="flex items-center gap-1"><span className="material-symbols-outlined text-[16px]">location_on</span> {getLocationName(pkg.location, masterLocations)}</span>
                     <span className="flex items-center gap-1"><span className="material-symbols-outlined text-[16px]">schedule</span> {pkg.days} Days</span>
                     <span className="flex items-center gap-1"><span className="material-symbols-outlined text-[16px]">group</span> {pkg.groupSize}</span>
                 </div>
@@ -72,7 +84,7 @@ const PackageCard = React.memo(({
 });
 
 export const AdminPackages: React.FC = () => {
-    const { packages, updatePackage, deletePackage, cmsGallery } = useData();
+    const { packages, updatePackage, deletePackage, cmsGallery, masterLocations } = useData();
     const navigate = useNavigate();
     const [search, setSearch] = useState('');
 
@@ -183,7 +195,12 @@ export const AdminPackages: React.FC = () => {
                                     </div>
                                     <div>
                                         <label className="text-xs font-bold text-slate-500 mb-1 block">Location</label>
-                                        <input required value={editForm.location} onChange={e => setEditForm({ ...editForm, location: e.target.value })} type="text" className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-primary outline-none" />
+                                        <select required value={editForm.location} onChange={e => setEditForm({ ...editForm, location: e.target.value })} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-primary outline-none">
+                                            <option value="">Select a Location</option>
+                                            {masterLocations.map(loc => (
+                                                <option key={loc.id} value={loc.id}>{loc.name}</option>
+                                            ))}
+                                        </select>
                                     </div>
                                     <div>
                                         <label className="text-xs font-bold text-slate-500 mb-1 block">Price (₹)</label>
@@ -351,6 +368,7 @@ export const AdminPackages: React.FC = () => {
                                 onToggleStatus={handleToggleStatus}
                                 onDelete={handleDelete}
                                 onPreview={handlePreview}
+                                masterLocations={masterLocations}
                             />
                         ))
                     ) : (
