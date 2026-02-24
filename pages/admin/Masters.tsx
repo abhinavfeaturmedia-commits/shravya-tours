@@ -1216,7 +1216,6 @@ export const Masters: React.FC = () => {
                                 </td>
                                 <td className="px-6 py-4">
                                     <p className="font-bold text-slate-900 dark:text-white">{item.name || item.title}</p>
-                                    <p className="text-xs text-slate-500 font-mono">{item.id}</p>
                                 </td>
                                 <td className="px-6 py-4 text-slate-600 dark:text-slate-300">
                                     {detailsContent}
